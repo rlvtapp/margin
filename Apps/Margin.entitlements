@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+	<!-- Files you choose: attaching them, and Save As for attachments. -->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+	<!-- Only for the MCP connection, which listens on 127.0.0.1 when turned on. -->
+	<key>com.apple.security.network.server</key>
+	<true/>
+	<!-- Only when you turn on contacts from the Contacts app, for address suggestions. -->
+	<key>com.apple.security.personal-information.addressbook</key>
+	<true/>
+	<!-- Only when you choose Add to Reminders on a message. -->
+	<key>com.apple.security.personal-information.calendars</key>
+	<true/>
+	<!-- Only while you dictate a question to Ask. -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+</dict>
+</plist>

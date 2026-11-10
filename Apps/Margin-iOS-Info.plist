@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER).refresh</string>
+	</array>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Margin device link</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>$(MARGIN_BUNDLE_ID).devicelink</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>Email address</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>mailto</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>Margin message</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>margin</string>
+			</array>
+		</dict>
+	</array>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
+	<key>MarginGoogleClientID</key>
+	<string>$(MARGIN_GOOGLE_CLIENT_ID)</string>
+	<key>MarginMicrosoftClientID</key>
+	<string>$(MARGIN_MICROSOFT_CLIENT_ID)</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>daybook</string>
+	</array>
+	<key>MarginPushRelayURL</key>
+	<string>$(MARGIN_PUSH_RELAY_URL)</string>
+	<key>MarginGmailPushTopic</key>
+	<string>$(MARGIN_GMAIL_PUSH_TOPIC)</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Margin suggests people from your contacts while you address mail. They stay on this device.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Margin listens only while you dictate a question to Ask.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Margin adds a reminder only when you choose Add to Reminders on a message.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Margin turns what you dictate into text for Ask. It stays on this device when the device supports it.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Margin device link</string>
+			<key>UTTypeIdentifier</key>
+			<string>$(MARGIN_BUNDLE_ID).devicelink</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>marginlink</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+</dict>
+</plist>

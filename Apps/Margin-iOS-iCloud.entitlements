@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Instant notifications through Margin's relay (docs/push.md). -->
+	<key>aps-environment</key>
+	<string>development</string>
+	<!-- For the iPhone and iPad target when building with your own Apple developer team, to turn
+	     on "Sync with iCloud". See docs/icloud.md. -->
+	<!-- iCloud: Sync with iCloud (mailboxes, settings, templates, workspaces). See docs/icloud.md. -->
+	<key>com.apple.developer.icloud-container-identifiers</key>
+	<array>
+		<string>iCloud.$(MARGIN_BUNDLE_ID)</string>
+	</array>
+	<key>com.apple.developer.icloud-services</key>
+	<array>
+		<string>CloudDocuments</string>
+	</array>
+	<key>com.apple.developer.ubiquity-container-identifiers</key>
+	<array>
+		<string>iCloud.$(MARGIN_BUNDLE_ID)</string>
+	</array>
+</dict>
+</plist>

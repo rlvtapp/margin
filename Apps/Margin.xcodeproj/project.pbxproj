@@ -1,0 +1,698 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000101 /* MailUI */ = {isa = PBXBuildFile; productRef = A10000000000000000000301 /* MailUI */; };
+		A10000000000000000000102 /* MailCore */ = {isa = PBXBuildFile; productRef = A10000000000000000000302 /* MailCore */; };
+		A10000000000000000000103 /* MailUI */ = {isa = PBXBuildFile; productRef = A10000000000000000000303 /* MailUI */; };
+		A10000000000000000000104 /* MailCore */ = {isa = PBXBuildFile; productRef = A10000000000000000000304 /* MailCore */; };
+		A10000000000000000000105 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000206 /* Localizable.xcstrings */; };
+		A10000000000000000000106 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000206 /* Localizable.xcstrings */; };
+		A10000000000000000000107 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000206 /* Localizable.xcstrings */; };
+		A10000000000000000000111 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000208 /* AppIcon.icon */; };
+		A10000000000000000000109 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000208 /* AppIcon.icon */; };
+		A10000000000000000000110 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000208 /* AppIcon.icon */; };
+		A10000000000000000000108 /* Margin.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A10000000000000000000207 /* Margin.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A1000000000000000000C000 /* AppIcon-Green.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D000 /* AppIcon-Green.icon */; };
+		A1000000000000000000E000 /* AppIcon-Green.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D000 /* AppIcon-Green.icon */; };
+		A1000000000000000000C001 /* AppIcon-Purple.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D001 /* AppIcon-Purple.icon */; };
+		A1000000000000000000E001 /* AppIcon-Purple.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D001 /* AppIcon-Purple.icon */; };
+		A1000000000000000000C002 /* AppIcon-Orange.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D002 /* AppIcon-Orange.icon */; };
+		A1000000000000000000E002 /* AppIcon-Orange.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D002 /* AppIcon-Orange.icon */; };
+		A1000000000000000000C003 /* AppIcon-Pink.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D003 /* AppIcon-Pink.icon */; };
+		A1000000000000000000E003 /* AppIcon-Pink.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D003 /* AppIcon-Pink.icon */; };
+		A1000000000000000000C004 /* AppIcon-Red.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D004 /* AppIcon-Red.icon */; };
+		A1000000000000000000E004 /* AppIcon-Red.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D004 /* AppIcon-Red.icon */; };
+		A1000000000000000000C005 /* AppIcon-Graphite.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D005 /* AppIcon-Graphite.icon */; };
+		A1000000000000000000E005 /* AppIcon-Graphite.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D005 /* AppIcon-Graphite.icon */; };
+		A1000000000000000000C006 /* AppIcon-Blue-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D006 /* AppIcon-Blue-Dark.icon */; };
+		A1000000000000000000E006 /* AppIcon-Blue-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D006 /* AppIcon-Blue-Dark.icon */; };
+		A1000000000000000000C007 /* AppIcon-Pixel.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D007 /* AppIcon-Pixel.icon */; };
+		A1000000000000000000E007 /* AppIcon-Pixel.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D007 /* AppIcon-Pixel.icon */; };
+		A1000000000000000000C008 /* AppIcon-Space.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D008 /* AppIcon-Space.icon */; };
+		A1000000000000000000E008 /* AppIcon-Space.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D008 /* AppIcon-Space.icon */; };
+		A1000000000000000000C010 /* AppIcon-Green-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D010 /* AppIcon-Green-Dark.icon */; };
+		A1000000000000000000E010 /* AppIcon-Green-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D010 /* AppIcon-Green-Dark.icon */; };
+		A1000000000000000000C011 /* AppIcon-Purple-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D011 /* AppIcon-Purple-Dark.icon */; };
+		A1000000000000000000E011 /* AppIcon-Purple-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D011 /* AppIcon-Purple-Dark.icon */; };
+		A1000000000000000000C012 /* AppIcon-Orange-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D012 /* AppIcon-Orange-Dark.icon */; };
+		A1000000000000000000E012 /* AppIcon-Orange-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D012 /* AppIcon-Orange-Dark.icon */; };
+		A1000000000000000000C013 /* AppIcon-Pink-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D013 /* AppIcon-Pink-Dark.icon */; };
+		A1000000000000000000E013 /* AppIcon-Pink-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D013 /* AppIcon-Pink-Dark.icon */; };
+		A1000000000000000000C014 /* AppIcon-Red-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D014 /* AppIcon-Red-Dark.icon */; };
+		A1000000000000000000E014 /* AppIcon-Red-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D014 /* AppIcon-Red-Dark.icon */; };
+		A1000000000000000000C015 /* AppIcon-Graphite-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D015 /* AppIcon-Graphite-Dark.icon */; };
+		A1000000000000000000E015 /* AppIcon-Graphite-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D015 /* AppIcon-Graphite-Dark.icon */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A10000000000000000000201 /* Margin.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Margin.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000206 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Shared/Localizable.xcstrings; sourceTree = "<group>"; };
+		A10000000000000000000208 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = Shared/AppIcon.icon; sourceTree = "<group>"; };
+		A10000000000000000000207 /* Margin.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Margin.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000205 /* Margin.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Margin.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000202 /* Margin.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Margin.entitlements; sourceTree = "<group>"; };
+		A10000000000000000000203 /* Margin-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Margin-Info.plist"; sourceTree = "<group>"; };
+		A10000000000000000000204 /* Margin.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/Margin.xcconfig; sourceTree = "<group>"; };
+		A1000000000000000000D000 /* AppIcon-Green.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Green.icon"; sourceTree = "<group>"; };
+		A1000000000000000000D001 /* AppIcon-Purple.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Purple.icon"; sourceTree = "<group>"; };
+		A1000000000000000000D002 /* AppIcon-Orange.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Orange.icon"; sourceTree = "<group>"; };
+		A1000000000000000000D003 /* AppIcon-Pink.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Pink.icon"; sourceTree = "<group>"; };
+		A1000000000000000000D004 /* AppIcon-Red.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Red.icon"; sourceTree = "<group>"; };
+		A1000000000000000000D005 /* AppIcon-Graphite.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Graphite.icon"; sourceTree = "<group>"; };
+		A1000000000000000000D006 /* AppIcon-Blue-Dark.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Blue-Dark.icon"; sourceTree = "<group>"; };
+		A1000000000000000000D007 /* AppIcon-Pixel.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Pixel.icon"; sourceTree = "<group>"; };
+		A1000000000000000000D008 /* AppIcon-Space.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Space.icon"; sourceTree = "<group>"; };
+		A1000000000000000000D010 /* AppIcon-Green-Dark.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Green-Dark.icon"; sourceTree = "<group>"; };
+		A1000000000000000000D011 /* AppIcon-Purple-Dark.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Purple-Dark.icon"; sourceTree = "<group>"; };
+		A1000000000000000000D012 /* AppIcon-Orange-Dark.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Orange-Dark.icon"; sourceTree = "<group>"; };
+		A1000000000000000000D013 /* AppIcon-Pink-Dark.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Pink-Dark.icon"; sourceTree = "<group>"; };
+		A1000000000000000000D014 /* AppIcon-Red-Dark.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Red-Dark.icon"; sourceTree = "<group>"; };
+		A1000000000000000000D015 /* AppIcon-Graphite-Dark.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Graphite-Dark.icon"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		A10000000000000000000401 /* macOS */ = {isa = PBXFileSystemSynchronizedRootGroup; path = macOS; sourceTree = "<group>"; };
+		A10000000000000000000402 /* iOS */ = {isa = PBXFileSystemSynchronizedRootGroup; path = iOS; sourceTree = "<group>"; };
+		A10000000000000000000403 /* watchOS */ = {isa = PBXFileSystemSynchronizedRootGroup; path = watchOS; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10000000000000000000501 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000101 /* MailUI */,
+				A10000000000000000000102 /* MailCore */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000503 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000103 /* MailUI */,
+				A10000000000000000000104 /* MailCore */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000505 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A10000000000000000000807 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				A10000000000000000000108 /* Margin.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXContainerItemProxy section */
+		A10000000000000000000A01 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10000000000000000000705;
+			remoteInfo = "Margin Watch";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		A10000000000000000000A02 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A10000000000000000000705 /* Margin Watch */;
+			targetProxy = A10000000000000000000A01 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXGroup section */
+		A10000000000000000000601 = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000401 /* macOS */,
+				A10000000000000000000402 /* iOS */,
+				A10000000000000000000403 /* watchOS */,
+				A10000000000000000000206 /* Localizable.xcstrings */,
+				A10000000000000000000208 /* AppIcon.icon */,
+				A1000000000000000000D000 /* AppIcon-Green.icon */,
+				A1000000000000000000D001 /* AppIcon-Purple.icon */,
+				A1000000000000000000D002 /* AppIcon-Orange.icon */,
+				A1000000000000000000D003 /* AppIcon-Pink.icon */,
+				A1000000000000000000D004 /* AppIcon-Red.icon */,
+				A1000000000000000000D005 /* AppIcon-Graphite.icon */,
+				A1000000000000000000D006 /* AppIcon-Blue-Dark.icon */,
+				A1000000000000000000D007 /* AppIcon-Pixel.icon */,
+				A1000000000000000000D008 /* AppIcon-Space.icon */,
+				A1000000000000000000D010 /* AppIcon-Green-Dark.icon */,
+				A1000000000000000000D011 /* AppIcon-Purple-Dark.icon */,
+				A1000000000000000000D012 /* AppIcon-Orange-Dark.icon */,
+				A1000000000000000000D013 /* AppIcon-Pink-Dark.icon */,
+				A1000000000000000000D014 /* AppIcon-Red-Dark.icon */,
+				A1000000000000000000D015 /* AppIcon-Graphite-Dark.icon */,
+				A10000000000000000000202 /* Margin.entitlements */,
+				A10000000000000000000203 /* Margin-Info.plist */,
+				A10000000000000000000204 /* Margin.xcconfig */,
+				A10000000000000000000602 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A10000000000000000000602 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10000000000000000000201 /* Margin.app */,
+				A10000000000000000000205 /* Margin.app */,
+				A10000000000000000000207 /* Margin.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A10000000000000000000701 /* Margin */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000902 /* Build configuration list for PBXNativeTarget "Margin" */;
+			buildPhases = (
+				A10000000000000000000801 /* Sources */,
+				A10000000000000000000501 /* Frameworks */,
+				A10000000000000000000802 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A10000000000000000000401 /* macOS */,
+			);
+			name = Margin;
+			packageProductDependencies = (
+				A10000000000000000000301 /* MailUI */,
+				A10000000000000000000302 /* MailCore */,
+			);
+			productName = Margin;
+			productReference = A10000000000000000000201 /* Margin.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A10000000000000000000703 /* Margin iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000903 /* Build configuration list for PBXNativeTarget "Margin iOS" */;
+			buildPhases = (
+				A10000000000000000000803 /* Sources */,
+				A10000000000000000000503 /* Frameworks */,
+				A10000000000000000000804 /* Resources */,
+				A10000000000000000000807 /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10000000000000000000A02 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A10000000000000000000402 /* iOS */,
+			);
+			name = "Margin iOS";
+			packageProductDependencies = (
+				A10000000000000000000303 /* MailUI */,
+				A10000000000000000000304 /* MailCore */,
+			);
+			productName = Margin;
+			productReference = A10000000000000000000205 /* Margin.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A10000000000000000000705 /* Margin Watch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000904 /* Build configuration list for PBXNativeTarget "Margin Watch" */;
+			buildPhases = (
+				A10000000000000000000805 /* Sources */,
+				A10000000000000000000505 /* Frameworks */,
+				A10000000000000000000806 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A10000000000000000000403 /* watchOS */,
+			);
+			name = "Margin Watch";
+			productName = Margin;
+			productReference = A10000000000000000000207 /* Margin.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A10000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+			};
+			buildConfigurationList = A10000000000000000000901 /* Build configuration list for PBXProject "Margin" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				"en-CA",
+				nl,
+				fr,
+				"fr-CA",
+				ja,
+				Base,
+				es,
+				de,
+				it,
+				"pt-BR",
+				ru,
+				hu,
+				ko,
+				"zh-Hans",
+				hi,
+			);
+			mainGroup = A10000000000000000000601;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A10000000000000000000300 /* XCLocalSwiftPackageReference ".." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A10000000000000000000602 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A10000000000000000000701 /* Margin */,
+				A10000000000000000000703 /* Margin iOS */,
+				A10000000000000000000705 /* Margin Watch */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A10000000000000000000802 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000105 /* Localizable.xcstrings in Resources */,
+				A10000000000000000000111 /* AppIcon.icon in Resources */,
+				A1000000000000000000C000 /* AppIcon-Green.icon in Resources */,
+				A1000000000000000000C001 /* AppIcon-Purple.icon in Resources */,
+				A1000000000000000000C002 /* AppIcon-Orange.icon in Resources */,
+				A1000000000000000000C003 /* AppIcon-Pink.icon in Resources */,
+				A1000000000000000000C004 /* AppIcon-Red.icon in Resources */,
+				A1000000000000000000C005 /* AppIcon-Graphite.icon in Resources */,
+				A1000000000000000000C006 /* AppIcon-Blue-Dark.icon in Resources */,
+				A1000000000000000000C007 /* AppIcon-Pixel.icon in Resources */,
+				A1000000000000000000C008 /* AppIcon-Space.icon in Resources */,
+				A1000000000000000000C010 /* AppIcon-Green-Dark.icon in Resources */,
+				A1000000000000000000C011 /* AppIcon-Purple-Dark.icon in Resources */,
+				A1000000000000000000C012 /* AppIcon-Orange-Dark.icon in Resources */,
+				A1000000000000000000C013 /* AppIcon-Pink-Dark.icon in Resources */,
+				A1000000000000000000C014 /* AppIcon-Red-Dark.icon in Resources */,
+				A1000000000000000000C015 /* AppIcon-Graphite-Dark.icon in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000804 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000106 /* Localizable.xcstrings in Resources */,
+				A10000000000000000000109 /* AppIcon.icon in Resources */,
+				A1000000000000000000E000 /* AppIcon-Green.icon in Resources */,
+				A1000000000000000000E001 /* AppIcon-Purple.icon in Resources */,
+				A1000000000000000000E002 /* AppIcon-Orange.icon in Resources */,
+				A1000000000000000000E003 /* AppIcon-Pink.icon in Resources */,
+				A1000000000000000000E004 /* AppIcon-Red.icon in Resources */,
+				A1000000000000000000E005 /* AppIcon-Graphite.icon in Resources */,
+				A1000000000000000000E006 /* AppIcon-Blue-Dark.icon in Resources */,
+				A1000000000000000000E007 /* AppIcon-Pixel.icon in Resources */,
+				A1000000000000000000E008 /* AppIcon-Space.icon in Resources */,
+				A1000000000000000000E010 /* AppIcon-Green-Dark.icon in Resources */,
+				A1000000000000000000E011 /* AppIcon-Purple-Dark.icon in Resources */,
+				A1000000000000000000E012 /* AppIcon-Orange-Dark.icon in Resources */,
+				A1000000000000000000E013 /* AppIcon-Pink-Dark.icon in Resources */,
+				A1000000000000000000E014 /* AppIcon-Red-Dark.icon in Resources */,
+				A1000000000000000000E015 /* AppIcon-Graphite-Dark.icon in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000806 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000107 /* Localizable.xcstrings in Resources */,
+				A10000000000000000000110 /* AppIcon.icon in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A10000000000000000000801 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000803 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000805 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A10000000000000000000911 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A10000000000000000000912 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+			};
+			name = Release;
+		};
+		A10000000000000000000921 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A10000000000000000000204 /* Margin.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon-Green AppIcon-Purple AppIcon-Orange AppIcon-Pink AppIcon-Red AppIcon-Graphite AppIcon-Blue-Dark AppIcon-Green-Dark AppIcon-Purple-Dark AppIcon-Orange-Dark AppIcon-Pink-Dark AppIcon-Red-Dark AppIcon-Graphite-Dark AppIcon-Pixel AppIcon-Space";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Margin.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Margin-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Margin;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Apache License 2.0";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(MARGIN_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		A10000000000000000000922 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A10000000000000000000204 /* Margin.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon-Green AppIcon-Purple AppIcon-Orange AppIcon-Pink AppIcon-Red AppIcon-Graphite AppIcon-Blue-Dark AppIcon-Green-Dark AppIcon-Purple-Dark AppIcon-Orange-Dark AppIcon-Pink-Dark AppIcon-Red-Dark AppIcon-Graphite-Dark AppIcon-Pixel AppIcon-Space";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Margin.entitlements;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Margin-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Margin;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Apache License 2.0";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(MARGIN_BUNDLE_ID)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		A10000000000000000000931 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A10000000000000000000204 /* Margin.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "Margin-iOS.entitlements";
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon-Green AppIcon-Purple AppIcon-Orange AppIcon-Pink AppIcon-Red AppIcon-Graphite AppIcon-Blue-Dark AppIcon-Green-Dark AppIcon-Purple-Dark AppIcon-Orange-Dark AppIcon-Pink-Dark AppIcon-Red-Dark AppIcon-Graphite-Dark AppIcon-Pixel AppIcon-Space";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Margin-iOS-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Margin;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(MARGIN_BUNDLE_ID)";
+				PRODUCT_NAME = Margin;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A10000000000000000000932 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A10000000000000000000204 /* Margin.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "Margin-iOS.entitlements";
+				ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES = "AppIcon-Green AppIcon-Purple AppIcon-Orange AppIcon-Pink AppIcon-Red AppIcon-Graphite AppIcon-Blue-Dark AppIcon-Green-Dark AppIcon-Purple-Dark AppIcon-Orange-Dark AppIcon-Pink-Dark AppIcon-Red-Dark AppIcon-Graphite-Dark AppIcon-Pixel AppIcon-Space";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "Margin-iOS-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = Margin;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(MARGIN_BUNDLE_ID)";
+				PRODUCT_NAME = Margin;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A10000000000000000000941 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A10000000000000000000204 /* Margin.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Margin;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "$(MARGIN_BUNDLE_ID)";
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(MARGIN_BUNDLE_ID).watchkitapp";
+				PRODUCT_NAME = Margin;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Debug;
+		};
+		A10000000000000000000942 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A10000000000000000000204 /* Margin.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Margin;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "$(MARGIN_BUNDLE_ID)";
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(MARGIN_BUNDLE_ID).watchkitapp";
+				PRODUCT_NAME = Margin;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "watchos watchsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A10000000000000000000901 /* Build configuration list for PBXProject "Margin" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000911 /* Debug */,
+				A10000000000000000000912 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000000000000000000902 /* Build configuration list for PBXNativeTarget "Margin" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000921 /* Debug */,
+				A10000000000000000000922 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000000000000000000903 /* Build configuration list for PBXNativeTarget "Margin iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000931 /* Debug */,
+				A10000000000000000000932 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000000000000000000904 /* Build configuration list for PBXNativeTarget "Margin Watch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000941 /* Debug */,
+				A10000000000000000000942 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A10000000000000000000300 /* XCLocalSwiftPackageReference ".." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A10000000000000000000301 /* MailUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MailUI;
+		};
+		A10000000000000000000302 /* MailCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MailCore;
+		};
+		A10000000000000000000303 /* MailUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MailUI;
+		};
+		A10000000000000000000304 /* MailCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MailCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A10000000000000000000001 /* Project object */;
+}

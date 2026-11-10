@@ -1,0 +1,38 @@
+# The push relay on Fly.io, in Frankfurt. See docs/release.md for the one-time setup
+# (app, volume, secrets, certificate). Secrets are set with `fly secrets set`, never here.
+
+app = "margin-relay"
+primary_region = "fra"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  DATABASE_PATH = "/data/relay.sqlite3"
+  PUBLIC_URL = "https://push.margin.relevate.app"
+  RUST_LOG = "info"
+
+# One machine with one volume: the SQLite file lives on it.
+[mounts]
+  source = "relay_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Providers can call at any moment, so the machine stays up.
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    path = "/healthz"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

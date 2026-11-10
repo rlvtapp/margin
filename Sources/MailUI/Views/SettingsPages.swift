@@ -1,0 +1,461 @@
+import MailCore
+import SwiftUI
+#if canImport(AppKit)
+import AppKit
+#endif
+
+/// The pages of Settings, the same on the Mac and on iPhone and iPad, with words to find them by.
+enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
+    case mailboxes, contacts, workspaces, notifications, reading, writing, appearance, sorting, templates, shortcuts, assistant, rules, connections, backup, experimental, about
+
+    var id: String { rawValue }
+
+    /// Pages each platform shows: shortcuts and connections are the Mac's.
+    static var available: [SettingsPage] {
+        #if os(macOS)
+        allCases
+        #else
+        allCases.filter { $0 != .shortcuts && $0 != .connections }
+        #endif
+    }
+
+    /// The sidebar's groups, as in System Settings: mail, how it behaves, how it looks, the
+    /// assistant and AI apps, then your data.
+    static var sections: [[SettingsPage]] {
+        [[.mailboxes, .contacts, .workspaces], [.notifications, .reading, .writing, .templates], [.appearance, .shortcuts],
+         [.assistant, .sorting, .rules, .connections], [.backup, .experimental, .about]]
+            .map { $0.filter(available.contains) }
+    }
+
+    /// The groups, with only the pages that match a search.
+    static func sections(matching query: String) -> [[SettingsPage]] {
+        sections.map { $0.filter { $0.matches(query) } }.filter { !$0.isEmpty }
+    }
+
+    var title: String {
+        switch self {
+        case .mailboxes: String(localized: "Mailboxes")
+        case .contacts: String(localized: "Contacts")
+        case .workspaces: String(localized: "Workspaces")
+        case .notifications: String(localized: "Notifications")
+        case .reading: String(localized: "Reading")
+        case .writing: String(localized: "Writing")
+        case .appearance: String(localized: "Appearance")
+        case .sorting: String(localized: "Sorting")
+        case .templates: String(localized: "Templates")
+        case .shortcuts: String(localized: "Shortcuts")
+        case .assistant: String(localized: "Assistant")
+        case .rules: String(localized: "Rules")
+        case .connections: String(localized: "Connections")
+        case .backup: String(localized: "Backup and Devices")
+        case .experimental: String(localized: "Experimental")
+        case .about: String(localized: "About")
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .mailboxes: "tray.2.fill"
+        case .contacts: "person.crop.circle.fill"
+        case .workspaces: "square.stack.fill"
+        case .notifications: "bell.badge.fill"
+        case .reading: "text.justify.left"
+        case .writing: "square.and.pencil"
+        case .appearance: "paintbrush.fill"
+        case .sorting: "square.stack.3d.up.fill"
+        case .templates: "doc.on.doc.fill"
+        case .shortcuts: "keyboard.fill"
+        case .assistant: "sparkles"
+        case .rules: "line.3.horizontal.decrease.circle.fill"
+        case .connections: "point.3.connected.trianglepath.dotted"
+        case .backup: "externaldrive.fill"
+        case .experimental: "flask.fill"
+        case .about: "info.circle.fill"
+        }
+    }
+
+    /// The icon tile's colour.
+    var tint: Color {
+        switch self {
+        case .mailboxes: Palette.account(0)
+        case .contacts: Palette.account(3)
+        case .workspaces: Palette.account(5)
+        case .notifications: Palette.account(1)
+        case .reading: Palette.account(3)
+        case .writing: Palette.account(4)
+        case .appearance: Palette.account(6)
+        case .sorting: Palette.account(7)
+        case .templates: Palette.account(8)
+        case .shortcuts: Ink.tertiary
+        case .assistant: Palette.account(2)
+        case .rules: Palette.account(7)
+        case .connections: Palette.account(9)
+        case .backup: Palette.account(10)
+        case .experimental: Palette.account(4)
+        case .about: Ink.tertiary
+        }
+    }
+
+    /// Words a search finds this page by, besides its title.
+    var keywords: [String] {
+        switch self {
+        case .mailboxes: ["account", "add", "remove", "signature", "alias", "send as", "server", "password", "picture", "imap", "smtp", "all inboxes"]
+        case .contacts: ["people", "address book", "carddav", "microsoft", "google", "outlook", "rooms", "calendar", "suggestions"]
+        case .workspaces: ["work", "personal", "group", "switch"]
+        case .notifications: ["alert", "sound", "vip", "sign-in", "code", "menu bar", "notch", "drop down", "meeting", "reminder", "badge", "quiet"]
+        case .reading: ["text size", "plain text", "pictures", "images", "tracker", "privacy", "screen sharing", "chat", "waiting"]
+        case .writing: ["undo send", "instructions", "style", "default mail app", "email links", "mailto", "reply"]
+        case .appearance: ["theme", "dark", "light", "white", "developer", "accent", "color", "app icon", "icon", "dock", "layout", "tabs", "minimal", "rows", "language", "contrast", "motion", "swipe"]
+        case .sorting: ["groups", "home", "classifier", "sort now", "bills", "travel"]
+        case .templates: ["template", "canned", "snippet"]
+        case .shortcuts: ["keyboard", "keys", "hotkey"]
+        case .assistant: ["ai", "model", "claude", "chatgpt", "gemini", "grok", "ollama", "apple intelligence", "writing profile", "suggest"]
+        case .rules: ["rules", "filters", "block", "blocked", "mute", "muted", "move", "auto archive"]
+        case .connections: ["mcp", "agent", "cursor", "codex", "claude code", "vs code", "permissions"]
+        case .backup: ["restore", "export", "recovery key", "icloud", "sync", "keychain", "link device", "another device", "automatic"]
+        case .experimental: ["labs", "beta", "block editor", "slash", "headings", "lists", "checklist", "formatting", "blocks"]
+        case .about: ["version", "license", "open source"]
+        }
+    }
+
+    func matches(_ query: String) -> Bool {
+        let words = query.lowercased().trimmingCharacters(in: .whitespaces)
+        guard !words.isEmpty else { return true }
+        return title.lowercased().contains(words) || rawValue.contains(words) || keywords.contains { $0.contains(words) }
+    }
+}
+
+extension SettingsPage {
+    /// One friendly line under the page's title.
+    var blurb: String {
+        switch self {
+        case .mailboxes: String(localized: "Accounts, signatures and the addresses you send from.")
+        case .contacts: String(localized: "Address books Margin suggests people from.")
+        case .workspaces: String(localized: "Groups of mailboxes, like Work and Personal.")
+        case .notifications: String(localized: "Alerts for new mail, sign-in codes and meetings.")
+        case .reading: String(localized: "How mail is shown, and privacy.")
+        case .writing: String(localized: "Sending, email links and instructions for the assistant.")
+        case .appearance: String(localized: "Theme, layout, colors and language.")
+        case .sorting: String(localized: "The groups Home sorts your inbox into.")
+        case .templates: String(localized: "Text you can insert into any message.")
+        case .shortcuts: String(localized: "Single-key shortcuts for the message list.")
+        case .assistant: String(localized: "The model that drafts replies and sorts mail. Off by default.")
+        case .rules: String(localized: "What happens to new mail, blocked senders and muted conversations.")
+        case .connections: String(localized: "Let AI apps on this Mac use your mail over MCP.")
+        case .backup: String(localized: "Back up your setup, or move it to another device.")
+        case .experimental: String(localized: "Early features to try. They may change or go away.")
+        case .about: String(localized: "Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
+        }
+    }
+}
+
+/// A page's icon: a white symbol on a rounded tile in the page's colour.
+struct SettingsIcon: View {
+    let page: SettingsPage
+    var size: CGFloat = 22
+
+    var body: some View {
+        Image(systemName: page.symbol)
+            .font(.system(size: size * 0.5, weight: .semibold))
+            .foregroundStyle(.white)
+            .frame(width: size, height: size)
+            .background(page.tint, in: RoundedRectangle(cornerRadius: size * 0.26, style: .continuous))
+    }
+}
+
+/// The top of every page, as in System Settings: the page's big icon, its name and one line
+/// about what's on it.
+struct SettingsHeader: View {
+    let page: SettingsPage
+
+    init(_ page: SettingsPage) { self.page = page }
+
+    var body: some View {
+        Section {
+            HStack(spacing: Space.m) {
+                icon
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(verbatim: page == .about ? Self.appName : page.title).font(.headline)
+                    Text(verbatim: page.blurb).font(.subheadline).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private static var appName: String {
+        (Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName")) as? String ?? "Margin"
+    }
+
+    /// About shows Margin's own icon on the Mac; every other page its tile.
+    @ViewBuilder
+    private var icon: some View {
+        #if os(macOS)
+        if page == .about {
+            Image(nsImage: NSApplication.shared.applicationIconImage).resizable().frame(width: 48, height: 48).padding(-4)
+        } else {
+            SettingsIcon(page: page, size: 40)
+        }
+        #else
+        SettingsIcon(page: page, size: 40)
+        #endif
+    }
+}
+
+extension EnvironmentValues {
+    /// The colour of the Settings page in view.
+    @Entry var settingsTint: Color = .accentColor
+}
+
+/// A Settings row's label: the title, and an optional line under it.
+struct SettingLabel: View {
+    let title: Text
+    var detail: Text?
+
+    init(_ title: LocalizedStringKey, detail: LocalizedStringKey? = nil) {
+        self.title = Text(title)
+        self.detail = detail.map { Text($0) }
+    }
+
+    init(verbatim title: String) {
+        self.title = Text(verbatim: title)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            title
+            if let detail {
+                detail.font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+/// What a list says while it's empty.
+struct SettingsEmptyRow: View {
+    let text: Text
+
+    init(_ text: LocalizedStringKey) { self.text = Text(text) }
+
+    var body: some View {
+        text.foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+// MARK: Shared pages
+
+/// Notifications: what to hear about, how, VIPs, sign-in codes, meetings.
+struct NotificationSettings: View {
+    @Bindable var model: MailModel
+
+    var body: some View {
+        Form {
+            SettingsHeader(.notifications)
+            Section {
+                Picker("Notify me about", selection: $model.newMailAlerts) {
+                    ForEach(NewMailAlerts.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
+                Picker("Sound", selection: Binding(get: { model.alertSound }, set: { model.alertSound = $0 })) {
+                    ForEach(AlertSound.choices) { Text(verbatim: $0.title).tag($0) }
+                }
+                Picker("Meeting reminders", selection: Binding(get: { model.eventReminderMinutes }, set: { model.eventReminderMinutes = $0 })) {
+                    Text("Off").tag(0)
+                    ForEach([5, 10, 15, 30], id: \.self) { Text("\($0) minutes before").tag($0) }
+                }
+            } footer: {
+                Text("Each mailbox can have its own setting: Mailboxes → Edit…. Workspaces you're not in stay quiet.")
+            }
+            #if os(iOS)
+            if model.hasPushRelay {
+                Section {
+                    Toggle("Instant notifications", isOn: Binding(get: { model.usesPushRelay }, set: { model.usesPushRelay = $0 }))
+                } footer: {
+                    Text("For Gmail, Outlook and Fastmail, your provider tells Margin's relay that new mail arrived, and the relay wakes this device. The relay never sees your mail. Off, this device is removed from the relay and checks for mail in the background instead, which iOS may only allow every so often.")
+                }
+            }
+            #endif
+            #if os(macOS)
+            Section("At the top of the screen") {
+                Toggle(isOn: Binding(get: { model.showsDropDownAlerts }, set: { model.showsDropDownAlerts = $0 })) {
+                    SettingLabel("Drop-down alerts", detail: "Slide down from the top of the screen with sign-in codes, links and Reply.")
+                }
+                Toggle(isOn: Binding(get: { model.showsMenuBarItem }, set: { model.showsMenuBarItem = $0 })) {
+                    SettingLabel("Menu bar", detail: "Sign-in codes, links and the latest mail in the menu bar.")
+                }
+            }
+            #endif
+            Section {
+                Toggle("Copy sign-in codes when they arrive", isOn: Binding(get: { model.copiesSignInCodes }, set: { model.copiesSignInCodes = $0 }))
+                #if os(macOS)
+                if MailModel.canTypeIntoOtherApps {
+                    Toggle("Type new codes into the field you're in", isOn: Binding(get: { model.typesSignInCodes }, set: { on in
+                        model.typesSignInCodes = on
+                        if on { MailModel.requestTypingPermission() }
+                    }))
+                } else {
+                    LabeledContent("Type codes for you") { Text("Needs the direct download of Margin").foregroundStyle(Ink.tertiary) }
+                }
+                #endif
+            } header: {
+                Text("Sign-in codes")
+            } footer: {
+                #if os(macOS)
+                Text("Typing codes in needs Accessibility permission. macOS doesn't let App Store apps type into other apps.")
+                #endif
+            }
+            Section {
+                if model.vipAddresses.isEmpty {
+                    SettingsEmptyRow("Add someone from a conversation's … menu: Add to VIPs.")
+                }
+                ForEach(model.vipAddresses.sorted(), id: \.self) { address in
+                    LabeledContent {
+                        Button("Remove") { model.vipAddresses.remove(address) }.buttonStyle(.borderless)
+                    } label: {
+                        Text(verbatim: address)
+                    }
+                }
+            } header: {
+                Text("VIPs")
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+/// Reading: how mail looks and what it may do.
+struct ReadingSettings: View {
+    @Bindable var model: MailModel
+
+    var body: some View {
+        Form {
+            SettingsHeader(.reading)
+            Section {
+                LabeledContent("Text size") {
+                    HStack(spacing: Space.s) {
+                        Image(systemName: "textformat.size.smaller").foregroundStyle(.secondary)
+                        Slider(value: $model.textScale, in: 0.8...2).frame(maxWidth: 180)
+                        Image(systemName: "textformat.size.larger").foregroundStyle(.secondary)
+                        Text("\(Int((model.textScale * 100).rounded()))%").monospacedDigit().foregroundStyle(.secondary)
+                            .frame(width: 44, alignment: .trailing)
+                    }
+                }
+                Picker("Show mail as", selection: $model.prefersPlainText) {
+                    Text("Original layout").tag(false)
+                    Text("Plain text").tag(true)
+                }
+                Toggle("Show conversations as a chat", isOn: Binding(get: { model.showsAsChat }, set: { model.showsAsChat = $0 }))
+                Toggle("Dark mode for emails", isOn: $model.darkensMail)
+                Picker("Waiting for reply after", selection: $model.followUpDays) {
+                    ForEach([2, 3, 5, 7], id: \.self) { Text("\($0) days").tag($0) }
+                }
+            } footer: {
+                Text("Original layout shows HTML mail as its sender designed it, with no scripts, and pictures from the web stay off until you allow them. Dark mode for emails shows light emails without pictures in dark colors while Margin is dark. Emails with pictures, and every email when it's off, sit on a white sheet.")
+            }
+            Section {
+                Toggle("Block trackers, even when pictures are loaded", isOn: Binding(get: { model.blocksTrackers }, set: { model.blocksTrackers = $0 }))
+                #if os(macOS)
+                Toggle("Hide Margin from screen sharing and recordings", isOn: Binding(get: { model.hidesFromScreenSharing }, set: { model.hidesFromScreenSharing = $0 }))
+                #endif
+            } header: {
+                Text("Privacy")
+            } footer: {
+                Text("Tracker blocking removes the hidden pictures that report when you open mail, and takes the tracking out of links.")
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+/// Writing: sending, the assistant's instructions, and email links.
+struct WritingSettings: View {
+    @Bindable var model: MailModel
+    @State private var instructions = ""
+
+    var body: some View {
+        Form {
+            SettingsHeader(.writing)
+            Section {
+                Picker("Undo send", selection: $model.undoSendDelay) {
+                    Text("Off").tag(0)
+                    ForEach([5, 10, 20, 30], id: \.self) { Text("\($0) seconds").tag($0) }
+                }
+                #if os(macOS)
+                LabeledContent("Email links") {
+                    let _ = model.defaultAppRevision
+                    if model.isDefaultMailApp {
+                        Text("Open in Margin").foregroundStyle(Ink.secondary)
+                    } else {
+                        Button("Make Margin the default mail app") { Task { await model.becomeDefaultMailApp() } }
+                    }
+                }
+                #endif
+            }
+            Section {
+                TextEditor(text: $instructions)
+                    .frame(minHeight: 90)
+                    .onChange(of: instructions) { _, value in model.writingInstructions = value }
+            } header: {
+                Text("Instructions for the assistant")
+            } footer: {
+                Text("Followed in every draft and suggested reply, for example: “No exclamation marks. Sign off with just my first name.”")
+            }
+        }
+        .formStyle(.grouped)
+        .onAppear { instructions = model.writingInstructions }
+    }
+}
+
+/// Workspaces: the list, and the editor.
+struct WorkspacesSettings: View {
+    let model: MailModel
+    @State private var editing = false
+
+    var body: some View {
+        Form {
+            SettingsHeader(.workspaces)
+            Section {
+                if model.workspaces.isEmpty {
+                    SettingsEmptyRow("No workspaces yet. Group your mailboxes, like Work and Personal, to see one group at a time.")
+                }
+                ForEach(model.workspaces) { workspace in
+                    HStack(spacing: Space.s) {
+                        WorkspaceBadge(workspace: workspace, size: 22)
+                        Text(verbatim: workspace.name)
+                        Spacer()
+                        Text(verbatim: model.accounts.filter { workspace.accounts.contains($0.id) }.map(\.label).formatted(.list(type: .and)))
+                            .foregroundStyle(Ink.tertiary).lineLimit(1)
+                    }
+                }
+            } footer: {
+                Text("Switch from the top of the sidebar, or with ⌥⌘1, ⌥⌘2…. Workspaces you're not in check mail quietly: no alerts except sign-in codes.")
+            }
+            Section {
+                Button(model.workspaces.isEmpty ? LocalizedStringKey("Make Workspaces…") : LocalizedStringKey("Edit Workspaces…")) { editing = true }
+            }
+        }
+        .formStyle(.grouped)
+        .sheet(isPresented: $editing) { WorkspaceEditor(model: model) }
+    }
+}
+
+/// Experimental: early features, each off until turned on.
+struct ExperimentalSettings: View {
+    @Bindable var model: MailModel
+
+    var body: some View {
+        Form {
+            SettingsHeader(.experimental)
+            Section {
+                Toggle(isOn: Binding(get: { model.usesBlockComposer }, set: { model.usesBlockComposer = $0 })) {
+                    SettingLabel("Block editor in the composer",
+                                 detail: "Relevate's editor for new messages: type / for headings, lists, checklists, quotes, code and tables, and drag blocks by their handle.")
+                }
+            } footer: {
+                Text("Quick replies keep the simple editor. Needs a Mac with Apple silicon.")
+            }
+        }
+        .formStyle(.grouped)
+    }
+}

@@ -1,0 +1,22 @@
+// Build settings anyone building Margin may want to change.
+// Put your own values in Margin.local.xcconfig (ignored by git) rather than editing this file.
+
+// The bundle id. Forks should use a domain they own.
+MARGIN_BUNDLE_ID = dev.margin.Margin
+
+// OAuth client ids for Google and Microsoft sign-in. Empty means those providers offer
+// app passwords instead. See docs/oauth.md for how to register a client.
+MARGIN_GOOGLE_CLIENT_ID =
+MARGIN_MICROSOFT_CLIENT_ID =
+
+// Instant notifications on iPhone and iPad (docs/push.md): the relay's address, and the Pub/Sub
+// topic Gmail reports to (projects/<project>/topics/<topic>). Empty turns them off.
+MARGIN_PUSH_RELAY_URL =
+MARGIN_GMAIL_PUSH_TOPIC =
+
+// Relevate's block editor ships for Apple silicon only (and the arm64 simulator).
+EXCLUDED_ARCHS[sdk=iphonesimulator*] = x86_64
+EXCLUDED_ARCHS[sdk=macosx*] = x86_64
+
+// Last, so every value above can be replaced there.
+#include? "Margin.local.xcconfig"

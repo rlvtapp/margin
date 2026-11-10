@@ -1,0 +1,29 @@
+{
+	"name": "margin-site",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev --port 3200",
+		"build": "vite build",
+		"preview": "wrangler dev",
+		"deploy": "pnpm build && wrangler deploy",
+		"types:check": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@fontsource-variable/inter": "^5.3.0",
+		"@tanstack/react-router": "^1.170.44",
+		"@tanstack/react-start": "^1.169.2",
+		"react": "^19.2.0",
+		"react-dom": "^19.2.0"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.2",
+		"@types/react": "^19.2.0",
+		"@types/react-dom": "^19.2.0",
+		"@vitejs/plugin-react": "^5.2.0",
+		"nitro": "3.0.260903-beta",
+		"typescript": "^5.7.2",
+		"vite": "^8.3.4",
+		"wrangler": "^4.151.0"
+	}
+}

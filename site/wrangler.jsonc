@@ -1,0 +1,19 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	// Static files only: the prerendered site from `pnpm build`.
+	"name": "margin-site",
+	"compatibility_date": "2025-09-24",
+	"assets": {
+		"directory": "./.output/public",
+		"html_handling": "auto-trailing-slash",
+		"not_found_handling": "404-page"
+	},
+	"routes": [
+		{
+			"pattern": "margin.relevate.app",
+			"zone_name": "relevate.app",
+			"custom_domain": true
+		}
+	],
+	"workers_dev": false
+}

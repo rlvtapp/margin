@@ -1,0 +1,72 @@
+/**
+ * Background options for the hero, to compare (?bg=cards, ?bg=people, ?bg=bold). The chosen one
+ * stays; the others get deleted.
+ */
+
+const colors = ["#2f78f5", "#18a874", "#7c5cff", "#e04f9a", "#e0a100", "#e2583e", "#3a8fb7"];
+
+/** Little message cards floating up past the app, at different depths and speeds. */
+export function CardsBackdrop() {
+	const cards = Array.from({ length: 22 }, (_, i) => ({
+		left: (i * 37) % 100,
+		size: 0.6 + ((i * 7) % 5) * 0.15,
+		speed: 16 + ((i * 11) % 14),
+		delay: -((i * 13) % 30),
+		color: colors[i % colors.length],
+		tilt: ((i * 17) % 20) - 10,
+	}));
+	return (
+		<div className="bg-cards" aria-hidden="true">
+			{cards.map((c, i) => (
+				<div
+					// biome-ignore lint/suspicious/noArrayIndexKey: a fixed list
+					key={i}
+					className="bg-card"
+					style={
+						{
+							left: `${c.left}%`,
+							"--size": c.size,
+							"--speed": `${c.speed}s`,
+							"--delay": `${c.delay}s`,
+							"--tilt": `${c.tilt}deg`,
+						} as React.CSSProperties
+					}
+				>
+					<i style={{ background: c.color }} />
+					<span>
+						<b />
+						<b />
+					</span>
+				</div>
+			))}
+		</div>
+	);
+}
+
+const names = "AMNSLKTPJROEHCVBDGFI".split("");
+
+/** Rows of people (letter avatars) sliding past in opposite directions. */
+export function PeopleBackdrop() {
+	const rows = Array.from({ length: 7 }, (_, r) =>
+		Array.from({ length: 24 }, (_, i) => ({ letter: names[(i * 7 + r * 3) % names.length], color: colors[(i + r * 2) % colors.length] })),
+	);
+	return (
+		<div className="bg-people" aria-hidden="true">
+			{rows.map((row, r) => (
+				<div
+					// biome-ignore lint/suspicious/noArrayIndexKey: a fixed list
+					key={r}
+					className="bg-people-row"
+					style={{ animationDuration: `${50 + r * 7}s`, animationDirection: r % 2 ? "reverse" : "normal" }}
+				>
+					{[...row, ...row].map((p, i) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: a fixed list
+						<i key={i} style={{ background: p.color }}>
+							{p.letter}
+						</i>
+					))}
+				</div>
+			))}
+		</div>
+	);
+}

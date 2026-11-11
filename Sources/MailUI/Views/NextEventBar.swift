@@ -69,7 +69,7 @@ struct NextEventChip: View {
             .frame(height: 28)
             .glassCapsule(tint: nil)
             .frame(maxWidth: 320)
-            .help(event.location ?? event.title)
+            .tip(event.location ?? event.title)
         }
     }
 }

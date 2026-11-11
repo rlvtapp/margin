@@ -27,7 +27,7 @@ struct NextUpBadge: View {
                 .frame(maxWidth: 320)
             }
             .buttonStyle(.plain)
-            .help(thread.subject)
+            .tip(thread.subject)
         }
     }
 

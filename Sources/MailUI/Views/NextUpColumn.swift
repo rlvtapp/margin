@@ -12,7 +12,10 @@ struct NextUpColumn: View {
     static let minimumPanelWidth: CGFloat = 880
 
     var body: some View {
-        let meetings = Array(model.upcomingEvents.filter { $0.start < Date().addingTimeInterval(7 * 86_400) }.prefix(5))
+        let now = Date()
+        let agenda = model.agenda(from: now, to: now.addingTimeInterval(7 * 86_400)).filter { $0.response != .declined && $0.end > now }
+        let next = agenda.first { !$0.isAllDay }
+        let meetings = Array(agenda.filter { $0.id != next?.id }.prefix(5))
         let snoozed = model.inboxThreads(nil)
             .compactMap { thread in model.snoozedUntil(thread).map { (thread, $0) } }
             .sorted { $0.1 < $1.1 }
@@ -20,12 +23,18 @@ struct NextUpColumn: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.xl) {
                 Text("Next up").font(TypeScale.heading).foregroundStyle(Ink.primary)
-                if meetings.isEmpty && snoozed.isEmpty && waiting.isEmpty {
+                if next == nil && meetings.isEmpty && snoozed.isEmpty && waiting.isEmpty {
                     Text("Nothing coming up.").font(TypeScale.row).foregroundStyle(Ink.tertiary)
                 }
-                if !meetings.isEmpty {
+                if next != nil || !meetings.isEmpty {
                     section("Meetings") {
-                        ForEach(meetings) { event in meetingRow(event) }
+                        if let next { NextMeetingCard(model: model, item: next) }
+                        ForEach(meetings) { item in meetingRow(item) }
+                        Button { model.go(to: .calendar) } label: {
+                            Text("Open Calendar").font(TypeScale.label.weight(.medium)).foregroundStyle(Palette.accent)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, 6)
                     }
                 }
                 if !snoozed.isEmpty {
@@ -65,20 +74,15 @@ struct NextUpColumn: View {
         }
     }
 
-    private func meetingRow(_ event: CalendarEntry) -> some View {
-        let now = Date()
-        let soon = event.start <= now || event.start.timeIntervalSince(now) < 10 * 60
-        return HStack(alignment: .firstTextBaseline, spacing: Space.s) {
-            row(title: event.title, detail: event.location, when: Text(verbatim: event.start <= now ? String(localized: "now") : Self.when(event.start))) {
-                model.open(event)
-            }
-            if soon, let join = event.joinURL {
-                Link("Join", destination: join)
-                    .font(TypeScale.label.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 10)
-                    .frame(height: 22)
-                    .background(Palette.accent, in: Capsule())
+    private func meetingRow(_ item: AgendaItem) -> some View {
+        let when = item.isAllDay
+            ? (Calendar.current.isDateInToday(item.start) ? String(localized: "All day") : item.start.formatted(.dateTime.weekday(.abbreviated)))
+            : Self.when(item.start)
+        return row(title: item.title, detail: item.location, when: Text(verbatim: when)) {
+            if let threadID = item.invitationThreadID {
+                model.showInvitation(threadID: threadID, title: item.title)
+            } else {
+                model.go(to: .calendar)
             }
         }
     }
@@ -108,5 +112,50 @@ struct NextUpColumn: View {
             return date.formatted(.dateTime.weekday(.abbreviated)) + " " + date.formatted(date: .omitted, time: .shortened)
         }
         return date.formatted(.dateTime.day().month(.abbreviated))
+    }
+}
+
+/// The next meeting at the top of Next up: how soon, what, when and where, and Join.
+private struct NextMeetingCard: View {
+    let model: MailModel
+    let item: AgendaItem
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            let soon = item.start.timeIntervalSince(context.date) < 15 * 60
+            VStack(alignment: .leading, spacing: 6) {
+                Text(verbatim: Countdown.text(for: item, now: context.date))
+                    .font(TypeScale.label.weight(.semibold))
+                    .foregroundStyle(Palette.accent)
+                Text(verbatim: item.title)
+                    .font(TypeScale.rowStrong)
+                    .foregroundStyle(Ink.primary)
+                    .lineLimit(2)
+                Text(verbatim: [item.start.formatted(date: .omitted, time: .shortened) + " – " + item.end.formatted(date: .omitted, time: .shortened),
+                                item.location].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: " · "))
+                    .font(TypeScale.label)
+                    .foregroundStyle(Ink.tertiary)
+                    .lineLimit(1)
+                if let url = item.joinURL {
+                    Link(destination: url) {
+                        Text("Join")
+                            .font(TypeScale.label.weight(.semibold))
+                            .foregroundStyle(soon ? Ink.inverse : Palette.accent)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 28)
+                            .background(soon ? Palette.accent : Palette.accent.opacity(0.12), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 4)
+                }
+            }
+            .padding(12)
+            .background(Palette.accent.opacity(0.07), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .onTapGesture {
+                if let threadID = item.invitationThreadID { model.showInvitation(threadID: threadID, title: item.title) }
+            }
+            .padding(.bottom, 6)
+        }
     }
 }

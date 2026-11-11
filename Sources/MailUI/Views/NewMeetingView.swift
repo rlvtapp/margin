@@ -78,7 +78,7 @@ struct NewMeetingView: View {
                                                           notes: notes)
                             dismiss()
                         }
-                        .help("Find a time and send it from your calendar")
+                        .tip("Find a time and send it from your calendar")
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
@@ -141,7 +141,7 @@ struct NewMeetingView: View {
     private func connect(_ access: Set<APIAccess>, account: MailAccount) async {
         do {
             try await model.requestAccess(access, for: account) { url, scheme in
-                try await webAuthentication.authenticate(using: url, callbackURLScheme: scheme, preferredBrowserSession: .shared)
+                try await webAuthentication.authenticate(using: url, callbackURLScheme: scheme, preferredBrowserSession: .ephemeral)
             }
             if model.canListRooms(account) { choosingRoom = true }
         } catch let failure as ASWebAuthenticationSessionError where failure.code == .canceledLogin {

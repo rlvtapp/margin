@@ -39,10 +39,14 @@ extension MailModel {
         return loaded
     }
 
-    /// Events still to come or happening now, not cancelled or declined.
+    /// Events still to come or happening now, not cancelled or declined: from the account
+    /// calendars Margin may read and from invitations in the mail, as the Calendar shows them.
     public var upcomingEvents: [CalendarEntry] {
         let now = Date()
-        return calendarEntries.filter { !$0.cancelled && $0.finish > now && rsvps[$0.id] != .declined }.sorted { $0.start < $1.start }
+        return agenda(from: now, to: now.addingTimeInterval(60 * 86_400))
+            .filter { $0.response != .declined && $0.end > now }
+            .sorted { $0.start < $1.start }
+            .map(\.asEntry)
     }
 
     /// The event to show at the top: one happening now, or starting in the next few hours.
@@ -126,6 +130,88 @@ extension MailModel {
             }
             noteInvites(in: thread)
         }
+        await findInvitesInSavedMail()
+    }
+
+    /// Invitations anywhere in saved mail from the last two months, not just the inbox: Outlook
+    /// moves an invitation to Deleted Items once it's answered, and your answers sit in Sent.
+    /// Oldest first, so a meeting is known before replies to it change who's coming.
+    func findInvitesInSavedMail(now: Date = Date()) async {
+        let words = ["invitation", "invite", "uitnodiging", "invitación", "einladung", "invito", "convite", "@ ",
+                     "accepted:", "declined:", "tentative:", "geaccepteerd:", "afgewezen:", "angenommen:", "abgelehnt:",
+                     "aceptado:", "rechazado:", "accepté :", "accepté:", "refusé :", "updated invitation", "canceled", "cancelled",
+                     "geannuleerd", "abgesagt"]
+        let found = await environment.cache.recentMessages(since: now.addingTimeInterval(-60 * 86_400), subjectWords: words)
+            .filter { current(contains: $0.account) }
+        // Bodies not on the device yet: newest first, so this week's answers come before old mail.
+        var fetched = 0
+        for (accountID, message) in found.reversed() where message.body == nil && bodies[Self.bodyKey(accountID, message.id)] == nil {
+            guard fetched < 30 else { break }
+            guard let account = account(accountID), let provider = try? provider(for: account) else { continue }
+            if let saved = await environment.cache.body(of: message.id, account: accountID) {
+                bodies[Self.bodyKey(accountID, message.id)] = saved
+                continue
+            }
+            fetched += 1
+            if let body = try? await provider.body(of: message) {
+                bodies[Self.bodyKey(accountID, message.id)] = body
+                await environment.cache.saveBody(body, of: message, account: accountID)
+            }
+        }
+        // Then oldest first, so a meeting is known before the replies to it.
+        for (accountID, message) in found {
+            let key = Self.bodyKey(accountID, message.id)
+            if bodies[key] == nil, let body = message.body { bodies[key] = body }
+            noteInvites(in: Self.tag(MailThread(id: message.id, messages: [message]), account: accountID))
+        }
+        noteAnswers(in: found.map(\.message))
+    }
+
+    private func current(contains account: UUID) -> Bool { accounts.contains { $0.id == account } }
+
+    /// Your answers from the subjects of replies you sent ("Accepted: Weekly sync"), for replies
+    /// whose calendar part isn't on the device. Matched to meetings by title; the newest wins.
+    func noteAnswers(in messages: [MailMessage]) {
+        let mine = Set(accounts.flatMap { [$0.address] + ($0.aliases ?? []) }.map { $0.address.lowercased() })
+        var entries = calendarEntries
+        var changed = false
+        for message in messages.sorted(by: { $0.date < $1.date }) where mine.contains(message.from.address.lowercased()) {
+            guard let (response, title) = Self.answer(inSubject: message.subject) else { continue }
+            for index in entries.indices
+            where entries[index].title.compare(title, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame {
+                rsvps[entries[index].id] = response
+                // Kept with the meeting too, as your entry in its guest list.
+                let me = message.from.address.lowercased()
+                if let at = entries[index].attendees.firstIndex(where: { $0.address.address.lowercased() == me }) {
+                    guard entries[index].attendees[at].response != response else { continue }
+                    entries[index].attendees[at].response = response
+                } else {
+                    entries[index].attendees.append(MeetingAttendee(address: message.from, kind: .required, response: response))
+                }
+                changed = true
+            }
+        }
+        if changed { saveCalendar(entries) }
+    }
+
+    /// "Accepted: Weekly sync" → (.accepted, "Weekly sync"), in the languages calendars write.
+    static func answer(inSubject subject: String) -> (CalendarInvite.Response, String)? {
+        let prefixes: [(String, CalendarInvite.Response)] = [
+            ("tentatively accepted:", .tentative), ("tentative:", .tentative), ("accepted:", .accepted), ("declined:", .declined),
+            ("voorlopig geaccepteerd:", .tentative), ("voorlopig:", .tentative), ("geaccepteerd:", .accepted), ("afgewezen:", .declined),
+            ("mit vorbehalt angenommen:", .tentative), ("angenommen:", .accepted), ("abgelehnt:", .declined),
+            ("aceptado provisionalmente:", .tentative), ("provisional:", .tentative), ("aceptado:", .accepted), ("rechazado:", .declined),
+            ("accepté provisoirement :", .tentative), ("provisoire :", .tentative), ("accepté :", .accepted), ("refusé :", .declined),
+            ("accepté:", .accepted), ("refusé:", .declined), ("accettato:", .accepted), ("rifiutato:", .declined),
+            ("aceito:", .accepted), ("recusado:", .declined),
+        ]
+        let trimmed = subject.trimmingCharacters(in: .whitespaces)
+        let lower = trimmed.lowercased()
+        for (prefix, response) in prefixes where lower.hasPrefix(prefix) {
+            let title = trimmed.dropFirst(prefix.count).trimmingCharacters(in: .whitespaces)
+            return title.isEmpty ? nil : (response, title)
+        }
+        return nil
     }
 
     // MARK: Reminders

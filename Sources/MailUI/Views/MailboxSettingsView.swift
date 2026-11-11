@@ -8,7 +8,10 @@ struct SignatureEditor: View {
     let accountID: UUID
     @Environment(\.dismiss) private var dismiss
     @State private var account: MailAccount?
-    @State private var newAlias = ""
+    @State private var newAliasAddress = ""
+    @State private var newAliasName = ""
+    /// Addresses that look like this mailbox's own (see `aliasSuggestions`), to add with a tap.
+    @State private var suggestions: [EmailAddress] = []
     @State private var choosingPicture = false
     @State private var server = MailboxServerFields()
     @State private var serverStatus: String?
@@ -27,10 +30,8 @@ struct SignatureEditor: View {
                             get: { account.wrappedValue.address.name ?? "" },
                             set: { account.wrappedValue.address.name = $0.isEmpty ? nil : $0 }
                         ))
-                    } header: {
-                        Text("Sender name")
                     } footer: {
-                        Text("What people see as the sender, like “Alex from Northwind”.")
+                        Text("What people see as the sender, like “Alex from Northwind”. Every address in this mailbox uses it unless you give one its own name under Send as.")
                     }
 
                     Section {
@@ -50,6 +51,8 @@ struct SignatureEditor: View {
                     }
 
                     AutoReplySection(model: model, account: account.wrappedValue)
+
+                    OutlookReactionsSection(model: model, account: account.wrappedValue)
 
                     Section {
                         HStack(spacing: Space.m) {
@@ -89,11 +92,28 @@ struct SignatureEditor: View {
                     }
 
                     Section {
-                        Text(verbatim: account.wrappedValue.address.address).foregroundStyle(Ink.secondary)
+                        let senderName = account.wrappedValue.address.name.flatMap { $0.trimmingCharacters(in: .whitespaces).isEmpty ? nil : $0 }
+                        HStack {
+                            Text(verbatim: account.wrappedValue.address.address)
+                            Spacer()
+                            Text(verbatim: senderName ?? "").foregroundStyle(.secondary)
+                        }
                         ForEach(Array((account.wrappedValue.aliases ?? []).enumerated()), id: \.offset) { index, alias in
                             HStack {
-                                Text(verbatim: alias.headerValue)
+                                Text(verbatim: alias.address).lineLimit(1).truncationMode(.middle)
                                 Spacer()
+                                TextField("", text: Binding(
+                                    get: { (account.wrappedValue.aliases ?? []).indices.contains(index) ? account.wrappedValue.aliases?[index].name ?? "" : "" },
+                                    set: { value in
+                                        guard account.wrappedValue.aliases?.indices.contains(index) == true else { return }
+                                        account.wrappedValue.aliases?[index].name = value.trimmingCharacters(in: .whitespaces).isEmpty ? nil : value
+                                    }
+                                ), prompt: senderName.map { Text(verbatim: $0) } ?? Text("Name"))
+                                .labelsHidden()
+                                .multilineTextAlignment(.trailing)
+                                .textFieldStyle(.plain)
+                                .frame(maxWidth: 170)
+                                .accessibilityLabel(Text("Name for \(alias.address)"))
                                 Button(role: .destructive) { account.wrappedValue.aliases?.remove(at: index) } label: {
                                     Image(systemName: "minus.circle")
                                 }
@@ -101,19 +121,33 @@ struct SignatureEditor: View {
                                 .accessibilityLabel("Remove")
                             }
                         }
-                        HStack {
-                            TextField("", text: $newAlias, prompt: Text(verbatim: "Sales <sales@yourdomain.com>"))
-                                #if os(iOS)
-                                .textInputAutocapitalization(.never)
-                                .keyboardType(.emailAddress)
-                                #endif
-                            Button("Add") { addAlias(to: account) }
-                                .disabled(EmailAddress.parseList(newAlias)?.first == nil)
+                        let known = Set(([account.wrappedValue.address] + (account.wrappedValue.aliases ?? [])).map { $0.address.lowercased() })
+                        ForEach(suggestions.filter { !known.contains($0.address.lowercased()) }, id: \.address) { suggestion in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(verbatim: suggestion.address)
+                                    Text("Mail sent to it arrives here").font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Button("Add") { account.wrappedValue.aliases = (account.wrappedValue.aliases ?? []) + [suggestion] }
+                                Button {
+                                    model.dismissAliasSuggestion(suggestion, for: account.wrappedValue)
+                                    suggestions.removeAll { $0.address == suggestion.address }
+                                } label: {
+                                    Image(systemName: "xmark")
+                                }
+                                .buttonStyle(.borderless)
+                                .tip("Not mine")
+                            }
                         }
+                        AliasAddRow(address: $newAliasAddress, name: $newAliasName) { addAlias(to: account) }
                     } header: {
                         Text("Send as")
                     } footer: {
-                        Text("Other addresses this mailbox can send from. Your provider has to allow them. Replies to mail sent to one go out from it.")
+                        Text("Other addresses this mailbox can send from. Your provider has to allow them. Replies to mail sent to one go out from it. Leave a name empty to use the sender name.")
+                    }
+                    .task(id: accountID) {
+                        if let current = model.account(accountID) { suggestions = await model.aliasSuggestions(for: current) }
                     }
 
                     Section {
@@ -312,9 +346,64 @@ struct SignatureEditor: View {
     }
 
     private func addAlias(to account: Binding<MailAccount>) {
-        guard let address = EmailAddress.parseList(newAlias)?.first else { return }
-        account.wrappedValue.aliases = (account.wrappedValue.aliases ?? []) + [address]
-        newAlias = ""
+        let address = newAliasAddress.trimmingCharacters(in: .whitespaces)
+        guard EmailAddress.isValid(address) else { return }
+        let known = ([account.wrappedValue.address] + (account.wrappedValue.aliases ?? [])).map { $0.address.lowercased() }
+        if !known.contains(address.lowercased()) {
+            account.wrappedValue.aliases = (account.wrappedValue.aliases ?? []) + [EmailAddress(name: newAliasName, address: address)]
+        }
+        newAliasAddress = ""
+        newAliasName = ""
+    }
+}
+
+/// Adding an address to send from: the address, and a name of its own if it shouldn't use the
+/// mailbox's sender name. Laid out like the rows above it (address left, name right).
+private struct AliasAddRow: View {
+    @Binding var address: String
+    @Binding var name: String
+    let add: () -> Void
+
+    private var isValid: Bool { EmailAddress.isValid(address.trimmingCharacters(in: .whitespaces)) }
+
+    var body: some View {
+        #if os(iOS)
+        VStack(spacing: Space.s) {
+            addressField
+            HStack {
+                nameField
+                Button("Add", action: add).disabled(!isValid)
+            }
+        }
+        #else
+        HStack {
+            addressField
+            nameField.frame(maxWidth: 170)
+            Button("Add", action: add).disabled(!isValid)
+        }
+        #endif
+    }
+
+    private var addressField: some View {
+        TextField("", text: $address, prompt: Text(verbatim: "sales@yourdomain.com"))
+            .labelsHidden()
+            .textFieldStyle(.roundedBorder)
+            .accessibilityLabel(Text("Email address"))
+            #if os(iOS)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .keyboardType(.emailAddress)
+            .textContentType(.emailAddress)
+            #endif
+            .onSubmit { if isValid { add() } }
+    }
+
+    private var nameField: some View {
+        TextField("", text: $name, prompt: Text("Name (optional)"))
+            .labelsHidden()
+            .textFieldStyle(.roundedBorder)
+            .accessibilityLabel(Text("Name (optional)"))
+            .onSubmit { if isValid { add() } }
     }
 }
 
@@ -346,7 +435,7 @@ struct SignatureMenu: View {
             .menuIndicator(.hidden)
             .fixedSize()
             #endif
-            .help("Signature")
+            .tip("Signature")
         }
     }
 }
@@ -368,5 +457,15 @@ private struct MailboxServerFields {
             outgoingHost = outgoing.host; outgoingPort = outgoing.port
         }
         if case .password(let name) = account.auth { username = name }
+    }
+}
+
+/// The first mailbox's settings on their own, for screenshots.
+public struct MailboxSettingsSnapshot: View {
+    let model: MailModel
+    public init(model: MailModel) { self.model = model }
+
+    public var body: some View {
+        if let id = model.accounts.first?.id { SignatureEditor(model: model, accountID: id) }
     }
 }

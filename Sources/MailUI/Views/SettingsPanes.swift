@@ -30,6 +30,11 @@ struct MailboxesSettings: View {
                         Spacer()
                         Button("Edit…") { editing = account.id }
                         Menu {
+                            Button("Move Up") { withAnimation(Motion.quick) { model.moveAccount(account.id, by: -1) } }
+                                .disabled(!model.canMoveAccount(account.id, by: -1))
+                            Button("Move Down") { withAnimation(Motion.quick) { model.moveAccount(account.id, by: 1) } }
+                                .disabled(!model.canMoveAccount(account.id, by: 1))
+                            Divider()
                             Button("Remove", role: .destructive) { removing = account }
                         } label: {
                             Image(systemName: "ellipsis.circle")
@@ -37,6 +42,11 @@ struct MailboxesSettings: View {
                         .menuIndicatorHidden()
                         .fixedSize()
                     }
+                }
+                .onMove { model.moveAccounts(from: $0, to: $1) }
+            } footer: {
+                if model.accounts.count > 1 {
+                    Text("Drag to change the order, here or in the account column.")
                 }
             }
             Section {
@@ -66,13 +76,36 @@ struct AppearanceSettings: View {
         #endif
     }
 
+    static func caption(_ appearance: AppAppearance) -> String? {
+        switch appearance {
+        #if os(macOS)
+        case .system: String(localized: "Light or dark, like the Mac.")
+        #else
+        case .system: String(localized: "Light or dark, like the system.")
+        #endif
+        case .light: String(localized: "Soft gray sidebar, white mail.")
+        case .dark: String(localized: "Dark gray, easy at night.")
+        case .deepDark: String(localized: "True black, for dark rooms.")
+        case .white: String(localized: "All white, no gray.")
+        case .developer: String(localized: "Dark blue-black with green.")
+        }
+    }
+
+    static func caption(_ layout: ListLayout) -> String? {
+        switch layout {
+        case .panels: String(localized: "The list and the open mail next to each other.")
+        case .wide: String(localized: "A full-width list; mail opens over it.")
+        case .spark: String(localized: "Inbox, unread and labels as tabs on top.")
+        case .minimal: String(localized: "A calm page of sections, no sidebar.")
+        }
+    }
+
     var body: some View {
         Form {
             SettingsHeader(.appearance)
             Section {
-                Picker(selection: $model.appearance) {
-                    ForEach(AppAppearance.allCases, id: \.self) { Text($0.title).tag($0) }
-                } label: { SettingLabel("Appearance") }
+                ChoiceTiles(options: AppAppearance.allCases, selection: $model.appearance,
+                            title: \.title, caption: Self.caption) { ThemePreview(appearance: $0) }
                 LabeledContent {
                     HStack(spacing: 10) {
                         ForEach(0..<8, id: \.self) { index in
@@ -84,21 +117,41 @@ struct AppearanceSettings: View {
                             .accessibilityLabel("Accent \(index + 1)")
                         }
                     }
-                } label: { SettingLabel("Accent") }
-                Picker(selection: $model.layout) {
-                    ForEach(layouts, id: \.self) { Text($0.title).tag($0) }
-                } label: { SettingLabel("Layout") }
-                Picker(selection: $model.compactRows) {
-                    Text("Three lines").tag(false)
-                    Text("One line").tag(true)
-                } label: { SettingLabel("Rows") }
+                } label: { SettingLabel("Accent", detail: "Unread dots, selections and badges.") }
+            } header: {
+                Text("Theme")
+            }
+            Section {
+                ChoiceTiles(options: layouts, selection: $model.layout, title: \.title, caption: Self.caption) { LayoutPreview(layout: $0) }
+            } header: {
+                Text("Layout")
+            }
+            Section {
+                ChoiceTiles(options: [false, true], selection: $model.compactRows,
+                            title: { $0 ? String(localized: "One line") : String(localized: "Three lines") },
+                            caption: { $0 ? String(localized: "Fits the most mail on screen.") : String(localized: "Sender, subject and a preview.") }) {
+                    RowsPreview(compact: $0)
+                }
                 #if os(macOS)
-                Picker(selection: $model.insetPanel) {
-                    Text("Edge to edge").tag(false)
-                    Text("Inset panel").tag(true)
-                } label: { SettingLabel("Window") }
+                ChoiceTiles(options: [false, true], selection: $model.insetPanel,
+                            title: { $0 ? String(localized: "Inset panel") : String(localized: "Edge to edge") },
+                            caption: { $0 ? String(localized: "Mail sits in a rounded panel.") : String(localized: "Mail runs to the window's edges.") }) {
+                    WindowStylePreview(inset: $0)
+                }
+                Toggle(isOn: $model.buttonNames) {
+                    SettingLabel("Show button names",
+                                 detail: "Names beside the icons above a conversation, when they fit. Off shows icons only; pointing at one shows its name and shortcut.")
+                }
                 #endif
-                LabeledContent { LanguageSetting() } label: { SettingLabel("Language") }
+            } header: {
+                #if os(macOS)
+                Text("Rows and window")
+                #else
+                Text("Rows")
+                #endif
+            }
+            Section {
+                LabeledContent { LanguageSetting() } label: { SettingLabel("Language", detail: "Margin's own language, apart from the system's.") }
             }
             Section {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 64), spacing: Space.s)], spacing: Space.m) {
@@ -134,17 +187,19 @@ struct AppearanceSettings: View {
                 #endif
             }
             Section {
-                Picker(selection: $model.colorBlindSafe) {
-                    Text("Standard").tag(false)
-                    Text("Color-blind safe").tag(true)
-                } label: { SettingLabel("Colors") }
+                ChoiceTiles(options: [false, true], selection: $model.colorBlindSafe,
+                            title: { $0 ? String(localized: "Color-blind safe") : String(localized: "Standard") }) {
+                    PalettePreview(colorBlindSafe: $0)
+                }
+            } header: {
+                Text("Colors")
             } footer: {
                 Text("A palette that stays clear with red–green and blue–yellow color blindness. Mailboxes also always show their letter, and unread mail is bold as well as marked.")
             }
             Section {
-                Toggle(isOn: $model.increaseContrast) { SettingLabel("Increase contrast") }
-                Toggle(isOn: $model.underlineLinks) { SettingLabel("Underline links in mail") }
-                Toggle(isOn: $model.reduceMotion) { SettingLabel("Reduce motion") }
+                Toggle(isOn: $model.increaseContrast) { SettingLabel("Increase contrast", detail: "Darker text and clearer lines.") }
+                Toggle(isOn: $model.underlineLinks) { SettingLabel("Underline links in mail", detail: "So links stand out without relying on color.") }
+                Toggle(isOn: $model.reduceMotion) { SettingLabel("Reduce motion", detail: "Things appear at once instead of sliding.") }
             } header: {
                 Text("Accessibility")
             } footer: {
@@ -154,43 +209,11 @@ struct AppearanceSettings: View {
                 Text("Margin also follows these settings from the system's Accessibility settings.")
                 #endif
             }
-            #if os(iOS)
-            swipes
-            #endif
+            SwipeSettings(model: model)
         }
         .formStyle(.grouped)
     }
 
-    #if os(iOS)
-    /// What swiping a conversation does: two actions each way, the first on a full swipe.
-    private var swipes: some View {
-        Section {
-            swipePicker("Swipe right", index: 0, leading: true)
-            swipePicker("Swipe right, second", index: 1, leading: true)
-            swipePicker("Swipe left", index: 0, leading: false)
-            swipePicker("Swipe left, second", index: 1, leading: false)
-        } header: {
-            Text("Swipes")
-        } footer: {
-            Text("A full swipe does the first action.")
-        }
-    }
-
-    private func swipePicker(_ title: LocalizedStringKey, index: Int, leading: Bool) -> some View {
-        Picker(selection: Binding(
-            get: { (leading ? model.leadingSwipes : model.trailingSwipes)[index] },
-            set: { value in
-                var list = leading ? model.leadingSwipes : model.trailingSwipes
-                list[index] = value
-                if leading { model.leadingSwipes = list } else { model.trailingSwipes = list }
-            }
-        )) {
-            ForEach(SwipeAction.allCases) { Text($0.title).tag($0) }
-        } label: {
-            Text(title)
-        }
-    }
-    #endif
 }
 
 /// Shortcuts: change any single key, or turn single keys off.
@@ -661,41 +684,120 @@ struct BackupSettings: View {
     }
 }
 
-/// About: what Margin is, its version, and who makes it.
+/// About: Margin's icon, name and version; where to tell us when something breaks; who makes it.
 struct AboutSettings: View {
     let model: MailModel
     @State private var showingWelcome = false
 
     var body: some View {
-        Form {
-            SettingsHeader(.about)
-            Section {
-                Text("\(model.environment.appName) is a free, open-source mail client (Apache-2.0). It connects directly to your mail provider over IMAP, SMTP and JMAP. There is no server of ours in between, no account to make, and nothing is tracked.")
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            } footer: {
+        ScrollView {
+            VStack(spacing: 0) {
+                AppIconPreview(choice: model.appIcon, dark: model.appIconDark, size: 84)
+                    .shadow(color: .black.opacity(0.14), radius: 12, y: 6)
+                Text(verbatim: model.environment.appName)
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundStyle(Ink.primary)
+                    .padding(.top, 16)
+                Text("Version \(Self.version)")
+                    .font(TypeScale.label.monospacedDigit())
+                    .foregroundStyle(Ink.tertiary)
+                    .textSelection(.enabled)
+                    .padding(.top, 4)
+                TellUsCard()
+                    .padding(.top, 36)
                 Link(destination: URL(string: "https://relevate.app")!) {
-                    VStack(spacing: Space.s) {
-                        Text("Made by").font(.caption).foregroundStyle(.secondary)
+                    HStack(spacing: 8) {
+                        Text("Made by").font(TypeScale.label).foregroundStyle(Ink.tertiary)
                         RelevateLogo()
-                            .fill(Ink.primary)
+                            .fill(Ink.secondary)
                             .aspectRatio(RelevateLogo.aspect, contentMode: .fit)
-                            .frame(height: 30)
+                            .frame(height: 22)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, Space.xl)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("Made by Relevate"))
-                .padding(.bottom, Space.l)
+                .padding(.top, 32)
                 Button("Show Welcome") { showingWelcome = true }
                     .buttonStyle(.borderless)
-                    .frame(maxWidth: .infinity)
+                    .font(TypeScale.label)
+                    .padding(.top, 10)
             }
+            .padding(.horizontal, Space.xl)
+            .padding(.vertical, 44)
+            .frame(maxWidth: 460)
+            .frame(maxWidth: .infinity)
         }
-        .formStyle(.grouped)
         .sheet(isPresented: $showingWelcome) { OnboardingView(model: model) }
+    }
+
+    static var version: String {
+        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
+        return build.isEmpty || build == short ? short : "\(short) (\(build))"
+    }
+}
+
+/// Nothing is tracked, so a problem is only known once someone says so: an ink card with the
+/// X mark, that sentence, and the two accounts to tell, each a row you can click.
+private struct TellUsCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 14) {
+                Text(verbatim: "𝕏")
+                    .font(.system(size: 22, weight: .heavy))
+                    .foregroundStyle(Ink.inverse)
+                    .frame(width: 40, height: 40)
+                    .background(Ink.inverse.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Something broken?")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(Ink.inverse)
+                    Text("Because nothing is tracked, we won't know when something breaks until you tell us.")
+                        .font(TypeScale.label)
+                        .foregroundStyle(Ink.inverse.opacity(0.7))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(18)
+            Rectangle().fill(Ink.inverse.opacity(0.1)).frame(height: 1)
+            HandleRow(handle: "@kaanmol_", who: "Kaan, who makes Margin", url: "https://x.com/kaanmol_")
+            Rectangle().fill(Ink.inverse.opacity(0.1)).frame(height: 1).padding(.leading, 18)
+            HandleRow(handle: "@rlvtapp", who: "Relevate", url: "https://x.com/rlvtapp")
+        }
+        .background(Ink.primary, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: .black.opacity(0.12), radius: 18, y: 10)
+    }
+}
+
+/// One account to write to: the handle, who it is, and an arrow that moves on hover.
+private struct HandleRow: View {
+    let handle: String
+    let who: LocalizedStringKey
+    let url: String
+    @State private var isHovered = false
+
+    var body: some View {
+        Link(destination: URL(string: url)!) {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: handle).font(.system(size: 14, weight: .semibold)).foregroundStyle(Ink.inverse)
+                    Text(who).font(TypeScale.caption).foregroundStyle(Ink.inverse.opacity(0.6))
+                }
+                Spacer()
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Ink.inverse.opacity(isHovered ? 1 : 0.6))
+                    .offset(x: isHovered ? 2 : 0, y: isHovered ? -2 : 0)
+            }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 13)
+            .background(Ink.inverse.opacity(isHovered ? 0.06 : 0))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in withAnimation(Motion.quick) { isHovered = hovering } }
+        .tip(Text(verbatim: url))
     }
 }
 

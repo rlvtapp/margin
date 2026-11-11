@@ -84,7 +84,7 @@ struct AutoReplySection: View {
     private func connect() async {
         do {
             try await model.requestAccess([.autoReply], for: account) { url, scheme in
-                try await webAuthentication.authenticate(using: url, callbackURLScheme: scheme, preferredBrowserSession: .shared)
+                try await webAuthentication.authenticate(using: url, callbackURLScheme: scheme, preferredBrowserSession: .ephemeral)
             }
         } catch let failure as ASWebAuthenticationSessionError where failure.code == .canceledLogin {
             return

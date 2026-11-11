@@ -17,6 +17,8 @@ public struct AccountSetupView: View {
     @State private var preset: ProviderPreset?
     @State private var connection: AccountConnection = .sample
     @State private var username = ""
+    /// A custom domain at iCloud whose own address iCloud refused: now asks for the @icloud.com one.
+    @State private var asksICloudAddress = false
     @State private var secret = ""
     @State private var usePassword = false
     @State private var showsServers = false
@@ -236,8 +238,21 @@ public struct AccountSetupView: View {
                     .fixedSize(horizontal: false, vertical: true)
             } else {
                 if let preset, !preset.steps.isEmpty { SetupSteps(preset: preset) }
-                SecureField(secretLabel, text: $secret).fieldStyle()
-                    .onSubmit { Task { await primary() } }
+                if needsICloudAddress && asksICloudAddress {
+                    // iCloud refused the custom-domain address: it wants the @icloud.com one.
+                    TextField("Your @icloud.com address", text: $username).fieldStyle().emailAddressEntry()
+                    Text("\(domain) gets its mail through iCloud. Sign in with the Apple Account's @icloud.com address; mail still goes out from \(address).")
+                        .font(TypeScale.label)
+                        .foregroundStyle(Ink.tertiary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                HStack(spacing: Space.s) {
+                    SecureField(secretLabel, text: $secret).fieldStyle()
+                        .onSubmit { Task { await primary() } }
+                    if case .appPassword = preset?.signIn {
+                        PasteSecret { secret = $0 }
+                    }
+                }
                 if let note = preset?.note {
                     Text(verbatim: note).font(TypeScale.label).foregroundStyle(Ink.tertiary).fixedSize(horizontal: false, vertical: true)
                 }
@@ -267,6 +282,12 @@ public struct AccountSetupView: View {
 
     private var usesOAuth: Bool { oauthClient != nil && !usePassword }
 
+    /// A custom domain (gillian@goud.ca) whose mail is at iCloud: Apple only accepts the Apple
+    /// Account's @icloud.com address as the username.
+    private var needsICloudAddress: Bool {
+        preset?.id == "icloud" && !["icloud.com", "me.com", "mac.com"].contains(domain.lowercased())
+    }
+
     private var isToken: Bool {
         if case .jmap = connection, case .token = preset?.signIn { return true }
         return false
@@ -285,6 +306,7 @@ public struct AccountSetupView: View {
         case .choose: false
         case .address: hasAddress
         case .signIn: hasAddress && (usesOAuth || (preset?.acceptsPasswords != false && !secret.isEmpty))
+            && (!(needsICloudAddress && asksICloudAddress) || username.contains("@"))
         }
     }
 
@@ -336,7 +358,7 @@ public struct AccountSetupView: View {
             return
         }
         do {
-            let email = EmailAddress(name: name, address: address)
+            var email = EmailAddress(name: name.trimmingCharacters(in: .whitespaces).isEmpty ? nil : name, address: address)
             let user = username.trimmingCharacters(in: .whitespaces).isEmpty ? address : username
             var auth: AuthMethod = isToken ? .token : .password(username: user)
             var stored = secret
@@ -348,12 +370,18 @@ public struct AccountSetupView: View {
                 let tokens = try await client.exchange(callback: callback, verifier: request.verifier, state: request.state)
                 stored = String(decoding: try JSONEncoder().encode(tokens), as: UTF8.self)
                 auth = .oauth(provider: client.provider, username: address)
+                // The name the account goes by, unless one was typed.
+                if email.name == nil { email.name = tokens.signedInName }
             }
             let account = MailAccount(label: address, address: email, connection: connection, auth: auth, providerID: preset?.id)
             try await model.add(account, secret: stored)
             dismiss()
         } catch let failure as ASWebAuthenticationSessionError where failure.code == .canceledLogin {
             return
+        } catch MailError.authenticationFailed(_) where needsICloudAddress && !asksICloudAddress {
+            // Tried the custom-domain address first; iCloud wants the Apple Account's @icloud.com one.
+            withAnimation(Motion.quick) { asksICloudAddress = true }
+            self.error = nil
         } catch {
             self.error = error.localizedDescription
         }
@@ -471,17 +499,52 @@ private struct SetupSteps: View {
                 }
             }
             if let url = preset.setupURL, let host = url.host() {
-                Button { openURL(url) } label: {
-                    Label { Text("Open \(host)") } icon: { Image(systemName: "arrow.up.right") }
+                if case .appPassword = preset.signIn {
+                    // The shortcut: straight to the page where the password is made.
+                    Button { openURL(url) } label: {
+                        Label { Text("Make an app password") } icon: { Image(systemName: "arrow.up.right") }
+                    }
+                    .buttonStyle(InkButtonStyle())
+                    .padding(.top, Space.xs)
+                } else {
+                    Button { openURL(url) } label: {
+                        Label { Text("Open \(host)") } icon: { Image(systemName: "arrow.up.right") }
+                    }
+                    .buttonStyle(QuietButtonStyle())
+                    .padding(.top, Space.xs)
                 }
-                .buttonStyle(QuietButtonStyle())
-                .padding(.top, Space.xs)
             }
         }
         .padding(Space.m)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Paper.sheet, in: RoundedRectangle(cornerRadius: Radius.row, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: Radius.row, style: .continuous).strokeBorder(Line.hairline))
+    }
+}
+
+/// Pastes a copied app password into the field, spaces and line breaks taken out. On iPhone the
+/// system's paste button, which doesn't ask for permission; on the Mac a plain button.
+private struct PasteSecret: View {
+    let paste: (String) -> Void
+
+    var body: some View {
+        #if os(iOS)
+        PasteButton(payloadType: String.self) { strings in
+            if let text = strings.first { paste(Self.cleaned(text)) }
+        }
+        .labelStyle(.iconOnly)
+        .buttonBorderShape(.capsule)
+        #else
+        Button("Paste") {
+            if let text = NSPasteboard.general.string(forType: .string) { paste(Self.cleaned(text)) }
+        }
+        .buttonStyle(QuietButtonStyle())
+        .tip("Paste the app password you copied")
+        #endif
+    }
+
+    static func cleaned(_ text: String) -> String {
+        text.filter { !$0.isWhitespace }
     }
 }
 

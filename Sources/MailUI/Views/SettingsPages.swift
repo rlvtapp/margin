@@ -114,7 +114,7 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
         case .connections: ["mcp", "agent", "cursor", "codex", "claude code", "vs code", "permissions"]
         case .backup: ["restore", "export", "recovery key", "icloud", "sync", "keychain", "link device", "another device", "automatic"]
         case .experimental: ["labs", "beta", "block editor", "slash", "headings", "lists", "checklist", "formatting", "blocks"]
-        case .about: ["version", "license", "open source"]
+        case .about: ["version", "made by", "welcome"]
         }
     }
 
@@ -170,18 +170,24 @@ struct SettingsHeader: View {
 
     init(_ page: SettingsPage) { self.page = page }
 
+    /// On the page itself, not in a box: the page's title, nothing above it.
     var body: some View {
         Section {
+        } header: {
             HStack(spacing: Space.m) {
                 icon
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(verbatim: page == .about ? Self.appName : page.title).font(.headline)
+                    Text(verbatim: page == .about ? Self.appName : page.title)
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(Ink.primary)
                     Text(verbatim: page.blurb).font(.subheadline).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 0)
             }
-            .padding(.vertical, 4)
+            .textCase(nil)
+            .padding(.top, 4)
+            .padding(.bottom, 6)
         }
     }
 
@@ -250,20 +256,50 @@ struct SettingsEmptyRow: View {
 struct NotificationSettings: View {
     @Bindable var model: MailModel
 
+    static func symbol(_ alerts: NewMailAlerts) -> String {
+        switch alerts {
+        case .people: "person.2.fill"
+        case .all: "tray.full.fill"
+        case .vips: "star.fill"
+        case .none: "bell.slash.fill"
+        }
+    }
+
+    static func title(_ alerts: NewMailAlerts) -> String {
+        switch alerts {
+        case .people: String(localized: "People you know")
+        case .all: String(localized: "All new mail")
+        case .vips: String(localized: "Only VIPs")
+        case .none: String(localized: "Nothing")
+        }
+    }
+
+    static func detail(_ alerts: NewMailAlerts) -> String {
+        switch alerts {
+        case .people: String(localized: "Contacts, VIPs and people you've written to, plus sign-in codes. Newsletters and updates stay quiet.")
+        case .all: String(localized: "Every message that lands in your inboxes.")
+        case .vips: String(localized: "Just the people you marked as VIP, plus sign-in codes.")
+        case .none: String(localized: "No notifications. The badge still counts unread mail.")
+        }
+    }
+
     var body: some View {
         Form {
             SettingsHeader(.notifications)
             Section {
-                Picker("Notify me about", selection: $model.newMailAlerts) {
-                    ForEach(NewMailAlerts.allCases, id: \.self) { Text($0.title).tag($0) }
-                }
-                Picker("Sound", selection: Binding(get: { model.alertSound }, set: { model.alertSound = $0 })) {
+                ChoiceList(options: [NewMailAlerts.people, .all, .vips, .none], selection: $model.newMailAlerts,
+                           symbol: Self.symbol, title: Self.title, detail: Self.detail)
+            } header: {
+                Text("Notify me about")
+            }
+            Section {
+                Picker(selection: Binding(get: { model.alertSound }, set: { model.alertSound = $0 })) {
                     ForEach(AlertSound.choices) { Text(verbatim: $0.title).tag($0) }
-                }
-                Picker("Meeting reminders", selection: Binding(get: { model.eventReminderMinutes }, set: { model.eventReminderMinutes = $0 })) {
+                } label: { SettingLabel("Sound", detail: "Played with each notification.") }
+                Picker(selection: Binding(get: { model.eventReminderMinutes }, set: { model.eventReminderMinutes = $0 })) {
                     Text("Off").tag(0)
                     ForEach([5, 10, 15, 30], id: \.self) { Text("\($0) minutes before").tag($0) }
-                }
+                } label: { SettingLabel("Meeting reminders", detail: "A heads-up before meetings from your invitations.") }
             } footer: {
                 Text("Each mailbox can have its own setting: Mailboxes → Edit…. Workspaces you're not in stay quiet.")
             }
@@ -287,13 +323,17 @@ struct NotificationSettings: View {
             }
             #endif
             Section {
-                Toggle("Copy sign-in codes when they arrive", isOn: Binding(get: { model.copiesSignInCodes }, set: { model.copiesSignInCodes = $0 }))
+                Toggle(isOn: Binding(get: { model.copiesSignInCodes }, set: { model.copiesSignInCodes = $0 })) {
+                    SettingLabel("Copy sign-in codes when they arrive", detail: "Ready to paste the moment the email lands.")
+                }
                 #if os(macOS)
                 if MailModel.canTypeIntoOtherApps {
-                    Toggle("Type new codes into the field you're in", isOn: Binding(get: { model.typesSignInCodes }, set: { on in
+                    Toggle(isOn: Binding(get: { model.typesSignInCodes }, set: { on in
                         model.typesSignInCodes = on
                         if on { MailModel.requestTypingPermission() }
-                    }))
+                    })) {
+                        SettingLabel("Type new codes into the field you're in", detail: "No pasting: the code appears where your cursor is.")
+                    }
                 } else {
                     LabeledContent("Type codes for you") { Text("Needs the direct download of Margin").foregroundStyle(Ink.tertiary) }
                 }
@@ -332,7 +372,7 @@ struct ReadingSettings: View {
         Form {
             SettingsHeader(.reading)
             Section {
-                LabeledContent("Text size") {
+                LabeledContent {
                     HStack(spacing: Space.s) {
                         Image(systemName: "textformat.size.smaller").foregroundStyle(.secondary)
                         Slider(value: $model.textScale, in: 0.8...2).frame(maxWidth: 180)
@@ -340,23 +380,46 @@ struct ReadingSettings: View {
                         Text("\(Int((model.textScale * 100).rounded()))%").monospacedDigit().foregroundStyle(.secondary)
                             .frame(width: 44, alignment: .trailing)
                     }
-                }
-                Picker("Show mail as", selection: $model.prefersPlainText) {
-                    Text("Original layout").tag(false)
-                    Text("Plain text").tag(true)
-                }
-                Toggle("Show conversations as a chat", isOn: Binding(get: { model.showsAsChat }, set: { model.showsAsChat = $0 }))
-                Toggle("Dark mode for emails", isOn: $model.darkensMail)
-                Picker("Waiting for reply after", selection: $model.followUpDays) {
-                    ForEach([2, 3, 5, 7], id: \.self) { Text("\($0) days").tag($0) }
-                }
-            } footer: {
-                Text("Original layout shows HTML mail as its sender designed it, with no scripts, and pictures from the web stay off until you allow them. Dark mode for emails shows light emails without pictures in dark colors while Margin is dark. Emails with pictures, and every email when it's off, sit on a white sheet.")
+                } label: { SettingLabel("Text size", detail: "For the mail you read; the rest of Margin stays the same.") }
+                // A line of mail at the chosen size.
+                Text("Hi Alex, the flat by the river is free in May. Shall I book it?")
+                    .font(.system(size: 15 * model.textScale))
+                    .foregroundStyle(Ink.secondary)
+                    .padding(.vertical, 2)
+            } header: {
+                Text("Text")
             }
             Section {
-                Toggle("Block trackers, even when pictures are loaded", isOn: Binding(get: { model.blocksTrackers }, set: { model.blocksTrackers = $0 }))
+                ChoiceList(options: [false, true], selection: $model.prefersPlainText,
+                           symbol: { $0 ? "text.alignleft" : "photo.on.rectangle" },
+                           title: { $0 ? String(localized: "Plain text") : String(localized: "Original layout") },
+                           detail: { $0 ? String(localized: "Just the words, in Margin's own font. Fastest and calmest.")
+                                        : String(localized: "As the sender designed it, without scripts. Pictures from the web wait until you allow them.") })
+            } header: {
+                Text("Show mail as")
+            }
+            Section {
+                Toggle(isOn: Binding(get: { model.showsAsChat }, set: { model.showsAsChat = $0 })) {
+                    SettingLabel("Show conversations as a chat", detail: "Short back-and-forth reads as bubbles instead of a stack of emails.")
+                }
+                Toggle(isOn: $model.offersTranslation) {
+                    SettingLabel("Offer to translate", detail: "Mail in a language you don't read gets a Translate button. It's translated on this device.")
+                }
+                Toggle(isOn: $model.darkensMail) {
+                    SettingLabel("Dark mode for emails", detail: "Light emails without pictures turn dark with Margin. Emails with pictures sit on a white sheet.")
+                }
+                Picker(selection: $model.followUpDays) {
+                    ForEach([2, 3, 5, 7], id: \.self) { Text("\($0) days").tag($0) }
+                } label: { SettingLabel("Waiting for reply after", detail: "When mail you sent counts as unanswered.") }
+            }
+            Section {
+                Toggle(isOn: Binding(get: { model.blocksTrackers }, set: { model.blocksTrackers = $0 })) {
+                    SettingLabel("Block trackers, even when pictures are loaded", detail: "Senders can't see when you open their mail.")
+                }
                 #if os(macOS)
-                Toggle("Hide Margin from screen sharing and recordings", isOn: Binding(get: { model.hidesFromScreenSharing }, set: { model.hidesFromScreenSharing = $0 }))
+                Toggle(isOn: Binding(get: { model.hidesFromScreenSharing }, set: { model.hidesFromScreenSharing = $0 })) {
+                    SettingLabel("Hide Margin from screen sharing and recordings", detail: "Others in a call see an empty window instead of your mail.")
+                }
                 #endif
             } header: {
                 Text("Privacy")
@@ -377,10 +440,10 @@ struct WritingSettings: View {
         Form {
             SettingsHeader(.writing)
             Section {
-                Picker("Undo send", selection: $model.undoSendDelay) {
+                Picker(selection: $model.undoSendDelay) {
                     Text("Off").tag(0)
                     ForEach([5, 10, 20, 30], id: \.self) { Text("\($0) seconds").tag($0) }
-                }
+                } label: { SettingLabel("Undo send", detail: "How long you have to take a message back after Send.") }
                 #if os(macOS)
                 LabeledContent("Email links") {
                     let _ = model.defaultAppRevision

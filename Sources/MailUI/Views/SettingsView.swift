@@ -46,6 +46,11 @@ public struct MailSettingsView: View {
             detail
                 .environment(\.settingsTint, page.tint)
                 .navigationTitle(Text(verbatim: page.title))
+                // The page says its own name; no second one in the window's title bar.
+                #if os(macOS)
+                .toolbar(removing: .title)
+                .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+                #endif
         }
         .frame(width: 780, height: 580)
         .sheet(isPresented: $model.isAddingAccount) { AccountSetupView(model: model) }

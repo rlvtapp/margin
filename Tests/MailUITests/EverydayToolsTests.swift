@@ -76,6 +76,20 @@ import Testing
         #expect(model.waitingCount == 2)
     }
 
+    /// They answered with a meeting invitation instead of a reply (Outlook then moves it to
+    /// Deleted Items): you're no longer waiting on them.
+    @Test func anInvitationCountsAsAnAnswer() async throws {
+        let model = await model()
+        let account = try #require(model.accounts.first)
+        let sam = EmailAddress(name: "Sam Okafor", address: "sam@kettle.example")
+        let invitation = MailMessage(id: "invite-1", mailboxID: "Deleted Items", messageID: "invite-1@kettle.example", from: sam,
+                                     to: [account.address], subject: "Invitation: Renewal call @ Tue 15:00", date: Date())
+        await model.environment.cache.saveThreads([MailThread(id: "invite-1", messages: [invitation])], account: account.id,
+                                                  mailbox: "Deleted Items")
+        let waiting = await model.waitingThreads(nil)
+        #expect(Set(waiting.map(\.subject)) == ["Flat keys"])
+    }
+
     @Test func bulkActionsAndFilters() async throws {
         let model = await model()
         let threads = Array(model.visibleThreads.prefix(2))

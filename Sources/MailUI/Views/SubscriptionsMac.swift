@@ -95,7 +95,6 @@ private struct SubscriptionsColumn: View {
                     .lineLimit(1)
             }
             Spacer(minLength: Space.s)
-            IconButton("sidebar.left", help: model.isSidebarHidden ? "Show sidebar  ⌃⌘S" : "Hide sidebar  ⌃⌘S") { model.isSidebarHidden.toggle() }
         }
         .padding(.leading, Space.l)
         .padding(.trailing, Space.s)

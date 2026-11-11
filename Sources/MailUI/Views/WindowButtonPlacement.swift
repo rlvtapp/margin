@@ -1,6 +1,6 @@
+import SwiftUI
 #if os(macOS)
 import AppKit
-import SwiftUI
 
 /// Puts the window's close, minimise and zoom buttons in the middle of Margin's top bar instead
 /// of at the system's default height, with as much room to their left as above and below them.

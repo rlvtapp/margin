@@ -21,19 +21,9 @@ struct SidebarView: View {
             header
                 .padding(.top, Space.m)
                 .padding(.horizontal, 14)
+            // Asking about your mail lives in the command palette (⌘K, or Q).
             HStack(spacing: Space.s) {
                 ComposeButton { model.startCompose() }
-                // Ask sits beside writing: a question about your mail is one click away.
-                Button { model.isAsking = true } label: {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Ink.primary)
-                        .frame(width: 34, height: 34)
-                        .glassCapsule(tint: nil)
-                }
-                .buttonStyle(.plain)
-                .help("Ask about your mail")
-                .accessibilityLabel("Ask")
             }
                 .padding(.horizontal, 10)
                 .padding(.top, Space.m)
@@ -75,6 +65,7 @@ struct SidebarView: View {
                         .padding(.horizontal, 8)
                         .padding(.vertical, Space.m)
                     SidebarRow(title: "Home", symbol: "house", count: nil, isSelected: model.place.isHome) { model.go(to: .home(group: nil)) }
+                    SidebarRow(title: "Calendar", symbol: "calendar", count: nil, isSelected: model.place == .calendar) { model.go(to: .calendar) }
                     let rarely = model.newsletterSuggestions.count
                     SidebarRow(title: "Subscriptions", symbol: "newspaper", count: rarely > 0 ? rarely : nil,
                                isSelected: model.place == .subscriptions) { model.go(to: .subscriptions) }
@@ -144,7 +135,7 @@ struct SidebarView: View {
             .buttonStyle(.plain)
             .padding(.top, Space.l)
             .padding(.trailing, 8)
-            .help("New folder")
+            .tip("New folder")
         }
         // Folders inside others are indented under them. Drag a folder onto another to put it
         // before that one.
@@ -273,9 +264,11 @@ struct SidebarView: View {
             foldTitle("Labels", key: "labels")
             if !isFolded("labels") {
                 ForEach(model.allLabels, id: \.self) { label in
-                    SidebarRow(title: label, symbol: "tag", count: counts[label], isSelected: model.place == .home(group: label)) {
+                    SidebarRow(title: label, symbol: "tag.fill", count: counts[label], isSelected: model.place == .home(group: label),
+                               tint: GroupStyle.color(label)) {
                         model.go(to: .home(group: label))
                     }
+                    .contextMenu { LabelColorMenu(model: model, label: label) }
                 }
             }
         }
@@ -337,7 +330,7 @@ private struct ComposeButton: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
-        .help("New message  ⌘N")
+        .tip("New message  ⌘N")
     }
 }
 
@@ -364,6 +357,8 @@ struct SidebarRow: View {
     let symbol: String
     let count: Int?
     let isSelected: Bool
+    /// The icon's own colour (a label's); otherwise the usual grey.
+    var tint: Color? = nil
     let action: () -> Void
     @State private var isHovered = false
 
@@ -374,8 +369,9 @@ struct SidebarRow: View {
 
     /// A name that is already translated or comes from the server (a folder), shown as is.
     @_disfavoredOverload
-    init(title: String, symbol: String, count: Int?, isSelected: Bool, action: @escaping () -> Void) {
+    init(title: String, symbol: String, count: Int?, isSelected: Bool, tint: Color? = nil, action: @escaping () -> Void) {
         self.init(title: Text(verbatim: title), symbol: symbol, count: count, isSelected: isSelected, action: action)
+        self.tint = tint
     }
 
     private init(title: Text, symbol: String, count: Int?, isSelected: Bool, action: @escaping () -> Void) {
@@ -391,7 +387,7 @@ struct SidebarRow: View {
             HStack(spacing: Space.s) {
                 Image(systemName: symbol)
                     .font(.system(size: 12))
-                    .foregroundStyle(isSelected ? Ink.primary : Ink.tertiary)
+                    .foregroundStyle(tint ?? (isSelected ? Ink.primary : Ink.tertiary))
                     .frame(width: 16)
                 title
                     .font(isSelected ? TypeScale.rowStrong : TypeScale.row)
@@ -418,4 +414,25 @@ struct SidebarRow: View {
 private struct FolderNaming: Equatable {
     var accountID: UUID
     var mailbox: Mailbox?
+}
+
+/// A label's Color menu: the palette by name, with a check on the one in use, and Automatic.
+struct LabelColorMenu: View {
+    let model: MailModel
+    let label: String
+
+    var body: some View {
+        let current = model.labelColors[label.lowercased()]
+        Menu("Color") {
+            Button { model.setColor(nil, forLabel: label) } label: {
+                if current == nil { Label("Automatic", systemImage: "checkmark") } else { Text("Automatic") }
+            }
+            Divider()
+            ForEach(Array(LabelColors.names.enumerated()), id: \.offset) { index, name in
+                Button { model.setColor(index, forLabel: label) } label: {
+                    if current == index { Label(name, systemImage: "checkmark") } else { Text(verbatim: name) }
+                }
+            }
+        }
+    }
 }

@@ -57,10 +57,11 @@ extension MailModel {
     static let backedUpSettings = [
         "assistantSettings", "connectionSettings", "prefersPlainText", "textScale", "newMailAlerts", "undoSendDelay",
         "followUpDays", "appearance", "accentIndex", "appIcon", "appIconDark", "compactRows", "layout", "singleKeyShortcuts", "keyOverrides",
-        "insetPanel", "showsNextUp", "colorBlindSafe", "increaseContrast", "underlineLinks", "darkensMail", "reduceMotion",
+        "insetPanel", "showsNextUp", "labelColors", "colorBlindSafe", "increaseContrast", "underlineLinks", "darkensMail", "reduceMotion",
         "learnsWriting", "suggestsReplies", "swipeLeading", "swipeTrailing", "backupSchedule",
         "writingInstructions", "usesBlockComposer", "vipAddresses", "blocksTrackers", "hidesFromScreenSharing", "alertSound", "dropDownAlerts",
         "showsMenuBarItem", "accountAlerts", "eventReminderMinutes", "emailGroups", "sortsNewMail", "showsAsChat",
+        "offersTranslation",
     ]
 
     /// A backup file. Secrets (mail passwords, sign-ins, assistant keys) are included only
@@ -135,6 +136,7 @@ extension MailModel {
         increaseContrast = defaults.bool(forKey: "increaseContrast")
         underlineLinks = defaults.bool(forKey: "underlineLinks")
         darkensMail = defaults.object(forKey: "darkensMail") as? Bool ?? true
+        offersTranslation = defaults.object(forKey: "offersTranslation") as? Bool ?? true
         reduceMotion = defaults.bool(forKey: "reduceMotion")
     }
 

@@ -24,6 +24,8 @@ public enum Place: Hashable, Sendable {
     case home(group: String?)
     /// Mail from the people marked as VIPs.
     case vips(account: UUID?)
+    /// Meetings from invitations in the mail, and from calendars Margin may read.
+    case calendar
 
     public static let allInboxes = Place.inbox(account: nil, split: nil)
 
@@ -35,7 +37,7 @@ public enum Place: Hashable, Sendable {
         case .inbox(let account, _), .starred(let account): account
         case .mailbox(let account, _): account
         case .snoozed(let account), .waiting(let account), .vips(let account): account
-        case .combined, .scheduled, .subscriptions, .search, .home: nil
+        case .combined, .scheduled, .subscriptions, .search, .home, .calendar: nil
         }
     }
 
@@ -113,7 +115,7 @@ public struct MailEnvironment: @unchecked Sendable {
         MailEnvironment(
             appName: "Margin",
             accounts: .standard(appName: "Margin"),
-            keychain: Keychain(service: Bundle.main.bundleIdentifier ?? "dev.margin.Margin"),
+            keychain: Keychain(service: Bundle.main.bundleIdentifier ?? "app.relevate.margin"),
             oauth: .fromInfoPlist()
         )
     }
@@ -140,12 +142,15 @@ public struct Notice: Identifiable, Equatable {
     /// What Undo (Z) would take back, if anything.
     public var undo: UndoKind?
     public var isError = false
+    /// While a message waits to go out: from now until it sends, drawn as a ring that fills.
+    public var countdown: ClosedRange<Date>?
     public var canUndo: Bool { undo != nil }
 
-    public init(text: String, undo: UndoKind? = nil, isError: Bool = false) {
+    public init(text: String, undo: UndoKind? = nil, isError: Bool = false, countdown: ClosedRange<Date>? = nil) {
         self.text = text
         self.undo = undo
         self.isError = isError
+        self.countdown = countdown
     }
 }
 
@@ -247,6 +252,8 @@ public final class MailModel {
     /// The Ask box: open, and its latest answer.
     public var isAsking = false
     public internal(set) var askAnswer: MailAnswer?
+    /// Where the question being asked is: searching, reading, or the answer so far.
+    public internal(set) var askProgress: AskProgress?
     public internal(set) var askSources: [MailThread] = []
     /// Past Ask conversations, newest first, kept on this device.
     public internal(set) var askChats: [AskChat] = []
@@ -259,6 +266,10 @@ public final class MailModel {
     public internal(set) var templates: [MailTemplate]
     /// Invitations answered in this session, by event id.
     public internal(set) var rsvps: [String: CalendarInvite.Response] = [:]
+    /// Events read from accounts' own calendars (with Calendar access on), by account.
+    public internal(set) var calendarEvents: [UUID: [CalendarEvent]] = [:]
+    /// The days `calendarEvents` covers.
+    @ObservationIgnored var calendarEventsRange: ClosedRange<Date>?
     public internal(set) var waitingCount = 0
     var pendingSend: PendingSend? { didSet { keepUnsent() } }
     var lastSnoozed: [String] = []
@@ -281,6 +292,8 @@ public final class MailModel {
     public internal(set) var isLearningWriting = false
     /// Short replies offered for an open conversation, by thread id.
     public internal(set) var replySuggestions: [MailThread.ID: [String]] = [:]
+    /// The message each conversation's suggestions answer, so a new message gets new ones.
+    @ObservationIgnored var replySuggestionsFor: [MailThread.ID: String] = [:]
     /// Offer short replies when mail from a person opens.
     public var suggestsReplies: Bool {
         get { environment.defaults.object(forKey: "suggestsReplies") as? Bool ?? true }
@@ -302,7 +315,12 @@ public final class MailModel {
     /// Folders opened this session, so going back shows them at once while they refresh.
     @ObservationIgnored var folderMemory: [Place: [MailThread]] = [:]
     /// Each account's recent Sent mail, so a conversation shows both sides (`conversation(_:)`).
-    var sentMail: [UUID: [MailMessage]] = [:]
+    var sentMail: [UUID: [MailMessage]] = [:] { didSet { sentIndexCache = nil } }
+    /// What's been sent, indexed once per change of `sentMail` (see `sentIndex`).
+    @ObservationIgnored var sentIndexCache: SentIndex?
+    @ObservationIgnored var emailGroupsCache: (revision: Int, groups: [EmailGroup])?
+    /// Home's notes per conversation, valid while `key` holds (see `marginNote(for:)`).
+    @ObservationIgnored var marginNoteCache: (key: Int, notes: [String: MarginNote?])?
     @ObservationIgnored var sentMailLoaded: [UUID: Date] = [:]
     /// Sign-in codes and links already looked for, by message and whether its body was there.
     @ObservationIgnored var signInCodes: [String: String?] = [:]
@@ -333,10 +351,15 @@ public final class MailModel {
         }
     }
     public var compactRows: Bool { didSet { environment.defaults.set(compactRows, forKey: "compactRows") } }
+    /// On the Mac: names beside the icons above a conversation (Done, Reply…), or icons only.
+    public var buttonNames: Bool { didSet { environment.defaults.set(buttonNames, forKey: "buttonNames") } }
     /// On the Mac: the list and reader edge to edge on the window, or in a rounded inset panel.
     public var insetPanel: Bool { didSet { environment.defaults.set(insetPanel, forKey: "insetPanel") } }
     /// On the Mac: the Next up column right of the reader, when the window is wide enough.
     public var showsNextUp: Bool { didSet { environment.defaults.set(showsNextUp, forKey: "showsNextUp") } }
+    /// Next up (the column, the badge in the top bar and its button) is set aside for now while
+    /// it's reworked; the code and the saved preference stay, so turning this back on restores it.
+    public static let nextUpAvailable = true
     /// Whether the Next up column is on screen now (it needs the setting, the layout and the room).
     public var isNextUpOnScreen = false
     public var layout: ListLayout {
@@ -358,6 +381,10 @@ public final class MailModel {
     public var underlineLinks: Bool { didSet { environment.defaults.set(underlineLinks, forKey: "underlineLinks") } }
     /// In dark mode, light emails are shown dark (colours turned around, pictures kept).
     public var darkensMail: Bool { didSet { environment.defaults.set(darkensMail, forKey: "darkensMail") } }
+    /// Mail in a language the reader doesn't read gets a Translate line above it.
+    public var offersTranslation: Bool { didSet { environment.defaults.set(offersTranslation, forKey: "offersTranslation") } }
+    /// Messages shown translated, in place.
+    public let translations = MessageTranslations()
     public var reduceMotion: Bool { didSet { environment.defaults.set(reduceMotion, forKey: "reduceMotion") } }
     public var singleKeyShortcuts: Bool { didSet { environment.defaults.set(singleKeyShortcuts, forKey: "singleKeyShortcuts") } }
     /// Changed keys: command id → key.
@@ -413,6 +440,9 @@ public final class MailModel {
     public internal(set) var isRefreshingContacts = false
     /// What each account's extra API tokens allow (contacts, calendar, rooms).
     public internal(set) var apiAccess: [UUID: Set<APIAccess>] = [:]
+    /// Outlook's own reactions read through Graph (opt-in), by `bodyKey`, and when each was read.
+    var outlookReactions: [String: [MailReaction]] = [:]
+    var outlookReactionsRead: [String: Date] = [:]
     var contactSettingsRevision = 0
     /// Sync with iCloud: why it can't run, when it last ran, and whether it's running.
     public internal(set) var syncProblem: String?
@@ -426,6 +456,14 @@ public final class MailModel {
     var restoreUndo: RestoreUndo?
     /// What AI apps changed, newest last, so `undo_last` can put it back. Kept for this run only.
     var agentChanges: [AgentChange] = []
+    /// Margin's own assistant taking actions ("Sort my mail"): the latest run, shown with its
+    /// steps until dismissed, and the task doing it.
+    public internal(set) var agentRun: AgentRun?
+    var agentTask: Task<Void, Never>?
+    /// The "Ask Margin to…" sheet on iPhone and iPad.
+    public var isAgentPromptOpen = false
+    /// Bumped when the provider for actions, saved providers or what they support change.
+    public var actionSettingsRevision = 0
     /// Sent conversations no longer tracked as waiting for a reply (by LabelStore key).
     var dismissedWaiting: Set<String>?
 
@@ -435,7 +473,13 @@ public final class MailModel {
 
     public init(environment: MailEnvironment) {
         self.environment = environment
-        accounts = environment.accounts.load()
+        // The sample mailboxes only stand in until there's a real one; leftovers go.
+        var loaded = environment.accounts.load()
+        if loaded.contains(where: { $0.connection != .sample }) && loaded.contains(where: { $0.connection == .sample }) {
+            loaded.removeAll { $0.connection == .sample }
+            try? environment.accounts.save(loaded)
+        }
+        accounts = loaded
         credentials = KeychainCredentials(keychain: environment.keychain, oauth: environment.oauth)
         labelStore = environment.labels
         prefersPlainText = environment.defaults.bool(forKey: "prefersPlainText")
@@ -444,6 +488,7 @@ public final class MailModel {
         appIcon = AppIconChoice(rawValue: environment.defaults.string(forKey: "appIcon") ?? "") ?? .blue
         appIconDark = environment.defaults.bool(forKey: "appIconDark")
         compactRows = environment.defaults.bool(forKey: "compactRows")
+        buttonNames = environment.defaults.object(forKey: "buttonNames") as? Bool ?? true
         layout = ListLayout(rawValue: environment.defaults.string(forKey: "layout") ?? "") ?? .panels
         insetPanel = environment.defaults.bool(forKey: "insetPanel")
         showsNextUp = environment.defaults.object(forKey: "showsNextUp") as? Bool ?? true
@@ -452,6 +497,7 @@ public final class MailModel {
         increaseContrast = environment.defaults.bool(forKey: "increaseContrast")
         underlineLinks = environment.defaults.bool(forKey: "underlineLinks")
         darkensMail = environment.defaults.object(forKey: "darkensMail") as? Bool ?? true
+        offersTranslation = environment.defaults.object(forKey: "offersTranslation") as? Bool ?? true
         reduceMotion = environment.defaults.bool(forKey: "reduceMotion")
         keyOverrides = environment.defaults.dictionary(forKey: "keyOverrides") as? [String: String] ?? [:]
         let scale = environment.defaults.double(forKey: "textScale")
@@ -495,6 +541,7 @@ public final class MailModel {
         case .waiting: String(localized: "Waiting for reply")
         case .scheduled: String(localized: "Scheduled")
         case .subscriptions: String(localized: "Subscriptions")
+        case .calendar: String(localized: "Calendar")
         case .home(let group): group ?? String(localized: "Home")
         case .vips: String(localized: "VIPs")
         case .search(let text): String(localized: "“\(text)”")
@@ -518,7 +565,7 @@ public final class MailModel {
         case .starred(let account): allInboxesThreads(account).filter(\.isStarred)
         case .snoozed(let account): allInboxesThreads(account).filter { isSnoozed($0) }
         case .mailbox, .combined, .waiting, .search: folder
-        case .scheduled, .subscriptions: []
+        case .scheduled, .subscriptions, .calendar: []
         case .vips(let account): vipThreads(account)
         case .home(let group):
             allInboxesThreads(nil).filter { thread in
@@ -572,13 +619,24 @@ public final class MailModel {
     }
 
     public func start() async {
+        // Avatars everywhere ask this model for people's pictures.
+        ContactPictures.shared.load = { [weak self] address in await self?.pictureData(for: address) }
         if !hasOnboarded && !environment.isPreview { isShowingOnboarding = true }
+        await forgetRemovedAccounts()
+        pruneLearnedAliases()
         await loadSavedMail()
+        // Your Sent mail, so Home knows what you've already answered (from any app).
+        for account in accounts { await loadSavedSentMail(for: account) }
+        fillPlaceholderNames()
         await loadAPIAccess()
         if !environment.isPreview { prepareSync(); await recoverUnsent() }
         await syncNow()
         await reload()
+        // Meetings from invitations anywhere in saved mail, without holding up the rest.
+        Task { await findInvites() }
+        await refreshCalendar()
         await refreshContacts()
+        await learnProviderAliases()
         await refreshNewsletterHistory()
         await learnFromSentMailIfNew()
     }
@@ -835,11 +893,26 @@ public final class MailModel {
             environment.keychain.deleteAll(account: account.id)
             throw error
         }
+        // Your first real mailbox replaces the sample ones, mail and all.
+        if account.connection != .sample {
+            for sample in accounts where sample.connection == .sample {
+                providers[sample.id] = nil
+                mailboxes[sample.id] = nil
+                inboxes[sample.id] = nil
+                loadErrors[sample.id] = nil
+            }
+            accounts.removeAll { $0.connection == .sample }
+        }
         accounts.append(account)
         try? environment.accounts.save(accounts)
         if clock != nil { startWatching() }
-        await reload()
         go(to: .inbox(account: account.id, split: nil))
+        // Access is confirmed; the mail itself comes in the background, so adding is quick.
+        Task {
+            await forgetRemovedAccounts()
+            await reload()
+            await loadSavedSentMail(for: account)
+        }
     }
 
     public func remove(_ id: UUID) {

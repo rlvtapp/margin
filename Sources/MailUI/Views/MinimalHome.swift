@@ -82,6 +82,7 @@ struct MinimalHomeHeader: View {
 
     // MARK: Tabs
 
+    /// The groups as glass tabs; each jumps to its section on the page.
     private var tabs: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             GlassChipRow {

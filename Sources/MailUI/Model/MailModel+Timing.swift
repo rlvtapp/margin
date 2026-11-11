@@ -90,7 +90,9 @@ extension MailModel {
             }
         }
         pendingSend = PendingSend(state: state, isReply: isReply, threadID: selectedThreadID, task: task)
-        notice = Notice(text: delay > 0 ? String(localized: "Sending…") : String(localized: "Sent"), undo: delay > 0 ? .send : nil)
+        let now = Date()
+        notice = Notice(text: delay > 0 ? String(localized: "Sending…") : String(localized: "Sent"), undo: delay > 0 ? .send : nil,
+                        countdown: delay > 0 ? now...now.addingTimeInterval(TimeInterval(delay)) : nil)
     }
 
     func undoSend() {
@@ -240,8 +242,29 @@ extension MailModel {
         }
         let me = Set(accounts.map { $0.address.address.lowercased() })
         let dismissed = dismissedWaitingKeys
-        let waiting = FollowUp.waiting(sent: sent, inbox: inboxThreads(nil), me: me, olderThan: TimeInterval(followUpDays) * 86_400)
+        var waiting = FollowUp.waiting(sent: sent, inbox: inboxThreads(nil), me: me, olderThan: TimeInterval(followUpDays) * 86_400)
             .filter { !dismissed.contains(LabelStore.key(for: $0)) }
+        // Someone you wrote to who has answered since in another way, in any folder: a meeting
+        // invitation instead of a reply, or a new email on the same subject.
+        var heardFrom: [MailThread.ID] = []
+        let invitationWords = ["invitation", "uitnodiging", "einladung", "invitación", "invito", "convite", "invite"]
+        for thread in waiting {
+            let mine = thread.latest
+            let subject = Subject.normalized(mine.subject)
+            for address in Set((mine.to + mine.cc).map { $0.address.lowercased() }) where !me.contains(address) {
+                let since = await environment.cache.history(with: address, limit: 60)
+                if since.contains(where: { message in
+                    guard message.from.address.lowercased() == address, message.date > mine.date else { return false }
+                    let lower = message.subject.lowercased()
+                    return message.body?.invite != nil || Subject.normalized(message.subject) == subject
+                        || invitationWords.contains { lower.hasPrefix($0) || lower.contains($0 + ":") }
+                }) {
+                    heardFrom.append(thread.id)
+                    break
+                }
+            }
+        }
+        waiting.removeAll { heardFrom.contains($0.id) }
         if accountID == nil { waitingCount = waiting.count }
         return waiting
     }
@@ -310,6 +333,9 @@ extension MailModel {
         // Now and then, look for invitations in new mail so the calendar knows about them.
         if clockTick % 9 == 1 { await findInvites() }
         if clockTick % 3 == 0 { await sortNewMail(inboxThreads(nil).filter { now.timeIntervalSince($0.date) < 3 * 3600 }) }
+        // Replies sent from other apps and devices: read each account's Sent now and then, so
+        // "reply owed" clears and conversations show both sides without opening them first.
+        if clockTick % 5 == 0 { for account in accounts { await loadSentMail(for: account) } }
         runAutomaticBackupIfDue(now: now)
         let woken = snoozes.filter { $0.value <= now }.map(\.key)
         if !woken.isEmpty {
@@ -319,7 +345,8 @@ extension MailModel {
         for item in outbox where item.sendAt <= now {
             guard let account = account(item.accountID) else { continue }
             do {
-                try await provider(for: account).send(item.draft)
+                try await provider(for: account).send(withSenderName(item.draft, account: account))
+                noteSent(item.draft, account: account)
                 outbox.removeAll { $0.id == item.id }
                 saveOutbox()
                 notice = Notice(text: item.waitsForConnection ? String(localized: "Back online: your message was sent")
@@ -494,7 +521,7 @@ extension MailModel {
     }
 }
 
-/// What a swipe on a conversation does, on iPhone and iPad.
+/// What a swipe on a conversation does: on iPhone and iPad, and with two fingers on a Mac trackpad.
 public enum SwipeAction: String, CaseIterable, Identifiable, Sendable {
     case done, star, read, snooze, trash, none
 
@@ -510,18 +537,30 @@ public enum SwipeAction: String, CaseIterable, Identifiable, Sendable {
         case .none: String(localized: "Nothing")
         }
     }
+
+    /// Its picture: the same in Settings and behind a swiped row.
+    public var symbol: String {
+        switch self {
+        case .done: "checkmark"
+        case .star: "star.fill"
+        case .read: "envelope.open.fill"
+        case .snooze: "clock.fill"
+        case .trash: "trash.fill"
+        case .none: "nosign"
+        }
+    }
 }
 
 extension MailModel {
     /// The two actions behind a swipe right (leading) and a swipe left (trailing); the first
     /// of each runs on a full swipe.
     public var leadingSwipes: [SwipeAction] {
-        get { swipes("swipeLeading", default: [.done, .star]) }
+        get { swipes("swipeLeading", default: [.read, .none]) }
         set { environment.defaults.set(newValue.map(\.rawValue), forKey: "swipeLeading"); swipeRevision += 1 }
     }
 
     public var trailingSwipes: [SwipeAction] {
-        get { swipes("swipeTrailing", default: [.trash, .snooze]) }
+        get { swipes("swipeTrailing", default: [.trash, .none]) }
         set { environment.defaults.set(newValue.map(\.rawValue), forKey: "swipeTrailing"); swipeRevision += 1 }
     }
 

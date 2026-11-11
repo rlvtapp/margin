@@ -115,7 +115,14 @@ extension View {
     @ViewBuilder
     func glassCapsule(tint: Color?) -> some View {
         if #available(macOS 26, iOS 26, *), !Look.reduceTransparency {
+            #if os(macOS)
+            // The Mac fades glass tints in a window that isn't focused, which left white text
+            // on pale grey; a solid layer of the same colour underneath keeps a picked chip dark.
+            self.background { if let tint { Capsule().fill(tint) } }
+                .glassEffect(tint.map { Glass.regular.tint($0).interactive() } ?? Glass.regular.interactive(), in: Capsule())
+            #else
             self.glassEffect(tint.map { Glass.regular.tint($0).interactive() } ?? Glass.regular.interactive(), in: Capsule())
+            #endif
         } else {
             self.background(tint ?? Fill.one, in: Capsule())
         }

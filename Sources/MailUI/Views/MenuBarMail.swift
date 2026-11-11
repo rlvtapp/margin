@@ -80,7 +80,7 @@ public struct MenuBarMail: View {
                     Text(verbatim: ReaderSuggestion.spaced(code)).font(TypeScale.rowStrong.monospacedDigit())
                 }
                 .buttonStyle(.bordered)
-                .help("Copy")
+                .tip("Copy")
             } else if let link = model.signInLink(in: thread) {
                 Button(link.kind == .confirm ? String(localized: "Confirm") : String(localized: "Sign In")) { openURL(link.url) }
                     .buttonStyle(.borderedProminent)

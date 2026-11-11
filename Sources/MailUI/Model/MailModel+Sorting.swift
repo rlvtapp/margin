@@ -7,9 +7,16 @@ extension MailModel {
     /// The groups mail is sorted into, in the person's order.
     public var emailGroups: [EmailGroup] {
         get {
-            _ = sortingRevision
-            if let data = environment.defaults.data(forKey: "emailGroups"), let groups = try? JSONDecoder().decode([EmailGroup].self, from: data) { return groups }
-            return EmailGroup.starters
+            // Read on every row (Home's notes, sorting); decoded only when the groups change.
+            if let cached = emailGroupsCache, cached.revision == sortingRevision { return cached.groups }
+            let groups: [EmailGroup]
+            if let data = environment.defaults.data(forKey: "emailGroups"), let saved = try? JSONDecoder().decode([EmailGroup].self, from: data) {
+                groups = saved
+            } else {
+                groups = EmailGroup.starters
+            }
+            emailGroupsCache = (sortingRevision, groups)
+            return groups
         }
         set {
             environment.defaults.set(try? JSONEncoder().encode(newValue), forKey: "emailGroups")
@@ -63,7 +70,7 @@ extension MailModel {
     /// stopped at any point and picks up where it left off: each conversation is remembered as
     /// soon as it's been looked at, sorted or not.
     public func sortNow() {
-        guard sortingTask == nil else { return }
+        guard sortingTask == nil, agentTask == nil else { return }
         let groups = emailGroups
         let todo = inboxThreads(nil).filter(needsSorting)
         sortingProgress = (0, todo.count)
@@ -98,9 +105,11 @@ extension MailModel {
     public func stopSorting() {
         sortingTask?.cancel()
         sortingProgress = nil
+        // "Sort my mail" with the assistant shows the same progress, and stops the same way.
+        if agentRun?.kind == .sort { stopAgent() }
     }
 
-    public var isSorting: Bool { sortingTask != nil }
+    public var isSorting: Bool { sortingTask != nil || (agentRun?.kind == .sort && agentRun?.isWorking == true) }
 
     /// Puts a conversation in a group by hand (or in none), out of any other group; sorting
     /// leaves it alone afterwards.
@@ -122,7 +131,7 @@ extension MailModel {
 
     /// New mail goes into its group as it arrives, when that's on.
     func sortNewMail(_ threads: [MailThread]) async {
-        guard sortsNewMail, sortingTask == nil else { return }
+        guard sortsNewMail, sortingTask == nil, agentTask == nil else { return }
         let groups = emailGroups
         for thread in threads.prefix(20) where needsSorting(thread) {
             if let group = await pickGroup(for: thread, among: groups) { addLabel(group.name, to: thread) }

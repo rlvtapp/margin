@@ -1,10 +1,56 @@
 import MailCore
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 /// The slim column at the far left: everything at once, then one avatar per mailbox.
 /// ⌃1 is All, ⌃2… are the mailboxes in order.
 struct AccountRail: View {
     @Bindable var model: MailModel
+    /// The mailbox being dragged to a new place, and how far the pointer has moved.
+    @State private var dragging: UUID?
+    @State private var dragStart = 0
+    /// The place it's in now, so each new place gets one tap.
+    @State private var dragTarget = 0
+    /// The column's order while dragging: only the column moves until you let go, then the
+    /// new order is saved.
+    @State private var order: [UUID]?
+
+    private var shown: [MailAccount] {
+        let accounts = model.workspaceAccounts
+        guard let order else { return accounts }
+        return order.compactMap { id in accounts.first { $0.id == id } }
+    }
+    /// One place in the column: a 34-point button and the 10 points between them.
+    private let step: CGFloat = 44
+
+    private func begin(_ account: MailAccount, at index: Int) {
+        dragging = account.id
+        dragStart = index
+        dragTarget = index
+        order = model.workspaceAccounts.map(\.id)
+    }
+
+    /// The pointer is a whole number of places from where it started: put the mailbox there,
+    /// with a tap on the trackpad.
+    private func moved(_ account: MailAccount, places: Int) {
+        guard var current = order, let from = current.firstIndex(of: account.id) else { return }
+        let target = min(max(dragStart + places, 0), current.count - 1)
+        guard target != dragTarget else { return }
+        dragTarget = target
+        #if os(macOS)
+        NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .drawCompleted)
+        #endif
+        current.move(fromOffsets: IndexSet(integer: from), toOffset: target > from ? target + 1 : target)
+        withAnimation(.spring(response: 0.26, dampingFraction: 0.86)) { order = current }
+    }
+
+    private func endDrag() {
+        if let order { model.setAccountOrder(order) }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) { dragging = nil }
+        order = nil
+    }
 
     var body: some View {
         VStack(spacing: 10) {
@@ -17,19 +63,44 @@ struct AccountRail: View {
             RailButton(help: Text("All inboxes  ⌃1"), badge: model.unreadCount(account: nil), isSelected: model.place.isCombined) {
                 Image(systemName: "tray.2").font(.system(size: 14))
             } action: { model.go(to: .allInboxes) }
+            // Places across every mailbox, a click away: what needs you, what you're waiting
+            // on, and what's snoozed.
+            RailButton(help: Text("Home"), badge: model.needYouCount, isSelected: model.place.isHome) {
+                Image(systemName: "house").font(.system(size: 14))
+            } action: { model.go(to: .home(group: nil)) }
+            RailButton(help: Text("Waiting for reply"), badge: model.waitingCount,
+                       isSelected: model.place == .waiting(account: nil)) {
+                Image(systemName: "hourglass").font(.system(size: 14))
+            } action: { model.go(to: .waiting(account: nil)) }
+            RailButton(help: Text("Snoozed"), badge: 0, isSelected: model.place == .snoozed(account: nil)) {
+                Image(systemName: "clock").font(.system(size: 14))
+            } action: { model.go(to: .snoozed(account: nil)) }
+            RailButton(help: Text("Calendar"), badge: 0, isSelected: model.place == .calendar) {
+                Image(systemName: "calendar").font(.system(size: 14))
+            } action: { model.go(to: .calendar) }
             Rectangle().fill(Line.hairline).frame(width: 20, height: 1).padding(.vertical, 2)
 
-            ForEach(Array(model.workspaceAccounts.enumerated()), id: \.element.id) { index, account in
-                RailButton(
+            ForEach(Array(shown.enumerated()), id: \.element.id) { index, account in
+                RailMailbox(
+                    account: account,
                     help: Text(verbatim: "\(account.label) · \(account.address.address)\(index < 8 ? "  ⌃\(index + 2)" : "")"),
                     badge: model.unreadCount(account: account.id),
                     isSelected: model.place.accountID == account.id,
                     hasError: model.loadErrors[account.id] != nil,
-                    isAvatar: true
-                ) {
-                    AccountAvatar(account: account, size: 30)
-                } action: {
-                    model.go(to: .inbox(account: account.id, split: nil))
+                    isDragging: dragging == account.id,
+                    shift: dragging == account.id ? CGFloat(dragTarget - dragStart) * step : 0,
+                    step: step,
+                    open: { model.go(to: .inbox(account: account.id, split: nil)) },
+                    begin: { begin(account, at: index) },
+                    moved: { places in moved(account, places: places) },
+                    end: endDrag
+                )
+                .zIndex(dragging == account.id ? 1 : 0)
+                .contextMenu {
+                    Button("Move Up") { withAnimation(Motion.quick) { model.moveAccount(account.id, by: -1) } }
+                        .disabled(!model.canMoveAccount(account.id, by: -1))
+                    Button("Move Down") { withAnimation(Motion.quick) { model.moveAccount(account.id, by: 1) } }
+                        .disabled(!model.canMoveAccount(account.id, by: 1))
                 }
             }
             RailButton(help: Text("Add a mailbox"), badge: 0, isSelected: false) {
@@ -46,7 +117,7 @@ struct AccountRail: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("Settings  ⌘,")
+            .tip("Settings  ⌘,", side: .right)
             .padding(.bottom, Space.m)
             #endif
         }
@@ -164,7 +235,7 @@ private struct RailButton<Face: View>: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(help)
+        .tip(help, side: .right)
         .accessibilityLabel(help)
         .accessibilityValue(badge > 0 ? "\(badge) unread" : "")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
@@ -192,5 +263,53 @@ private struct RailButton<Face: View>: View {
                 .overlay(Capsule().strokeBorder(Paper.sidebar, lineWidth: 2))
                 .offset(x: 5, y: -4)
         }
+    }
+}
+
+/// One mailbox in the column. While it's dragged it follows the pointer by itself (only this
+/// view redraws as the pointer moves); the column reorders only when it crosses into a new place.
+private struct RailMailbox: View {
+    let account: MailAccount
+    let help: Text
+    let badge: Int
+    let isSelected: Bool
+    let hasError: Bool
+    let isDragging: Bool
+    /// How far its place in the column has moved since the drag began.
+    let shift: CGFloat
+    let step: CGFloat
+    let open: () -> Void
+    let begin: () -> Void
+    let moved: (Int) -> Void
+    let end: () -> Void
+    @State private var dragY: CGFloat = 0
+    @State private var places = 0
+
+    var body: some View {
+        RailButton(help: help, badge: badge, isSelected: isSelected, hasError: hasError, isAvatar: true,
+                   face: { AccountAvatar(account: account, size: 30) }, action: open)
+            .scaleEffect(isDragging ? 1.1 : 1)
+            .shadow(color: .black.opacity(isDragging ? 0.18 : 0), radius: 8, y: 3)
+            .offset(y: isDragging ? dragY - shift : 0)
+            // In hand it follows the pointer exactly; the others glide out of the way.
+            .transaction { if isDragging { $0.animation = nil } }
+            .highPriorityGesture(
+                // Measured against the window, not this view, which moves as it's dragged.
+                DragGesture(minimumDistance: 3, coordinateSpace: .global)
+                    .onChanged { value in
+                        if !isDragging { begin() }
+                        dragY = value.translation.height
+                        let now = Int((dragY / step).rounded())
+                        if now != places {
+                            places = now
+                            moved(now)
+                        }
+                    }
+                    .onEnded { _ in
+                        end()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) { dragY = 0 }
+                        places = 0
+                    }
+            )
     }
 }

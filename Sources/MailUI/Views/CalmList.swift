@@ -176,10 +176,39 @@ enum GroupStyle {
     }
 
     static func color(_ name: String) -> Color {
-        let starters = EmailGroup.starters.map(\.name)
-        let index = starters.firstIndex(of: name) ?? abs(name.hashValue)
-        return Palette.account(index % 12)
+        Palette.account(LabelColors.index(for: name))
     }
+
+    /// The label's colour for its name written on its tint, readable at AA.
+    static func textColor(_ name: String) -> Color {
+        Palette.accountText(LabelColors.index(for: name))
+    }
+}
+
+/// Each label's colour: the one you picked (right-click a label → Color), else the starter
+/// group's own, else one worked out from the name that stays the same on every launch and device.
+enum LabelColors {
+    /// Picked colours by lowercased label name, set from the model before drawing.
+    nonisolated(unsafe) static var chosen: [String: Int] = [:]
+
+    /// The palette's colours in order, for the Color menu.
+    static var names: [String] {
+        [String(localized: "Blue"), String(localized: "Green"), String(localized: "Violet"), String(localized: "Amber"),
+         String(localized: "Pink"), String(localized: "Cyan"), String(localized: "Red"), String(localized: "Lime")]
+    }
+
+    static func index(for name: String) -> Int {
+        let key = name.lowercased()
+        if let picked = chosen[key] { return picked }
+        if let starter = EmailGroup.starters.firstIndex(where: { $0.name.lowercased() == key }) { return starter % names.count }
+        // A stable hash (Swift's own changes every launch, which shuffled colours).
+        var hash: UInt32 = 5381
+        for byte in key.utf8 { hash = (hash &* 33) &+ UInt32(byte) }
+        return Int(hash % UInt32(names.count))
+    }
+
+    /// Changes whenever a colour is picked, so the window redraws.
+    static var signature: String { chosen.sorted { $0.key < $1.key }.map { "\($0.key)=\($0.value)" }.joined(separator: ",") }
 }
 
 /// A tab in Home, Spark and Minimal: a Liquid Glass chip with the group's icon and colour.

@@ -44,6 +44,48 @@ extension MailModel {
         return accounts.filter { workspace.accounts.contains($0.id) }
     }
 
+    /// Puts mailboxes in the order you want: the account column, sidebar, All inboxes and the
+    /// ⌃2, ⌃3… shortcuts all follow it.
+    public func moveAccounts(from source: IndexSet, to destination: Int) {
+        accounts.move(fromOffsets: source, toOffset: destination)
+        try? environment.accounts.save(accounts)
+    }
+
+    /// Moves one mailbox up (-1) or down (1) a place.
+    public func moveAccount(_ id: UUID, by step: Int) {
+        guard let index = accounts.firstIndex(where: { $0.id == id }) else { return }
+        let target = index + step
+        guard accounts.indices.contains(target) else { return }
+        accounts.swapAt(index, target)
+        try? environment.accounts.save(accounts)
+    }
+
+    /// Moves a dragged mailbox to where another one is.
+    public func moveAccount(_ id: UUID, to other: UUID) {
+        guard id != other, let from = accounts.firstIndex(where: { $0.id == id }),
+              let to = accounts.firstIndex(where: { $0.id == other }) else { return }
+        accounts.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+        try? environment.accounts.save(accounts)
+    }
+
+    /// Puts these mailboxes in this order, in the places they already take among the others
+    /// (the account column shows one workspace's mailboxes, not always all of them).
+    public func setAccountOrder(_ ids: [UUID]) {
+        let places = accounts.indices.filter { ids.contains(accounts[$0].id) }
+        let wanted = ids.compactMap { id in accounts.first { $0.id == id } }
+        guard places.count == wanted.count else { return }
+        var reordered = accounts
+        for (place, account) in zip(places, wanted) { reordered[place] = account }
+        guard reordered.map(\.id) != accounts.map(\.id) else { return }
+        accounts = reordered
+        try? environment.accounts.save(accounts)
+    }
+
+    func canMoveAccount(_ id: UUID, by step: Int) -> Bool {
+        guard let index = accounts.firstIndex(where: { $0.id == id }) else { return false }
+        return accounts.indices.contains(index + step)
+    }
+
     public func switchWorkspace(to id: UUID?) {
         currentWorkspaceID = id
         selection = []

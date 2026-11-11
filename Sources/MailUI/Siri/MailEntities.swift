@@ -193,7 +193,7 @@ extension View {
     /// Tells Siri which conversation is on screen, so "summarize this" or "archive this" knows
     /// what "this" is.
     func onScreenForSiri(_ thread: MailThread?) -> some View {
-        userActivity("dev.margin.conversation", isActive: thread != nil) { activity in
+        userActivity("app.relevate.margin.conversation", isActive: thread != nil) { activity in
             activity.title = thread?.subject
             if #available(iOS 18.2, macOS 15.2, *), let thread {
                 activity.appEntityIdentifier = EntityIdentifier(for: MailMessageEntity.self, identifier: thread.id)

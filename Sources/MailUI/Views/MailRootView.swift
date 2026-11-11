@@ -28,12 +28,15 @@ public struct MailRootView: View {
             // window buttons sit at its left end, and every column starts under it.
             WindowBar(model: model, searchFocus: $searchFocused)
                 .background(WindowButtonPlacement(barHeight: WindowBar.height))
+                // Above the columns, so the "Ask: …" offer under the search field isn't covered.
+                .zIndex(1)
             #endif
             HStack(spacing: 0) {
             AccountRail(model: model)
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
-                    if !model.isSidebarHidden {
+                    // The Calendar has the whole width; mailboxes come back with the mail.
+                    if !model.isSidebarHidden && model.place != .calendar {
                         SidebarView(model: model)
                             .frame(width: 220)
                             .transition(.move(edge: .leading).combined(with: .opacity))
@@ -78,6 +81,9 @@ public struct MailRootView: View {
         .onKeyPress(phases: .down) { press in handle(press) }
         .overlay { paletteLayer }
         .overlay(alignment: .bottom) { NoticeBar(model: model).padding(.bottom, Space.l) }
+        // The assistant at work ("Sort my mail", "Ask Margin to…"), out of the reader's way.
+        .overlay(alignment: .bottomTrailing) { AgentRunCard(model: model).padding(Space.l) }
+        .animation(Motion.present, value: model.agentRun?.id)
         // New mail opens in the reading pane (ListAndReader); only Subscriptions, which has
         // its own columns, still writes in a sheet.
         .sheet(isPresented: Binding(get: { model.compose != nil && !model.isComposePutAway && model.place == .subscriptions },
@@ -109,6 +115,9 @@ public struct MailRootView: View {
             listFocused = true
             await model.start()
         }
+        #if os(macOS)
+        .onAppear { TextEditingKeys.install() }
+        #endif
         .onChange(of: model.focusRequest) { _, _ in listFocused = true }
         .onChange(of: model.searchRequest) { _, _ in searchFocused = true }
     }
@@ -116,6 +125,9 @@ public struct MailRootView: View {
     /// Single keys act only while the list has focus, never while typing.
     private func handle(_ press: KeyPress) -> KeyPress.Result {
         guard listFocused, !model.isPaletteOpen, model.compose == nil || model.isComposePutAway else { return .ignored }
+        // With a reply being written, the arrows still move through the list, but no single key
+        // acts on mail: a letter meant for the reply must never archive or trash something.
+        if model.reply != nil, press.key != .downArrow, press.key != .upArrow { return .ignored }
         if press.modifiers == .command && press.characters.lowercased() == "a" {
             model.selectAll()
             return .handled
@@ -177,6 +189,7 @@ extension Look {
         underlineLinks = model.underlineLinks
         darkensMail = model.darkensMail
         theme = model.appearance
+        LabelColors.chosen = model.labelColors
         reduceTransparency = systemReduceTransparency || ProcessInfo.processInfo.arguments.contains("-reduce-transparency")
         return key
     }
@@ -204,6 +217,29 @@ enum MailLayout {
     /// The shared height of the sidebar's top row, the list header and the reader toolbar.
     static let topBand: CGFloat = 52
     static let railWidth: CGFloat = 56
+    /// Room the window's close, minimise and zoom buttons take at the top bar's left, past its padding.
+    static let windowButtonsWidth: CGFloat = 64
+}
+
+/// How long until a message goes out: a thin ring that fills, full the moment it sends.
+private struct SendRing: View {
+    let countdown: ClosedRange<Date>
+
+    var body: some View {
+        TimelineView(.animation) { context in
+            let total = countdown.upperBound.timeIntervalSince(countdown.lowerBound)
+            let progress = total > 0 ? min(1, max(0, context.date.timeIntervalSince(countdown.lowerBound) / total)) : 1
+            ZStack {
+                Circle().stroke(Ink.primary.opacity(0.14), lineWidth: 2)
+                Circle()
+                    .trim(from: 0, to: progress)
+                    .stroke(Ink.primary, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+            }
+            .frame(width: 15, height: 15)
+        }
+        .accessibilityHidden(true)
+    }
 }
 
 /// "Conversation marked done · Undo Z", and errors, at the bottom of the window.
@@ -216,6 +252,9 @@ struct NoticeBar: View {
                 HStack(spacing: Space.m) {
                     if notice.isError {
                         Image(systemName: "exclamationmark.circle").foregroundStyle(Status.danger)
+                    }
+                    if let countdown = notice.countdown {
+                        SendRing(countdown: countdown)
                     }
                     Text(notice.text)
                         .font(TypeScale.row)
@@ -240,7 +279,9 @@ struct NoticeBar: View {
                 .frame(maxWidth: 520)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .task(id: notice.id) {
-                    try? await Task.sleep(for: notice.isError ? .seconds(8) : .seconds(5))
+                    // A message waiting to go keeps its notice (and Undo) until it's sent.
+                    let waits = notice.countdown.map { $0.upperBound.timeIntervalSinceNow + 1 } ?? 0
+                    try? await Task.sleep(for: .seconds(max(notice.isError ? 8 : 5, waits)))
                     if model.notice?.id == notice.id { model.notice = nil }
                 }
             }
@@ -270,6 +311,8 @@ private struct ListAndReader: View {
                 #if os(macOS)
                 SubscriptionsColumns(model: model, listWidth: listWidth)
                 #endif
+            } else if model.place == .calendar {
+                CalendarPage(model: model)
             } else if model.layout.opensOverList {
                 // Wide list: the list fills the panel; a conversation opens over it.
                 if let compose = writing {
@@ -330,7 +373,7 @@ private struct ListAndReader: View {
     /// Next up shows beside the reader when it's on, the layout has a reader beside the list,
     /// and there's room for all three.
     private var showsNextUp: Bool {
-        model.showsNextUp && model.layout == .panels && model.place != .subscriptions
+        MailModel.nextUpAvailable && model.showsNextUp && model.layout == .panels && model.place != .subscriptions
             && panelWidth >= NextUpColumn.minimumPanelWidth
     }
 

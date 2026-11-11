@@ -78,7 +78,7 @@ struct WorkspaceHeader: View {
             }
             .contentShape(Rectangle())
         }
-        .help("Switch workspace")
+        .tip("Switch workspace")
         .sheet(isPresented: $editing) { WorkspaceEditor(model: model) }
     }
 }

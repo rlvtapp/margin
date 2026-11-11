@@ -23,7 +23,8 @@ public struct KeyCap: View {
     }
 }
 
-/// Initials on a solid disc in the person's own colour.
+/// The person's picture when one of your address books has it; otherwise their initials on a
+/// solid disc in their own colour.
 public struct Avatar: View {
     let address: EmailAddress
     var size: CGFloat = 24
@@ -34,11 +35,23 @@ public struct Avatar: View {
     }
 
     public var body: some View {
-        Text(initials)
-            .font(.system(size: size * 0.42, weight: .semibold))
-            .foregroundStyle(.white)
-            .frame(width: size, height: size)
-            .background(Palette.person(address.address), in: Circle())
+        Group {
+            if let picture = ContactPictures.shared.image(for: address.address) {
+                picture
+                    .resizable()
+                    .interpolation(.high)
+                    .scaledToFill()
+                    .frame(width: size, height: size)
+                    .clipShape(Circle())
+            } else {
+                Text(initials)
+                    .font(.system(size: size * 0.42, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: size, height: size)
+                    .background(Palette.person(address.address), in: Circle())
+            }
+        }
+        .task(id: address.address) { ContactPictures.shared.want(address.address) }
     }
 
     /// One letter on small discs, two on larger ones.
@@ -108,9 +121,62 @@ public struct IconButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(help)
+        .tip(help)
         .onHover { isHovered = $0 }
         .accessibilityLabel(help)
+    }
+}
+
+extension EnvironmentValues {
+    /// Whether toolbar buttons show their names beside their icons.
+    @Entry var toolbarLabels = false
+}
+
+/// A button in a toolbar: its icon, and its name beside it when names are on. Either way the
+/// name, with its shortcut, shows as a tooltip on hover.
+public struct ToolbarButton: View {
+    let symbol: String
+    let title: LocalizedStringKey
+    let help: LocalizedStringKey
+    let action: () -> Void
+    @Environment(\.toolbarLabels) private var labels
+    @State private var isHovered = false
+
+    public init(_ symbol: String, title: LocalizedStringKey, help: LocalizedStringKey, action: @escaping () -> Void) {
+        self.symbol = symbol
+        self.title = title
+        self.help = help
+        self.action = action
+    }
+
+    public var body: some View {
+        Button(action: action) {
+            ToolbarLabel(symbol: symbol, title: title, isHovered: isHovered)
+        }
+        .buttonStyle(.plain)
+        .tip(help)
+        .onHover { isHovered = $0 }
+        .accessibilityLabel(title)
+    }
+}
+
+/// How a toolbar button or menu looks: the icon alone, or the icon and its name.
+struct ToolbarLabel: View {
+    let symbol: String
+    let title: LocalizedStringKey
+    var isHovered = false
+    @Environment(\.toolbarLabels) private var labels
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: symbol).font(.system(size: 13))
+            if labels { Text(title).font(TypeScale.label.weight(.medium)).lineLimit(1).fixedSize() }
+        }
+        .foregroundStyle(isHovered ? Ink.primary : labels ? Ink.secondary : Ink.tertiary)
+        .padding(.horizontal, labels ? 8 : 0)
+        .frame(minWidth: 28, minHeight: 28)
+        .background(isHovered ? Fill.one : .clear, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
+        .contentShape(Rectangle())
     }
 }
 

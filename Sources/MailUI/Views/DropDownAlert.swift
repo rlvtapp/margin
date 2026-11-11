@@ -137,7 +137,7 @@ private struct DropDownAlertView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(prominentStyle)
-                .help(link.url.host() ?? "")
+                .tip(link.url.host() ?? "")
             }
             if replying {
                 HStack(spacing: Space.s) {

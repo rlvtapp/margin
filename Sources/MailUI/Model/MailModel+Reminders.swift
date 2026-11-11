@@ -145,7 +145,7 @@ struct ReplyReminderMenu: View {
         .menuIndicator(.hidden)
         .fixedSize()
         #endif
-        .help("Remind me if nobody replies")
+        .tip("Remind me if nobody replies")
     }
 
     @ViewBuilder

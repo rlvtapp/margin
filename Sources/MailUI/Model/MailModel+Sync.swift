@@ -135,7 +135,10 @@ extension MailModel {
         if accounts.contains(where: { $0.connection != .sample }) { accounts.removeAll { $0.connection == .sample } }
         if accounts.isEmpty { accounts = [.sample, .samplePersonal] }
         try? environment.accounts.save(accounts)
-        Task { await reload() }
+        Task {
+            await forgetRemovedAccounts()
+            await reload()
+        }
     }
 
     /// A setting as bytes, the same way a backup stores it.
@@ -152,5 +155,20 @@ extension MailModel {
         } else {
             defaults.set(data, forKey: key)
         }
+    }
+}
+
+extension MailModel {
+    /// Clears saved mail, meetings and Sent copies of accounts that are no longer here, such as
+    /// the sample accounts shown before the first sign-in, so they never turn up in Home or Ask.
+    func forgetRemovedAccounts() async {
+        guard !environment.isPreview else { return }
+        let current = Set(accounts.map(\.id))
+        for id in await environment.cache.savedAccounts() where !current.contains(id) {
+            await environment.cache.removeAccount(id)
+        }
+        let entries = calendarEntries.filter { $0.accountID.map(current.contains) ?? true }
+        if entries.count != calendarEntries.count { saveCalendar(entries) }
+        for id in sentMail.keys where !current.contains(id) { sentMail[id] = nil }
     }
 }

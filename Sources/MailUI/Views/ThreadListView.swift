@@ -52,13 +52,19 @@ struct ThreadListView: View {
                     .foregroundStyle(Ink.tertiary)
             }
             Spacer(minLength: Space.s)
-            IconButton("sidebar.left", help: model.isSidebarHidden ? "Show sidebar  ⌃⌘S" : "Hide sidebar  ⌃⌘S") { model.isSidebarHidden.toggle() }
+            // New message lives in the sidebar; with the sidebar hidden, it's here instead. The
+            // sidebar's own button is in the top bar.
             IconButton("arrow.clockwise", help: "Check for new mail  ⇧⌘N") { Task { await model.reload() } }
-            IconButton("square.and.pencil", help: "New message  C") { model.startCompose() }
+            if model.isSidebarHidden {
+                IconButton("square.and.pencil", help: "New message  C") { model.startCompose() }
+            }
         }
-        .padding(.leading, Space.l)
+        .padding(.leading, model.layout.isCalm ? Space.s : Space.l)
         .padding(.trailing, Space.s)
         .frame(height: MailLayout.topBand)
+        // In the centred layouts the title and its buttons line up with the page below them,
+        // instead of sitting at the far edges of the window.
+        .calmColumn(model.layout.isCalm)
     }
 
     /// "15 conversations, 9 unread"
@@ -103,7 +109,7 @@ struct ThreadListView: View {
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help("Show part of the inbox  ⌘1–⌘4")
+        .tip("Show part of the inbox  ⌘1–⌘4")
     }
 
     // MARK: List
@@ -174,6 +180,7 @@ struct ThreadListView: View {
                 .id(thread.id)
                 .onTapGesture { tap(thread) }
                 .contextMenu { ThreadContextMenu(model: model, thread: thread) }
+                .rowSwipe(model: model, thread: thread)
         } else {
             standardRow(thread)
         }
@@ -183,7 +190,9 @@ struct ThreadListView: View {
         ThreadRow(
             thread: thread,
             isSelected: model.selection.isEmpty ? thread.id == model.selectedThreadID : model.selection.contains(thread.id),
-            account: showsAccounts ? model.account(thread.accountID) : nil,
+            // No mailbox badge on rows: it was a letter that didn't match the mailbox's picture,
+            // and the reader's header names the mailbox.
+            account: nil,
             showsRecipients: model.place.isOutgoing || model.place == .waiting(account: model.place.accountID),
             // Home already sorts by what matters, so its rows leave the label chips out.
             labels: model.place.isHome ? [] : model.labels(for: thread),
@@ -198,6 +207,7 @@ struct ThreadListView: View {
         .id(thread.id)
         .onTapGesture { tap(thread) }
         .contextMenu { ThreadContextMenu(model: model, thread: thread) }
+        .rowSwipe(model: model, thread: thread)
     }
 
     /// ⌘-click adds to the selection, ⇧-click selects a range, a plain click opens.
@@ -255,7 +265,7 @@ struct ThreadRow: View {
                 .foregroundStyle(unread ? Ink.primary : Ink.secondary)
                 .lineLimit(1)
                 .frame(width: 140, alignment: .leading)
-            Text("\(Text(thread.subject.isEmpty ? String(localized: "(No subject)") : thread.subject).foregroundStyle(unread ? Ink.primary : Ink.secondary))  \(Text(thread.latest.snippet).foregroundStyle(Ink.tertiary))")
+            Text("\(Text(thread.subject.isEmpty ? String(localized: "(No subject)") : thread.subject).foregroundStyle(unread ? Ink.primary : Ink.secondary))  \(Text(listed.latest.snippet).foregroundStyle(Ink.tertiary))")
                 .font(TypeScale.row)
                 .lineLimit(1)
             Spacer(minLength: Space.s)
@@ -275,7 +285,7 @@ struct ThreadRow: View {
     }
 
     private var fullBody: some View {
-        let latest = thread.latest
+        let latest = listed.latest
         let unread = thread.isUnread
         return HStack(alignment: .top, spacing: 10) {
             Avatar(showsRecipients ? (latest.to.first ?? latest.from) : latest.from, size: 28)
@@ -293,8 +303,8 @@ struct ThreadRow: View {
                         .font(unread ? TypeScale.rowStrong : TypeScale.row)
                         .foregroundStyle(Ink.primary)
                         .lineLimit(1)
-                    if thread.messages.count > 1 {
-                        Text("\(thread.messages.count)").font(TypeScale.label.monospacedDigit()).foregroundStyle(Ink.tertiary)
+                    if listed.messages.count > 1 {
+                        Text("\(listed.messages.count)").font(TypeScale.label.monospacedDigit()).foregroundStyle(Ink.tertiary)
                     }
                     Spacer(minLength: Space.xs)
                     if thread.hasAttachments {
@@ -331,7 +341,7 @@ struct ThreadRow: View {
                     } else {
                         ForEach(labels.prefix(2), id: \.self) { LabelChip(text: $0, style: .compact) }
                     }
-                    if let account { AccountMark(account, size: 12).help(account.label) }
+                    if let account { AccountMark(account, size: 12).tip(account.label) }
                 }
                 // No preview (some mail is only pictures): no empty line either.
                 if !latest.snippet.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -356,13 +366,17 @@ struct ThreadRow: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
+    /// The conversation without its reactions ("Jane reacted to your message"), which show on
+    /// their message in the reader instead. Only for what the row says.
+    private var listed: MailThread { MailReaction.withoutReactions(thread) }
+
     /// One name, or the first names of everyone who wrote (or, in Sent, who it went to).
     private var senders: String {
         if showsRecipients {
             let names = thread.latest.to.map(\.displayName)
             return names.isEmpty ? String(localized: "No recipients") : String(localized: "To \(names.joined(separator: ", "))")
         }
-        let people = thread.participants
+        let people = listed.participants
         guard people.count > 1 else { return people.first?.displayName ?? "" }
         return people.map { $0.displayName.split(separator: " ").first.map(String.init) ?? $0.displayName }
             .joined(separator: ", ")
@@ -435,7 +449,7 @@ struct QuickFilterToggles: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help(Text(filter.title))
+                .tip(Text(filter.title))
                 .accessibilityLabel(Text(filter.title))
                 .accessibilityAddTraits(isOn ? .isSelected : [])
             }

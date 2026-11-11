@@ -169,12 +169,22 @@ extension MailModel {
     public func startReply(all: Bool = false) {
         guard let thread = selectedThread, let account = account(thread.accountID) else { return }
         // Mail sent to an alias is answered from that alias.
-        reply = ComposeState(account: account, draft: Draft.reply(to: thread, from: account.replyAddress(for: thread), all: all), isReply: true)
+        reply = ComposeState(account: account, draft: Draft.reply(to: withoutReactions(thread), from: account.replyAddress(for: thread), all: all),
+                             isReply: true)
     }
 
-    public func startForward() {
+    /// A reply to one message of the open conversation, not necessarily the latest.
+    public func startReply(to message: MailMessage, all: Bool = false) {
         guard let thread = selectedThread, let account = account(thread.accountID) else { return }
-        let last = thread.latest
+        reply = ComposeState(account: account,
+                             draft: Draft.reply(to: message, in: thread, from: account.replyAddress(for: thread), all: all),
+                             isReply: true)
+    }
+
+    /// Forwards the latest message, or the one given.
+    public func startForward(_ message: MailMessage? = nil) {
+        guard let thread = selectedThread, let account = account(thread.accountID) else { return }
+        let last = message ?? thread.latest
         let text = body(of: last, in: thread)?.text ?? last.snippet
         let quoted = text.split(separator: "\n", omittingEmptySubsequences: false).map { "> \($0)" }.joined(separator: "\n")
         let header = "\n\n---------- Forwarded message ----------\nFrom: \(last.from.headerValue)\nDate: \(last.date.formatted())\nSubject: \(last.subject)\n\n"
@@ -211,7 +221,8 @@ extension MailModel {
             if state.signature != nil, state.signature == ComposeState.signatureBlock(account) {
                 draft = Self.withFormattedSignature(draft, plain: state.signature, html: account.signatureHTML)
             }
-            try await provider(for: account).send(draft)
+            try await provider(for: account).send(withSenderName(draft, account: account))
+            noteSent(draft, account: account)
             learnWriting(from: draft, account: account)
             if let days = state.remindAfterDays { remindIfNoReply(draft, accountID: account.id, after: days) }
             notice = Notice(text: String(localized: "Sent from \(account.label)"))
@@ -233,6 +244,9 @@ public struct ComposeState: Equatable {
     public var to: String
     public var cc: String
     public var showsCc: Bool
+    /// Hidden recipients: they get the message, nobody sees them.
+    public var bcc: String = ""
+    public var showsBcc: Bool = false
     /// Days after which to remind if nobody has replied; nil for no reminder.
     public var remindAfterDays: Int?
 
@@ -242,6 +256,8 @@ public struct ComposeState: Equatable {
         to = self.draft.to.map(\.headerValue).joined(separator: ", ")
         cc = self.draft.cc.map(\.headerValue).joined(separator: ", ")
         showsCc = !self.draft.cc.isEmpty
+        bcc = self.draft.bcc.map(\.headerValue).joined(separator: ", ")
+        showsBcc = !self.draft.bcc.isEmpty
         signature = Self.block(account.signatureText(forReply: isReply))
         if self.draft.text.isEmpty, let signature {
             self.draft.text = signature
@@ -297,9 +313,11 @@ public struct ComposeState: Equatable {
         var draft = self.draft
         guard let to = EmailAddress.parseList(to) else { throw MailError.invalidAddress(self.to) }
         guard let cc = EmailAddress.parseList(cc) else { throw MailError.invalidAddress(self.cc) }
-        guard !(to + cc).isEmpty else { throw MailError.notSupported(String(localized: "Add at least one recipient.")) }
+        guard let bcc = EmailAddress.parseList(bcc) else { throw MailError.invalidAddress(self.bcc) }
+        guard !(to + cc + bcc).isEmpty else { throw MailError.notSupported(String(localized: "Add at least one recipient.")) }
         draft.to = to
         draft.cc = cc
+        draft.bcc = bcc
         return draft
     }
 }

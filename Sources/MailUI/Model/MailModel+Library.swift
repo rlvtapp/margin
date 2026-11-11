@@ -126,6 +126,7 @@ extension MailModel {
         var draft = state.draft
         draft.to = EmailAddress.parseList(state.to) ?? []
         draft.cc = EmailAddress.parseList(state.cc) ?? []
+        draft.bcc = EmailAddress.parseList(state.bcc) ?? []
         Task {
             do {
                 try await provider.saveDraft(draft)

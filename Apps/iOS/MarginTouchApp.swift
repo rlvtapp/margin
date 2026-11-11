@@ -16,7 +16,7 @@ struct MarginTouchApp: App {
     @UIApplicationDelegateAdaptor private var pushes: PushDelegate
 
     /// The background check iOS runs now and then, as permitted in the Info.plist.
-    nonisolated static let refreshTask = (Bundle.main.bundleIdentifier ?? "dev.margin.Margin") + ".refresh"
+    nonisolated static let refreshTask = (Bundle.main.bundleIdentifier ?? "app.relevate.margin") + ".refresh"
 
     var body: some Scene {
         WindowGroup {

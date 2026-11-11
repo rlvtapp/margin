@@ -50,30 +50,25 @@ struct HomeHeader: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 6)
                 .padding(.bottom, Space.l)
-            // The groups as plain words, the one you're in a little darker.
+            // The groups as glass tabs; the one you're in is filled.
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Space.l) {
-                    textTab(String(localized: "Everything"), count: nil, isOn: model.place == .home(group: nil)) {
+                GlassChipRow {
+                    GroupTab(title: String(localized: "Everything"), symbol: "tray.full", isOn: model.place == .home(group: nil)) {
                         model.go(to: .home(group: nil))
                     }
                     ForEach(model.homeGroups, id: \.group.id) { item in
-                        textTab(item.group.name, count: item.count, isOn: model.place == .home(group: item.group.name)) {
+                        GroupTab.group(item.group.name, count: item.count, isOn: model.place == .home(group: item.group.name)) {
                             model.go(to: .home(group: item.group.name))
                         }
                     }
                     if model.isSorting, let progress = model.sortingProgress {
                         Button { model.stopSorting() } label: { Text("Sorting \(progress.done) of \(progress.total) · Stop") }
-                            .buttonStyle(.plain)
-                            .font(TypeScale.label)
-                            .foregroundStyle(Ink.tertiary)
+                            .buttonStyle(PillButtonStyle())
                     } else {
-                        Button { model.sortNow() } label: { Label("Sort now", systemImage: "wand.and.stars") }
-                            .buttonStyle(.plain)
-                            .font(TypeScale.label)
-                            .foregroundStyle(Ink.tertiary)
+                        GroupTab(title: String(localized: "Sort now"), symbol: "wand.and.stars", isOn: false) { model.sortNow() }
                     }
                 }
-                .padding(.vertical, 6)
+                .padding(.vertical, 4)
             }
         }
         .padding(.horizontal, model.layout.isCalm ? Space.xs : Space.l)
@@ -81,41 +76,8 @@ struct HomeHeader: View {
         .padding(.bottom, Space.xs)
     }
 
-    private func textTab(_ title: String, count: Int?, isOn: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Text(verbatim: title)
-                if let count, count > 0 { Text(verbatim: "\(count)").foregroundStyle(Ink.tertiary) }
-            }
-            .font(isOn ? TypeScale.rowStrong : TypeScale.row)
-            .foregroundStyle(isOn ? Ink.primary : Ink.tertiary)
-            .padding(.bottom, 4)
-            .overlay(alignment: .bottom) {
-                Rectangle().fill(Ink.primary).frame(height: 1.5).opacity(isOn ? 1 : 0)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// "Two replies to write and a bill to open. Quarterly planning at 10:00." Or, with
-    /// nothing waiting, "Nothing needs you right now."
-    private var summary: String {
-        let now = Date()
-        var parts: [String] = []
-        let owed = model.allInboxesThreads(nil).filter { !model.isSnoozed($0) && model.owesReply($0, now: now) }.count
-        if owed > 0 { parts.append(owed == 1 ? String(localized: "a reply to write") : String(localized: "\(owed) replies to write")) }
-        let bills = model.unopenedBills.count
-        if bills > 0 { parts.append(bills == 1 ? String(localized: "a bill to open") : String(localized: "\(bills) bills to open")) }
-        var sentence = parts.isEmpty ? "" : parts.formatted(.list(type: .and))
-        if !sentence.isEmpty { sentence = sentence.prefix(1).uppercased() + sentence.dropFirst() + "." }
-        if let next = model.todaysEvents.first(where: { !$0.isAllDay && $0.finish > now }) {
-            let time = next.start.formatted(date: .omitted, time: .shortened)
-            let line = next.start <= now ? String(localized: "\(next.title) is on now.") : String(localized: "\(next.title) at \(time).")
-            sentence = sentence.isEmpty ? line : sentence + " " + line
-        }
-        return sentence.isEmpty ? String(localized: "Nothing needs you right now.") : sentence
-    }
+    /// The one quiet sentence about what needs you (`MailModel.homeSummary`).
+    private var summary: String { model.homeSummary() }
 
     private func tab(_ title: String, count: Int?, group: String?) -> some View {
         let selected = model.place == .home(group: group)
@@ -135,4 +97,3 @@ struct HomeHeader: View {
         .buttonStyle(PillButtonStyle(prominent: selected))
     }
 }
-

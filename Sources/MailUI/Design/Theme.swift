@@ -92,7 +92,7 @@ public enum Look {
     nonisolated(unsafe) public static var theme: AppAppearance = .system
 
     /// Changes whenever any option changes, so the window can redraw everything once.
-    public static var key: String { "\(colorBlindSafe)\(highContrast)\(reduceMotion)\(underlineLinks)\(darkensMail)\(reduceTransparency)\(theme.rawValue)" }
+    public static var key: String { "\(colorBlindSafe)\(highContrast)\(reduceMotion)\(underlineLinks)\(darkensMail)\(reduceTransparency)\(theme.rawValue)\(LabelColors.signature)" }
 }
 
 public enum Ink {
@@ -219,6 +219,15 @@ public enum Palette {
         return Color.adaptive(hue.0, hue.1)
     }
 
+    /// Text in a label's colour, on that colour's light tint: the hue darkened (light) or
+    /// lightened (dark) just enough to reach 4.7:1, so small label text passes WCAG AA, also
+    /// on a selected row.
+    public static func accountText(_ index: Int) -> Color {
+        let hue = hues[((index % hues.count) + hues.count) % hues.count]
+        return Color.adaptive(Contrast.readable(hue.0, on: 0xEBEBEB, toward: 0x000000),
+                              Contrast.readable(hue.1, on: 0x333333, toward: 0xFFFFFF))
+    }
+
     public static func split(_ split: InboxSplit) -> Color {
         if Look.colorBlindSafe {
             return switch split {
@@ -247,5 +256,44 @@ public enum Palette {
         for byte in address.lowercased().utf8 { hash = (hash &* 33) &+ UInt32(byte) }
         let hex = people[Int(hash % UInt32(people.count))]
         return Color.adaptive(hex, hex)
+    }
+}
+
+/// WCAG contrast arithmetic for picking readable text shades.
+enum Contrast {
+    /// Relative luminance of a 0xRRGGBB colour.
+    static func luminance(_ rgb: (Double, Double, Double)) -> Double {
+        func channel(_ value: Double) -> Double {
+            let c = value / 255
+            return c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * channel(rgb.0) + 0.7152 * channel(rgb.1) + 0.0722 * channel(rgb.2)
+    }
+
+    static func ratio(_ a: (Double, Double, Double), _ b: (Double, Double, Double)) -> Double {
+        let la = luminance(a), lb = luminance(b)
+        return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+    }
+
+    static func components(_ hex: UInt32) -> (Double, Double, Double) {
+        (Double((hex >> 16) & 0xFF), Double((hex >> 8) & 0xFF), Double(hex & 0xFF))
+    }
+
+    static func mix(_ a: (Double, Double, Double), _ b: (Double, Double, Double), _ t: Double) -> (Double, Double, Double) {
+        (a.0 + (b.0 - a.0) * t, a.1 + (b.1 - a.1) * t, a.2 + (b.2 - a.2) * t)
+    }
+
+    /// `hex` moved toward `target` until it reads at `minimum` on its own 14% tint over `background`.
+    static func readable(_ hex: UInt32, on background: UInt32, toward target: UInt32, minimum: Double = 4.7) -> UInt32 {
+        let base = components(hex), ground = components(background), end = components(target)
+        let chip = mix(ground, base, 0.14)
+        for step in 0...100 {
+            let shade = mix(base, end, Double(step) / 100)
+            let rounded = (shade.0.rounded(), shade.1.rounded(), shade.2.rounded())
+            if ratio(rounded, chip) >= minimum {
+                return UInt32(rounded.0) << 16 | UInt32(rounded.1) << 8 | UInt32(rounded.2)
+            }
+        }
+        return target
     }
 }

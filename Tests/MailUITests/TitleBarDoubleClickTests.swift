@@ -40,7 +40,7 @@ import AppKit
         #expect(window.frame != before)
         #expect(window.frame.width > before.width)
     }
-    
+
     /// ⌘⌫ while writing clears the line being typed and goes no further (it used to reach the
     /// menu's Move to Trash).
     @MainActor @Test func commandBackspaceBelongsToTheText() throws {

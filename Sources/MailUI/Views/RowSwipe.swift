@@ -279,4 +279,3 @@ extension View {
     func rowSwipe(model: MailModel, thread: MailThread) -> some View { self }
 }
 #endif
-

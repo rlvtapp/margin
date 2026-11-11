@@ -43,6 +43,31 @@ public enum MessageBuilder {
                 QuotedPrintable.encode(calendar),
                 "--\(alternative)--",
             ]
+        } else if let emoji = draft.reaction {
+            // A reaction: the text, Gmail's reaction part, then the HTML if any, the order Gmail
+            // recommends so apps showing only the first or the last part still show text.
+            let alternative = "rx" + String(marker.reversed())
+            var parts = [
+                "Content-Type: multipart/alternative; boundary=\"\(alternative)\"",
+                "",
+                "--\(alternative)",
+            ] + textPart + [
+                "--\(alternative)",
+                "Content-Type: \(MailReaction.gmailType)",
+                "Content-Transfer-Encoding: base64",
+                "",
+                MailReaction.gmailJSON(emoji).base64EncodedString(options: [.lineLength76Characters, .endLineWithCarriageReturn, .endLineWithLineFeed]),
+            ]
+            if let html = draft.html {
+                parts += [
+                    "--\(alternative)",
+                    "Content-Type: text/html; charset=utf-8",
+                    "Content-Transfer-Encoding: quoted-printable",
+                    "",
+                    QuotedPrintable.encode(html),
+                ]
+            }
+            textPart = parts + ["--\(alternative)--"]
         } else if let html = draft.html {
             // Formatted mail: the same message as plain text and as HTML; readers pick one.
             // A boundary must never start with another one in the same message (RFC 2046 §5.1.1).

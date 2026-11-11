@@ -47,6 +47,8 @@ public enum InboxSplit: String, CaseIterable, Codable, Sendable {
         if marketingLocalParts.contains(local) { return .newsletters }
         // A calendar's automatic answer ("Declined: …") isn't a person writing.
         if MeetingNotice.isNotice(subject: message.subject) { return .updates }
+        // Nor is a reaction ("Jane reacted to your message"); it shows on the message it answers.
+        if MailReaction.detect(message, text: message.snippet) != nil { return .updates }
         if let auto = headers["auto-submitted"]?.lowercased(), auto != "no" {
             return .updates
         }

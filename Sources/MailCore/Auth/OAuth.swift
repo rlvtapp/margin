@@ -100,17 +100,45 @@ public struct OAuthClient: Sendable {
             var expires_in: Double?
             var error: String?
             var error_description: String?
+            var id_token: String?
         }
         let payload = try JSONDecoder().decode(Payload.self, from: data)
         guard let access = payload.access_token, (response as? HTTPURLResponse)?.statusCode == 200 else {
             throw MailError.authenticationFailed(payload.error_description ?? payload.error ?? "The token request failed.")
         }
-        return OAuthTokens(
+        var tokens = OAuthTokens(
             accessToken: access,
             // Providers may omit the refresh token on refresh; keep the old one.
             refreshToken: payload.refresh_token ?? previous?.refreshToken,
             expiresAt: Date().addingTimeInterval(payload.expires_in ?? 3600)
         )
+        tokens.signedInAs = payload.id_token.flatMap(Self.address(inIdentityToken:)) ?? previous?.signedInAs
+        tokens.signedInName = payload.id_token.flatMap(Self.name(inIdentityToken:)) ?? previous?.signedInName
+        return tokens
+    }
+
+    /// The address in an identity token (a JWT straight from the provider over HTTPS, so only
+    /// read, not verified): `email`, else Microsoft's `preferred_username`.
+    static func address(inIdentityToken token: String) -> String? {
+        guard let claims = claims(inIdentityToken: token) else { return nil }
+        let value = (claims["email"] as? String) ?? (claims["preferred_username"] as? String) ?? (claims["upn"] as? String)
+        return value.flatMap { EmailAddress.isValid($0) ? $0.lowercased() : nil }
+    }
+
+    /// The person's name in an identity token (`name`), when it isn't just their address.
+    static func name(inIdentityToken token: String) -> String? {
+        guard let name = (claims(inIdentityToken: token)?["name"] as? String)?.trimmingCharacters(in: .whitespaces),
+              !name.isEmpty, !name.contains("@") else { return nil }
+        return name
+    }
+
+    private static func claims(inIdentityToken token: String) -> [String: Any]? {
+        let parts = token.split(separator: ".")
+        guard parts.count >= 2 else { return nil }
+        var base64 = parts[1].replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
+        while base64.count % 4 != 0 { base64 += "=" }
+        guard let data = Data(base64Encoded: base64) else { return nil }
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
     }
 }
 
@@ -118,6 +146,10 @@ public struct OAuthTokens: Codable, Sendable {
     public var accessToken: String
     public var refreshToken: String?
     public var expiresAt: Date
+    /// The address that signed in, from the sign-in's identity token, when one came with it.
+    public var signedInAs: String?
+    /// The person's name from the same token, for the sender name.
+    public var signedInName: String?
 
     public init(accessToken: String, refreshToken: String?, expiresAt: Date) {
         self.accessToken = accessToken
@@ -157,7 +189,7 @@ public struct OAuthClientRegistry: Sendable {
                 provider: .google, clientID: id,
                 authorizeURL: URL(string: "https://accounts.google.com/o/oauth2/v2/auth")!,
                 tokenURL: URL(string: "https://oauth2.googleapis.com/token")!,
-                scopes: ["https://mail.google.com/", "email"],
+                scopes: ["https://mail.google.com/", "email", "profile"],
                 redirectURI: "\(scheme):/oauth2redirect",
                 extraParameters: ["access_type": "offline", "prompt": "consent"]
             )
@@ -169,7 +201,7 @@ public struct OAuthClientRegistry: Sendable {
                 tokenURL: URL(string: "https://login.microsoftonline.com/common/oauth2/v2.0/token")!,
                 scopes: [
                     "https://outlook.office.com/IMAP.AccessAsUser.All",
-                    "https://outlook.office.com/SMTP.Send", "offline_access", "openid", "email",
+                    "https://outlook.office.com/SMTP.Send", "offline_access", "openid", "email", "profile",
                     // Asked for at sign-in so instant notifications on iPhone need nothing more;
                     // the token for it comes from the same sign-in (see `pushToken`).
                     "https://graph.microsoft.com/Mail.ReadBasic",
@@ -191,6 +223,9 @@ public enum APIAccess: String, Codable, Sendable, CaseIterable {
     case rooms
     /// The out-of-office reply.
     case autoReply
+    /// Outlook's reactions on Microsoft 365 mail, read from undocumented mailbox properties
+    /// (unofficial; see `OutlookReactions`). Needs reading mail, which sign-in doesn't ask for.
+    case reactions
 
     func scopes(for provider: OAuthProviderID) -> [String] {
         switch (provider, self) {
@@ -212,12 +247,17 @@ public enum APIAccess: String, Codable, Sendable, CaseIterable {
             ["https://graph.microsoft.com/MailboxSettings.ReadWrite"]
         case (.google, .autoReply):
             ["https://www.googleapis.com/auth/gmail.settings.basic"]
+        case (.microsoft, .reactions):
+            ["https://graph.microsoft.com/Mail.Read"]
+        case (.google, .reactions):
+            // Gmail's reactions arrive as mail, which Margin already reads.
+            []
         }
     }
 
     /// What each provider offers.
     public static func offered(by provider: OAuthProviderID) -> [APIAccess] {
-        [.contacts, .calendar, .rooms, .autoReply]
+        provider == .microsoft ? [.contacts, .calendar, .rooms, .autoReply, .reactions] : [.contacts, .calendar, .rooms, .autoReply]
     }
 }
 
@@ -238,7 +278,8 @@ extension OAuthClientRegistry {
     public func client(for provider: OAuthProviderID, access: Set<APIAccess>) -> OAuthClient? {
         guard var client = client(for: provider) else { return nil }
         let scopes = APIAccess.allCases.filter(access.contains).flatMap { $0.scopes(for: provider) }
-        client.scopes = scopes + (provider == .microsoft ? ["offline_access"] : [])
+        // openid and email: so it's known which account said yes (see `signedInAs`).
+        client.scopes = scopes + (provider == .microsoft ? ["offline_access", "openid", "email"] : ["openid", "email"])
         if provider == .google { client.extraParameters["include_granted_scopes"] = "true" }
         return client
     }

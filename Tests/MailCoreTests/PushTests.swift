@@ -7,7 +7,7 @@ import Testing
         let api = GraphFakeAPI()
         api.on("v1/devices", status: 201, #"{"device": "d1", "secret": "s1"}"#)
         let device = try await PushRelay(base: URL(string: "https://relay.example")!, send: api.send)
-            .register(token: Data([0xAB, 0x01]), sandbox: true, topic: "dev.margin.Margin")
+            .register(token: Data([0xAB, 0x01]), sandbox: true, topic: "app.relevate.margin")
         #expect(device == .init(device: "d1", secret: "s1"))
         let body = try #require(api.json(of: "v1/devices"))
         #expect(body["token"] as? String == "ab01")

@@ -41,9 +41,12 @@ public enum NewsletterReport {
         return groups.compactMap { key, group in
             guard let newest = group.messages.max(by: { $0.date < $1.date }),
                   let latest = group.threads.max(by: { $0.date < $1.date }) else { return nil }
+            // A list that people write to (a team's or club's group, a discussion list) carries
+            // one List-Id for everyone's mail: that's not a newsletter to unsubscribe from.
+            if Set(group.messages.map { $0.from.address.lowercased() }).count >= 3 { return nil }
             let opened = group.messages.filter { !$0.isUnread || openedIDs.contains(identity($0)) }.count
             return NewsletterSender(
-                id: key, name: newest.from.displayName, address: newest.from.address,
+                id: key, name: listName(newest) ?? newest.from.displayName, address: newest.from.address,
                 received: group.messages.count, opened: opened, lastReceived: newest.date, latest: latest
             )
         }
@@ -58,6 +61,13 @@ public enum NewsletterReport {
     /// How a message is remembered across folders and launches.
     public static func identity(_ message: MailMessage) -> String {
         message.messageID ?? message.id
+    }
+
+    /// `List-Id: "Weekly" <weekly.example>` → `Weekly`: the list's own name, when it gives one.
+    static func listName(_ message: MailMessage) -> String? {
+        guard let listID = message.listHeaders["list-id"], let open = listID.lastIndex(of: "<") else { return nil }
+        let name = listID[..<open].trimmingCharacters(in: .whitespaces.union(CharacterSet(charactersIn: "\"")))
+        return name.isEmpty ? nil : name
     }
 
     /// `List-Id: Weekly <weekly.example>` → `weekly.example`; otherwise the sender's address.

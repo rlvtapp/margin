@@ -80,7 +80,7 @@ public enum ProviderCatalog {
                   "Open Sign-In and Security, then App-Specific Passwords.",
                   "Create one called Margin and paste it below.",
               ],
-              setupURL: "https://account.apple.com/account/manage"),
+              setupURL: "https://account.apple.com/account/manage/section/security"),
         .imap("yahoo", "Yahoo Mail", domains: ["yahoo.com", "ymail.com", "rocketmail.com", "yahoo.co.uk", "yahoo.fr", "yahoo.de"],
               imap: ("imap.mail.yahoo.com", 993, .tls), smtp: ("smtp.mail.yahoo.com", 465, .tls),
               signIn: .appPassword(help: URL(string: "https://help.yahoo.com/kb/SLN15241.html")!),

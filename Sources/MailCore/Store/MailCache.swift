@@ -84,6 +84,28 @@ public actor MailCache {
         index(message, account: account, body: body.text)
     }
 
+    /// Saved messages from every folder since a date whose subject contains one of the words,
+    /// oldest first: invitations, also ones moved to Deleted Items once answered, and your replies.
+    public func recentMessages(since date: Date, subjectWords: [String], limit: Int = 80) -> [(account: UUID, message: MailMessage)] {
+        let words = subjectWords.map { $0.lowercased() }
+        let rows = query("SELECT account, json, body FROM messages WHERE date > ? ORDER BY date ASC",
+                         [.real(date.timeIntervalSince1970)]) { row -> (UUID, MailMessage)? in
+            guard let account = row.text(0).flatMap(UUID.init(uuidString:)),
+                  let json = row.blob(1), var message = try? JSONDecoder().decode(MailMessage.self, from: json) else { return nil }
+            let subject = message.subject.lowercased()
+            guard words.contains(where: subject.contains) else { return nil }
+            message.body = row.blob(2).flatMap { try? JSONDecoder().decode(MessageBody.self, from: $0) }
+            return (account, message)
+        }
+        return Array(rows.compactMap { $0 }.suffix(limit))
+    }
+
+    /// One saved message.
+    public func message(id: String, account: UUID) -> MailMessage? {
+        query("SELECT json, body FROM messages WHERE account = ? AND id = ?", [.text(account.uuidString), .text(id)], Self.message)
+            .compactMap { $0 }.first
+    }
+
     public func body(of messageID: String, account: UUID) -> MessageBody? {
         query("SELECT body FROM messages WHERE account = ? AND id = ?", [.text(account.uuidString), .text(messageID)]) { row in
             row.blob(0).flatMap { try? JSONDecoder().decode(MessageBody.self, from: $0) }
@@ -113,14 +135,17 @@ public actor MailCache {
     /// Words become quoted FTS terms; the last also matches as a prefix.
     /// People on saved mail in every folder and account (senders and recipients, so Sent
     /// counts too) whose name or address starts with what's typed, most frequent first.
-    public func people(matching text: String, limit: Int = 12) -> [EmailAddress] {
+    /// `accounts` limits it to those accounts' mail; nil for all.
+    public func people(matching text: String, limit: Int = 12, accounts: Set<UUID>? = nil) -> [EmailAddress] {
         let typed = text.trimmingCharacters(in: .whitespaces).lowercased()
         let word = typed.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).first.map(String.init) ?? ""
         guard word.count >= 2 else { return [] }
+        if let accounts, accounts.isEmpty { return [] }
+        let only = accounts.map { " AND m.account IN (" + Array(repeating: "?", count: $0.count).joined(separator: ",") + ")" } ?? ""
         let rows = query("""
         SELECT m.json, NULL FROM search s JOIN messages m ON m.account = s.account AND m.id = s.id
-        WHERE search MATCH ? ORDER BY m.date DESC LIMIT 400
-        """, [.text("people : \"\(word.replacingOccurrences(of: "\"", with: ""))\"*")], Self.message)
+        WHERE search MATCH ?\(only) ORDER BY m.date DESC LIMIT 400
+        """, [.text("people : \"\(word.replacingOccurrences(of: "\"", with: ""))\"*")] + (accounts ?? []).map { .text($0.uuidString) }, Self.message)
         var counts: [String: (person: EmailAddress, count: Int)] = [:]
         for message in rows.compactMap({ $0 }) {
             for person in [message.from] + message.to + message.cc {
@@ -136,6 +161,23 @@ public actor MailCache {
             }
         }
         return counts.values.sorted { $0.count > $1.count }.prefix(limit).map(\.person)
+    }
+
+    /// Saved mail with this address on it (from, to or cc), newest first, across every folder
+    /// and account; one copy per message.
+    public func history(with address: String, limit: Int = 200) -> [MailMessage] {
+        let target = address.lowercased()
+        let words = target.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+        guard !words.isEmpty else { return [] }
+        let rows = query("""
+        SELECT m.json, NULL FROM search s JOIN messages m ON m.account = s.account AND m.id = s.id
+        WHERE search MATCH ? ORDER BY m.date DESC LIMIT ?
+        """, [.text("people : \"\(words.joined(separator: " "))\""), .int(limit * 3)], Self.message)
+        var seen = Set<String>()
+        return rows.compactMap { $0 }.filter { message in
+            ([message.from] + message.to + message.cc).contains { $0.address.lowercased() == target }
+                && seen.insert(message.messageID ?? message.id).inserted
+        }.prefix(limit).map { $0 }
     }
 
     static func ftsQuery(_ text: String) -> String? {
@@ -179,6 +221,12 @@ public actor MailCache {
         return Set(query(sql, values + values) { $0.text(0) }.compactMap { $0 })
     }
 
+    /// Every account with anything saved here.
+    public func savedAccounts() -> Set<UUID> {
+        let ids = query("SELECT DISTINCT account FROM messages UNION SELECT account FROM mailboxes", []) { $0.text(0) }
+        return Set(ids.compactMap { $0.flatMap(UUID.init(uuidString:)) })
+    }
+
     public func removeAccount(_ account: UUID) {
         for table in ["messages", "mailboxes", "search"] {
             execute("DELETE FROM \(table) WHERE account = ?", [.text(account.uuidString)])
@@ -199,6 +247,8 @@ public actor MailCache {
 
     private static func message(_ row: Row) -> MailMessage? {
         guard let json = row.blob(0), var message = try? JSONDecoder().decode(MailMessage.self, from: json) else { return nil }
+        // Previews saved before dividers were tidied away ("------").
+        message.snippet = HTMLText.tidyPreview(message.snippet)
         message.body = row.blob(1).flatMap { try? JSONDecoder().decode(MessageBody.self, from: $0) }
         return message
     }

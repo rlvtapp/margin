@@ -45,6 +45,17 @@ import Testing
         #expect(await cache.people(matching: "zz").isEmpty)
     }
 
+    @Test func peopleCanBeLimitedToSomeAccounts() async {
+        let cache = MailCache(url: nil)
+        let other = UUID()
+        await cache.saveThreads([MailThread(id: "a1", messages: [message("a1", "Hi", from: "Gilbert", minutes: 6)])], account: account, mailbox: "INBOX")
+        await cache.saveThreads([MailThread(id: "b1", messages: [message("b1", "Hey", from: "Gilda", minutes: 7)])], account: other, mailbox: "INBOX")
+        #expect(Set(await cache.people(matching: "gil").map(\.address)) == ["gilbert@example.com", "gilda@example.com"])
+        #expect(await cache.people(matching: "gil", accounts: [account]).map(\.address) == ["gilbert@example.com"])
+        #expect(await cache.people(matching: "gil", accounts: [other, account]).count == 2)
+        #expect(await cache.people(matching: "gil", accounts: []).isEmpty)
+    }
+
     @Test func searchesSubjectsPeopleAndBodies() async {
         let cache = MailCache(url: nil)
         let lisbon = message("1", "Trip plans", from: "Noor", minutes: 10)

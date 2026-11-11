@@ -107,12 +107,16 @@ public struct MessageBody: Hashable, Codable, Sendable {
     public var attachments: [AttachmentInfo]
     /// A meeting invitation carried by the message.
     public var invite: CalendarInvite?
+    /// The emoji of a Gmail-format reaction part (`text/vnd.google.email-reaction+json`).
+    public var reaction: String?
 
-    public init(text: String, html: String? = nil, attachments: [AttachmentInfo] = [], invite: CalendarInvite? = nil) {
+    public init(text: String, html: String? = nil, attachments: [AttachmentInfo] = [], invite: CalendarInvite? = nil,
+                reaction: String? = nil) {
         self.text = text
         self.html = html
         self.attachments = attachments
         self.invite = invite
+        self.reaction = reaction
     }
 
     /// Pictures the HTML shows with `cid:` put in place as `data:` URLs, and taken out of the
@@ -229,6 +233,8 @@ public struct Draft: Hashable, Codable, Sendable {
     public var html: String?
     /// An iCalendar part (an invitation reply), sent alongside the text when present.
     public var calendar: String?
+    /// A reaction emoji, sent as Gmail's reaction part between the text and the HTML.
+    public var reaction: String?
 
     public init(
         from: EmailAddress, to: [EmailAddress] = [], cc: [EmailAddress] = [], bcc: [EmailAddress] = [],
@@ -251,6 +257,12 @@ public struct Draft: Hashable, Codable, Sendable {
     /// A reply to the latest message of a thread, quoting nothing (the thread stays visible).
     public static func reply(to thread: MailThread, from me: EmailAddress, all: Bool = false) -> Draft {
         let last = thread.messages.last(where: { $0.from.address.lowercased() != me.address.lowercased() }) ?? thread.latest
+        return reply(to: last, in: thread, from: me, all: all)
+    }
+
+    /// A reply to one message of a thread, whichever it is: to its sender (or, for one you sent,
+    /// to the people you sent it to), and with `all`, copying everyone else who was on it.
+    public static func reply(to last: MailMessage, in thread: MailThread, from me: EmailAddress, all: Bool = false) -> Draft {
         var to = [last.from]
         var cc: [EmailAddress] = []
         if all {

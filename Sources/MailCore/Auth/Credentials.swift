@@ -29,8 +29,22 @@ public struct Keychain: Sendable {
     }
 
     /// Secrets that belong to the app rather than an account (assistant API keys, the MCP token).
+    /// Secrets already read this launch. Each Keychain read of an item can ask for the Mac's
+    /// password (when the item was made by another build), so each is read once, then kept.
+    private static let memory = Memory()
+
+    final class Memory: @unchecked Sendable {
+        private let lock = NSLock()
+        private var values: [String: String] = [:]
+        func get(_ key: String) -> String? { lock.withLock { values[key] } }
+        func set(_ key: String, _ value: String?) { lock.withLock { values[key] = value } }
+    }
+
+    private func memoryKey(_ key: String) -> String { service + "|" + key }
+
     public func save(_ value: String, key: String) throws {
         delete(key: key)
+        defer { Self.memory.set(memoryKey(key), value) }
         if synchronizes {
             // iCloud Keychain lives in the data protection keychain. A build that isn't signed
             // for it can't write there; the secret then stays on this device.
@@ -49,6 +63,13 @@ public struct Keychain: Sendable {
     }
 
     public func read(key: String) -> String? {
+        if let known = Self.memory.get(memoryKey(key)) { return known }
+        let value = readFromKeychain(key: key)
+        if let value { Self.memory.set(memoryKey(key), value) }
+        return value
+    }
+
+    private func readFromKeychain(key: String) -> String? {
         // Synced items first, then ones kept on this device.
         for dataProtection in [true, false] {
             var query = base(key)
@@ -65,6 +86,7 @@ public struct Keychain: Sendable {
     }
 
     public func delete(key: String) {
+        Self.memory.set(memoryKey(key), nil)
         for dataProtection in [true, false] {
             var query = base(key)
             query[kSecAttrSynchronizable as String] = kSecAttrSynchronizableAny
@@ -126,6 +148,25 @@ public actor KeychainCredentials: CredentialSource {
         return fresh.accessToken
     }
 
+    /// The addresses a Microsoft 365 mailbox also receives at (its aliases), from the account's
+    /// own profile; empty when Microsoft won't say (personal accounts, or no consent to read it).
+    public func microsoftAliases(for account: MailAccount) async -> [String] {
+        guard case .oauth(.microsoft, _) = account.auth,
+              let stored = keychain.read(account: account.id, kind: "oauth"),
+              let tokens = try? JSONDecoder().decode(OAuthTokens.self, from: Data(stored.utf8)),
+              var client = oauth.client(for: .microsoft) else { return [] }
+        client.scopes = ["https://graph.microsoft.com/User.Read", "offline_access"]
+        guard let fresh = try? await client.refresh(tokens),
+              var request = Optional(URLRequest(url: URL(string: "https://graph.microsoft.com/v1.0/me?$select=proxyAddresses")!)) else { return [] }
+        request.setValue("Bearer \(fresh.accessToken)", forHTTPHeaderField: "Authorization")
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let addresses = object["proxyAddresses"] as? [String] else { return [] }
+        // "SMTP:" is the primary address, "smtp:" the others.
+        return addresses.filter { $0.hasPrefix("smtp:") }.map { String($0.dropFirst(5)) }
+    }
+
     /// What the account's API tokens were granted for, if any.
     public func apiAccess(for account: MailAccount) -> Set<APIAccess> {
         storedAPITokens(account)?.access ?? []
@@ -133,6 +174,14 @@ public actor KeychainCredentials: CredentialSource {
 
     public func saveAPITokens(_ tokens: APITokens, for account: MailAccount) throws {
         try keychain.save(String(decoding: try JSONEncoder().encode(tokens), as: UTF8.self), account: account.id, kind: "api")
+    }
+
+    /// Narrows what the account's API tokens are used for (the next refresh asks only for that).
+    /// Nothing left: the tokens are forgotten.
+    public func setAPIAccess(_ access: Set<APIAccess>, for account: MailAccount) throws {
+        guard let stored = storedAPITokens(account) else { return }
+        if access.isEmpty { removeAPITokens(for: account); return }
+        try saveAPITokens(APITokens(tokens: stored.tokens, access: access), for: account)
     }
 
     public func removeAPITokens(for account: MailAccount) {

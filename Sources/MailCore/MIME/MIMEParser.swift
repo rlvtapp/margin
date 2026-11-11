@@ -7,10 +7,13 @@ public struct MIMEMessage: Sendable {
     public var html: String?
     public var attachments: [AttachmentInfo]
     public var invite: CalendarInvite?
+    /// The emoji of a Gmail-format reaction part.
+    public var reaction: String?
 
     public var body: MessageBody {
         let readable = text.isEmpty ? (html.map(HTMLText.plain) ?? "") : text
-        return MessageBody(text: readable.trimmingCharacters(in: .whitespacesAndNewlines), html: html, attachments: attachments, invite: invite)
+        return MessageBody(text: readable.trimmingCharacters(in: .whitespacesAndNewlines), html: html, attachments: attachments, invite: invite,
+                           reaction: reaction)
             .embeddingInlineImages()
     }
 
@@ -52,6 +55,11 @@ public struct MIMEMessage: Sendable {
             return
         }
         let decoded = Self.decode(body, encoding: headers["content-transfer-encoding"])
+        // A reaction in Gmail's documented format: {"version":1,"emoji":"👍"}.
+        if type.value == MailReaction.gmailType {
+            if reaction == nil { reaction = MailReaction.gmailEmoji(Data(decoded)) }
+            return
+        }
         let content = Charset.string(from: decoded, charset: type.params["charset"])
         // The first text part wins; alternatives that come later are the same content.
         if type.value == "text/plain", text.isEmpty {
@@ -273,7 +281,32 @@ public enum HTMLText {
     public static func snippet(_ text: String, length: Int = 160) -> String {
         let lines = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty && !$0.hasPrefix(">") }
-        let joined = lines.joined(separator: " ")
+        let joined = tidyPreview(lines.joined(separator: " "))
         return joined.count > length ? String(joined.prefix(length)) + "…" : joined
     }
+
+    /// A preview without the dividers plain-text mail draws with characters ("-------",
+    /// "=====", "_____", "*****"): runs of three or more go, and the spaces close up.
+    public static func tidyPreview(_ text: String) -> String {
+        guard text.contains(where: { dividerCharacters.contains($0) }) else { return text }
+        var result = ""
+        var run = ""
+        func flush() {
+            if run.count < 3 { result += run }
+            run = ""
+        }
+        for character in text {
+            if dividerCharacters.contains(character) {
+                if let last = run.last, last != character { flush() }
+                run.append(character)
+            } else {
+                flush()
+                result.append(character)
+            }
+        }
+        flush()
+        return result.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+    }
+
+    private static let dividerCharacters: Set<Character> = ["-", "_", "=", "*", "~", "—", "–", "·", "•", "#"]
 }

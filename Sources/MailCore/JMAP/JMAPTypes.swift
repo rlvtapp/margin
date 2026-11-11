@@ -48,6 +48,7 @@ enum JMAPEmail {
         "id", "threadId", "mailboxIds", "keywords", "from", "to", "cc", "subject", "receivedAt", "sentAt",
         "preview", "hasAttachment", "messageId", "inReplyTo", "references", "header:List-Id:asText",
         "header:List-Unsubscribe:asText", "header:Auto-Submitted:asText", "header:Precedence:asText",
+        "header:X-MS-Reactions:asText",
     ] + InboxSplit.bulkHeaders.map { "header:\($0):asText" }
 
     static func message(from email: [String: Any], folders: [Mailbox], fallbackMailbox: String) -> MailMessage? {
@@ -61,7 +62,8 @@ enum JMAPEmail {
         let mailboxIDs = (email["mailboxIds"] as? [String: Bool])?.keys.sorted() ?? []
         var headers: [String: String] = [:]
         for (key, name) in [("header:List-Id:asText", "list-id"), ("header:List-Unsubscribe:asText", "list-unsubscribe"),
-                            ("header:Auto-Submitted:asText", "auto-submitted"), ("header:Precedence:asText", "precedence")] {
+                            ("header:Auto-Submitted:asText", "auto-submitted"), ("header:Precedence:asText", "precedence"),
+                            ("header:X-MS-Reactions:asText", "x-ms-reactions")] {
             if let value = email[key] as? String { headers[name] = value }
         }
         for name in InboxSplit.bulkHeaders {

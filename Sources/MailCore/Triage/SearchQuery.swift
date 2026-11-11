@@ -12,6 +12,36 @@ public struct SearchQuery: Equatable, Sendable {
     public var hasAttachment = false
     public var split: InboxSplit?
 
+    /// Whether what was typed reads as a question for the assistant rather than words to find:
+    /// it ends in "?", or starts with a question word, has at least three words, and uses no
+    /// search operators (`from:`, `is:`…). "when is my flight to lisbon" → yes; "lisbon flight" → no.
+    public static func looksLikeQuestion(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let words = trimmed.split(whereSeparator: \.isWhitespace)
+        guard words.count >= 3, !words.contains(where: { $0.contains(":") }) else { return false }
+        if trimmed.hasSuffix("?") || trimmed.hasSuffix("？") { return true }
+        let first = words[0].lowercased().trimmingCharacters(in: .punctuationCharacters)
+        let firstTwo = words.prefix(2).joined(separator: " ").lowercased()
+        return questionWords.contains(first) || questionWords.contains(firstTwo)
+    }
+
+    /// Words that start a question in English and the app's other main languages.
+    static let questionWords: Set<String> = [
+        // English
+        "what", "when", "where", "who", "whom", "whose", "why", "how", "which", "did", "do", "does",
+        "is", "are", "was", "were", "can", "could", "should", "has", "have", "will", "would", "summarize", "find me",
+        // Dutch
+        "wat", "wanneer", "waar", "wie", "waarom", "hoe", "welke", "welk", "heb", "heeft", "is er", "kan", "moet",
+        // German
+        "was", "wann", "wo", "wer", "warum", "wie", "welche", "welcher", "hat", "habe", "gibt es",
+        // French
+        "quoi", "quand", "où", "qui", "pourquoi", "comment", "quel", "quelle", "est-ce",
+        // Spanish and Portuguese
+        "qué", "que", "cuándo", "quando", "dónde", "onde", "quién", "quem", "por qué", "cómo", "como", "cuál", "qual",
+        // Italian
+        "cosa", "chi", "perché", "dove", "quale",
+    ]
+
     public init(_ text: String) {
         for token in Self.tokens(text) {
             let parts = token.split(separator: ":", maxSplits: 1).map(String.init)

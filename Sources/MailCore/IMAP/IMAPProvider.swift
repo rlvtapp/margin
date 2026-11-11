@@ -17,7 +17,7 @@ public actor IMAPProvider: MailProvider {
     private var waiting: [CheckedContinuation<Void, Never>] = []
 
     /// The parts of a message a list needs: no body.
-    static let listItems = "(UID FLAGS ENVELOPE RFC822.SIZE INTERNALDATE BODYSTRUCTURE BODY.PEEK[HEADER.FIELDS (LIST-ID LIST-UNSUBSCRIBE LIST-UNSUBSCRIBE-POST PRECEDENCE REFERENCES AUTO-SUBMITTED FEEDBACK-ID X-CSA-COMPLAINTS X-MAILGUN-SID X-SES-OUTGOING X-SG-EID X-MC-USER)])"
+    static let listItems = "(UID FLAGS ENVELOPE RFC822.SIZE INTERNALDATE BODYSTRUCTURE BODY.PEEK[HEADER.FIELDS (LIST-ID LIST-UNSUBSCRIBE LIST-UNSUBSCRIBE-POST PRECEDENCE REFERENCES AUTO-SUBMITTED FEEDBACK-ID X-CSA-COMPLAINTS X-MAILGUN-SID X-SES-OUTGOING X-SG-EID X-MC-USER X-MS-REACTIONS)])"
 
     public init(account: MailAccount, credentials: any CredentialSource) throws {
         guard case .imap(let incoming, let outgoing) = account.connection else {
@@ -66,6 +66,19 @@ public actor IMAPProvider: MailProvider {
             throw MailError.protocolViolation(String(localized: "The message body was missing."))
         }
         return MIMEMessage.parse(raw).body
+    }
+
+    public func rawSource(of message: MailMessage) async throws -> Data {
+        try await exclusive {
+            let client = try await self.connected()
+            guard let uid = Self.uid(of: message) else { throw MailError.protocolViolation(String(localized: "Unknown message.")) }
+            if await client.selected != message.mailboxID { try await client.select(message.mailboxID) }
+            let items = try await client.fetch("\(uid)", "(UID BODY.PEEK[])", byUID: true)
+            guard let raw = items.first?.sections[""] else {
+                throw MailError.protocolViolation(String(localized: "The message body was missing."))
+            }
+            return Data(raw)
+        }
     }
 
     public func perform(_ action: MailAction, on threads: [MailThread]) async throws {
@@ -343,17 +356,44 @@ public actor IMAPProvider: MailProvider {
         return client
     }
 
-    /// A new connection, opened and signed in.
+    /// A new connection, opened and signed in. Outlook.com sometimes answers a good sign-in with
+    /// "User is authenticated but not connected" when the mailbox behind it isn't ready yet; that
+    /// passes, so it's tried again a few times, a little later each time, before it's an error.
     private func signedIn(readTimeout: TimeInterval) async throws -> IMAPClient {
+        var attempt = 0
+        while true {
+            do {
+                return try await signInOnce(readTimeout: readTimeout)
+            } catch let MailError.authenticationFailed(detail) where Self.isPassing(detail) && attempt < 3 {
+                attempt += 1
+                try await Task.sleep(for: .milliseconds(800 * attempt))
+            }
+        }
+    }
+
+    /// Server answers to a good sign-in that only mean "not now".
+    static func isPassing(_ detail: String) -> Bool {
+        let text = detail.lowercased()
+        return text.contains("authenticated but not connected") || text.contains("temporarily unavailable")
+            || text.contains("try again later")
+    }
+
+    private func signInOnce(readTimeout: TimeInterval) async throws -> IMAPClient {
         let client = try IMAPClient(endpoint: incoming, readTimeout: readTimeout)
         try await client.open(security: incoming.security)
-        switch account.auth {
-        case .password(let username):
-            try await client.login(username: username, password: try await credentials.secret(for: account))
-        case .oauth(_, let username):
-            try await client.authenticate(username: username, accessToken: try await credentials.secret(for: account))
-        case .token:
-            throw MailError.notSupported(String(localized: "IMAP needs a password or a sign-in."))
+        do {
+            switch account.auth {
+            case .password(let username):
+                try await client.login(username: username, password: try await credentials.secret(for: account))
+            case .oauth(_, let username):
+                try await client.authenticate(username: username, accessToken: try await credentials.secret(for: account))
+            case .token:
+                throw MailError.notSupported(String(localized: "IMAP needs a password or a sign-in."))
+            }
+        } catch {
+            // Closed straight away, so a retry doesn't leave a connection open on the server.
+            await client.logout()
+            throw error
         }
         return client
     }

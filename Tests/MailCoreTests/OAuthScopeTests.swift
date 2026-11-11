@@ -20,7 +20,7 @@ import Testing
         let client = try #require(registry.client(for: .microsoft))
         #expect(client.tokenScopes == [
             "https://outlook.office.com/IMAP.AccessAsUser.All", "https://outlook.office.com/SMTP.Send",
-            "offline_access", "openid", "email",
+            "offline_access", "openid", "email", "profile",
         ])
     }
 

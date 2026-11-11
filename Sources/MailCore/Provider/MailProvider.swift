@@ -13,6 +13,8 @@ public protocol MailProvider: Sendable {
     func perform(_ action: MailAction, on threads: [MailThread]) async throws
     /// Sends a message, and files a copy in Sent where the protocol doesn't.
     func send(_ draft: Draft) async throws
+    /// The message exactly as the server keeps it (headers and MIME), for "Show source".
+    func rawSource(of message: MailMessage) async throws -> Data
     /// An attachment's bytes, for providers that don't send them with the body.
     func attachmentData(_ attachment: AttachmentInfo, of message: MailMessage) async throws -> Data
     /// Mail matching the words, from the whole account, newest first.
@@ -31,6 +33,9 @@ public protocol MailProvider: Sendable {
 }
 
 extension MailProvider {
+    public func rawSource(of message: MailMessage) async throws -> Data {
+        throw MailError.notSupported(String(localized: "This account can't show a message's source."))
+    }
     public func waitForInboxChange(timeout: Duration) async throws -> Bool {
         throw MailError.notSupported(String(localized: "This account can't push new mail."))
     }

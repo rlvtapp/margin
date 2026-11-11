@@ -55,6 +55,18 @@ public actor JMAPProvider: MailProvider {
         return body.embeddingInlineImages()
     }
 
+    public func rawSource(of message: MailMessage) async throws -> Data {
+        let session = try await connected()
+        let responses = try await call([
+            ["Email/get", ["accountId": session.accountID, "ids": [message.id], "properties": ["blobId"]], "s"],
+        ])
+        guard let blob = ((responses.first?.arguments["list"] as? [[String: Any]])?.first?["blobId"]) as? String else {
+            throw MailError.protocolViolation(String(localized: "The message body was missing."))
+        }
+        let file = AttachmentInfo(filename: "message.eml", mimeType: "message/rfc822", blobID: blob)
+        return try await attachmentData(file, of: message)
+    }
+
     public func perform(_ action: MailAction, on threads: [MailThread]) async throws {
         let session = try await connected()
         let inbox = folders.first { $0.role == .inbox }?.id

@@ -67,6 +67,16 @@ public actor SampleProvider: MailProvider {
         ))
     }
 
+    /// The sample mail as it would arrive: built from its fields.
+    public func rawSource(of message: MailMessage) async throws -> Data {
+        var draft = Draft(from: message.from, to: message.to, cc: message.cc, subject: message.subject,
+                          text: message.body?.text ?? message.snippet)
+        draft.html = message.body?.html
+        draft.inReplyTo = message.inReplyTo
+        draft.references = message.references
+        return Data(MessageBuilder.build(draft, date: message.date, messageID: message.messageID))
+    }
+
     public func disconnect() async {}
 
     public func search(_ text: String, limit: Int) async throws -> [MailThread] {

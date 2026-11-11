@@ -21,6 +21,8 @@ public struct AutoConfig: Sendable {
             return .notFound
         }
         if let preset = ProviderCatalog.preset(forDomain: domain) { return .preset(preset) }
+        // A custom domain at one of the big providers: known by where its mail goes.
+        if let preset = ProviderCatalog.preset(forMXHosts: await MXLookup.hosts(for: domain)) { return .preset(preset) }
         if let jmap = await jmapSession(domain: domain) { return .discovered(.jmap(sessionURL: jmap)) }
         let sources = [
             "https://autoconfig.\(domain)/mail/config-v1.1.xml",

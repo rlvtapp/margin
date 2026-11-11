@@ -21,7 +21,8 @@ Plain IMAP servers (iCloud Mail, Yahoo, most hosts) can't report new mail to any
 accounts keep iOS background checks.
 
 The relay is optional: **Settings → Notifications → Instant notifications** (iPhone and iPad, shown
-only when the build has a relay; on by default). Turning it off (`MailModel.usesPushRelay`):
+only when the build has a relay; on by default). The first-launch welcome explains it too, on its own step with the
+same switch. Turning it off (`MailModel.usesPushRelay`):
 
 - ends each Microsoft Graph subscription and stops Gmail's `watch`, where the sign-in still works;
 - deletes the phone from the relay (`DELETE /v1/devices/{id}`), which deletes every subscription

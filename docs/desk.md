@@ -42,10 +42,26 @@ after what was learned from your sent mail, so they win.
 
 ## First launch
 
-A three-step welcome: what Margin is with **Add Your Mailbox…** or **Look Around First** (the sample
-mail), then layout, appearance and app icon, then alerts, Contacts suggestions and copying sign-in
-codes. It shows once (`hasOnboarded`); Help → Welcome to Margin and Settings → About → Show
-Welcome open it again. Code: `MailUI/Views/OnboardingView.swift`.
+A short welcome: what Margin is with **Add Your Mailbox…** or **Look Around First** (the sample
+mail); layout, appearance, the color-blind-safe palette and app icon, each one short row of
+the Settings picture tiles so the step fits without scrolling (the window style stays in
+Settings); alerts, Contacts suggestions, iCloud sync and copying
+sign-in codes; on iPhone and iPad (when the build has a push relay) **Instant notifications**,
+which says why the relay exists, what it learns and never sees, and has the same switch as
+Settings → Notifications (`usesPushRelay`, docs/push.md); then **You're all set** with a summary.
+
+Each step has a small moving picture: rows of people, drawn like Margin's avatars (initials on
+their colour) with the odd VIP star and assistant sparkle, sliding past the app icon on the
+welcome (popping in from the icon with a little spring), a little window (a phone on iPhone) whose
+list of unread dots and avatars takes the layout, appearance and palette as you pick them, the alerts each choice would bring, and mail and a "new mail" nudge
+travelling to the device. Steps come into focus from the side they lie on; choices give a small
+springy press. With Reduce Motion (in Margin or on the device) everything simply appears. On a
+phone the main action is a pill under the thumb with Back as a round button beside it. A step
+taller than the window fades at the bottom with a small arrow that scrolls down. After adding
+a mailbox the welcome stays put and lists the mailboxes added so far, with **Add Another
+Mailbox…** and **Continue**, so several can be added in one go. It shows once (`hasOnboarded`); Help → Welcome to
+Margin and Settings → About → Show Welcome open it again. Code: `MailUI/Views/OnboardingView.swift`
+and `OnboardingScenes.swift`; `-snapshot-onboarding <n>` on the Mac draws each step.
 
 ## Settings
 

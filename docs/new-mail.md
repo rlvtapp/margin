@@ -7,7 +7,7 @@ Margin has no server of its own, so new-mail alerts come straight from each mail
   and Margin reloads at once. The connection is renewed every 25 minutes (servers drop IDLE after
   30). Servers without IDLE, and JMAP accounts for now, fall back to the three-minute timer.
   Code: `IMAPClient.idle`, `IMAPProvider.waitForInboxChange`, `MailModel.startWatching`.
-- **iPhone and iPad in the background:** Background App Refresh (`dev.margin.Margin.refresh`).
+- **iPhone and iPad in the background:** Background App Refresh (`app.relevate.margin.refresh`).
   iOS decides when to wake Margin, often every 15 minutes to a few hours. Margin fetches, alerts
   about mail it hasn't alerted about before (remembered in `seen-unread.json`), and asks to be
   woken again. Code: `MarginTouchApp`, `MailModel.checkForNewMail`.

@@ -70,7 +70,7 @@ Snoozes (`snoozes.json`) and the outbox (`outbox.json`) are JSON files in Applic
 
 - **The clock.** A clock in `MailModel+Timing.swift` ticks every 20 seconds. It wakes due snoozes and sends due scheduled messages, and checks for new mail about every 3 minutes, posting notifications for new mail from people. Scheduled mail only goes out while Margin is running.
 - **Undo send.** Sending holds the message in memory for the undo delay before it reaches SMTP or JMAP.
-- **Waiting for reply.** Sent mail where you wrote last counts as waiting when no inbox message answers it, by `In-Reply-To`/`References`, or by the same subject from a recipient.
+- **Waiting for reply.** Sent mail where you wrote last counts as waiting when no inbox message answers it, by `In-Reply-To`/`References`, or by the same subject from a recipient. A recipient who has since sent a meeting invitation, or a new email on the same subject, in any saved folder (Outlook moves answered invitations to Deleted Items), counts as having answered.
 - **Unsubscribe.** Uses RFC 8058 one-click (a cookie-less POST) when the sender supports it, otherwise the list's mail address, otherwise its web page.
 
 ## Commands and keyboard
@@ -83,9 +83,9 @@ The look is called paper and ink: one neutral scale per appearance, and the syst
 
 ## Checking the UI without screen recording
 
-`-snapshot <file.png>` launches the app with the sample mailboxes, renders the window to a PNG and quits. Add `-appearance light|dark`, `-snapshot-palette`, `-snapshot-compose`, `-snapshot-mailbox 0`, `-snapshot-combined sent` or `-snapshot-select "Issue 212"`. Web content is drawn in another process, so snapshot mode paints each web view's own snapshot over its frame. A sandboxed build can only write inside its container, so build without the sandbox entitlement for snapshots:
+`-snapshot <file.png>` launches the app with the sample mailboxes, renders the window to a PNG and quits. Add `-appearance light|dark`, `-snapshot-palette`, `-snapshot-compose`, `-snapshot-mailbox 0`, `-snapshot-combined sent`, `-snapshot-select "Issue 212"` or `-snapshot-size 1520x940` (the window at that size in points, drawn two pixels a point). `-snapshot-cc "maya@example.com, no"` (with `-snapshot-compose`) opens Cc and Bcc with that in Cc. Put flags that take no value last: AppKit reads `-flag value` pairs, so a bare flag swallows the next one and a stray word after that is taken for a file to open, and no window comes up. Add `-snapshot-glass` to save the system's own picture of the real window instead, with Liquid Glass and scrolling parts in it; the window shows on a Retina screen for a moment. The website's pictures are made that way. Web content is drawn in another process, so snapshot mode paints each web view's own snapshot over its frame. A sandboxed build can only write inside its container, so build without the sandbox entitlement for snapshots:
 
 ```bash
-cd Apps && xcodebuild -scheme Margin -derivedDataPath ../.build/xcode-snapshot CODE_SIGN_ENTITLEMENTS= MARGIN_BUNDLE_ID=dev.margin.Margin.snapshot build
+cd Apps && xcodebuild -scheme Margin -derivedDataPath ../.build/xcode-snapshot CODE_SIGN_ENTITLEMENTS= MARGIN_BUNDLE_ID=app.relevate.margin.snapshot build
 ../.build/xcode-snapshot/Build/Products/Debug/Margin.app/Contents/MacOS/Margin -snapshot /tmp/margin.png -appearance dark
 ```

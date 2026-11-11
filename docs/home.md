@@ -27,9 +27,12 @@ On the Mac:
 - **The one next thing** (`NextUpBadge`), top right of that bar: the next meeting when one is
   happening or starts within a few hours (Join when it's about to start), otherwise the next
   snoozed conversation coming back today. Nothing when there's nothing.
-- **Next up** (`NextUpColumn`): with Side by side and enough room, a column right of the reader
-  lists meetings in the coming week, snoozed mail and when it comes back, and mail waiting for a
-  reply. The button next to the badge shows or hides it; while it shows, the badge steps aside.
+- **Next up** (`NextUpColumn`): with Side by side and enough room, a column right of the reader.
+  The next meeting leads as a small card (how soon, time and place, Join); then the rest of the
+  week's meetings (All day for all-day ones), **Open Calendar**, snoozed mail and when it comes
+  back, and mail waiting for a reply. Meetings come from the same list as the Calendar (account
+  calendars and invitations in mail); clicking one opens its invitation. The button next to the
+  badge shows or hides it; while it shows, the badge steps aside.
 
 Each mailbox can be left out of All Inboxes (Edit… on the mailbox); it keeps its own inbox,
 alerts and everything else. The newest conversations are read ahead after every refresh, so they
@@ -67,6 +70,10 @@ saying why it matters now (`MailModel.marginNote(for:)`, first match wins):
 - **bill**: it's in Bills to Pay;
 - **reply owed** / **owed 3d**: the last word is from someone you know, in the last three weeks,
   and you haven't answered.
+
+Under the date, one sentence sums it up ("Two replies to write and a bill to open. Planning at
+10:00."), from `MailModel.homeSummary`. AI apps connected to Margin get the same list and sentence
+with `list_needs_you` (sign-in codes named, never shown).
 
 Rows without a reason keep an empty margin so they line up. The count at the top is the rows
 with a note. Every Home layout uses the same date line and notes.

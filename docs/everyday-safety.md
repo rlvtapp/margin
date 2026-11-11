@@ -45,3 +45,9 @@ Settings → **Rules**.
 They run on new inbox mail on every load while Margin is open, before alerts, each message once (the
 first run only remembers what's there). Code: `MailModel+Rules.swift`, `RulesSettings.swift`. Tests:
 `EssentialsTests`, `AutoReplyTests`.
+
+AI apps connected to Margin can make the same rules from a plain request ("always mark mail from my
+bank as important"), when the connection is allowed to change things: `list_rules`, `preview_rule`,
+`create_rule`, `update_rule`, `delete_rule` (see [intelligence.md](intelligence.md#connections-mcp)).
+They show in Settings → Rules like any other, with a notice when one is added, changed or removed.
+Code: `MailToolbox+Rules.swift`. Tests: `RuleToolsTests`.

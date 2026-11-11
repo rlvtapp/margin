@@ -14,7 +14,7 @@ a yearly security assessment.
 - [ ] Two owners or editors on the project, so the review never stalls on one person.
 - [ ] **relevate.app verified in Google Search Console** by one of the project owners. The
       homepage, privacy policy and terms must be on a verified domain.
-- [ ] A support inbox someone reads (the site uses `margin@relevate.app`; make sure it exists).
+- [ ] A support inbox someone reads (the site uses `hello@relevate.app`; make sure it exists).
       Google's reviewers write there and expect answers within days.
 - [ ] A developer contact email for Google's notices.
 
@@ -44,7 +44,7 @@ a yearly security assessment.
 ## 4. Sign-in clients (Google Auth Platform → Clients)
 
 - [ ] One **iOS** client for the iPhone/iPad app, with the final bundle ID (now
-      `dev.margin.Margin`; change it before registering if the App Store one will differ).
+      `app.relevate.margin`, in its own Google Cloud project for Margin).
 - [ ] The Mac app uses the same kind of client; Google treats native Apple apps as "iOS" clients.
       Margin signs in with PKCE and the reversed client ID as the redirect
       (`com.googleusercontent.apps.<id>:/oauth2redirect`), so no client secret is needed.

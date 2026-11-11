@@ -10,7 +10,7 @@ anything in `Margin.xcconfig`.
 
 | Setting | Now | Meaning |
 | --- | --- | --- |
-| `MARGIN_BUNDLE_ID` | `dev.margin.Margin` | Decide the App Store id before registering clients; changing it later means new clients, a new iCloud container, and installed copies start empty. |
+| `MARGIN_BUNDLE_ID` | `app.relevate.margin` | Margin's domain reversed (margin.relevate.app). Changed from `dev.margin.Margin` on 2026-11-10; changing it again means new clients, a new iCloud container, and installed copies start empty. |
 | `MARGIN_GOOGLE_CLIENT_ID` | empty | Stays empty until Google approves the app. Gmail signs in with an app password meanwhile. |
 | `MARGIN_MICROSOFT_CLIENT_ID` | empty, to fill in | From the Entra registration below. Without it Outlook and Microsoft 365 accounts can't sign in at all. |
 | `MARGIN_PUSH_RELAY_URL` | empty | `https:/$()/push.margin.relevate.app` once the relay runs (`//` starts a comment in xcconfig files). |
@@ -36,14 +36,14 @@ What to test:
 2. Name: **Margin**. Supported account types: **Accounts in any organizational directory and
    personal Microsoft accounts**.
 3. Redirect URI: platform **Public client/native (mobile & desktop)**, value
-   `msauth.dev.margin.Margin://auth` (`msauth.` plus the bundle id, plus `://auth`).
+   `msauth.app.relevate.margin://auth` (`msauth.` plus the bundle id, plus `://auth`).
 4. Copy the **Application (client) ID** into `MARGIN_MICROSOFT_CLIENT_ID`.
 5. Under Authentication, set **Allow public client flows** to Yes. There's no client secret.
 6. Under API permissions, add these delegated permissions so the consent screen lists them up front:
    - Office 365 Exchange Online: `IMAP.AccessAsUser.All`, `SMTP.Send`
    - Microsoft Graph: `offline_access`, `email`, `Mail.ReadBasic` (push), `Contacts.Read`,
      `People.Read`, `Calendars.ReadWrite`, `MailboxSettings.ReadWrite`, `Place.Read.All` (rooms;
-     needs an admin in work accounts)
+     needs an admin in work accounts), `Mail.Read` (Outlook reactions, only when turned on)
 7. Under Branding & properties, add the homepage, terms and privacy links on margin.relevate.app,
    and the logo.
 8. **Publisher verification** (Branding & properties → verify publisher) with the company's free
@@ -65,7 +65,7 @@ Store all need the company's paid Apple Developer Program membership ($99 a year
 ## Website (margin.relevate.app)
 
 On Cloudflare Workers, with the custom domain in the relevate.app zone set in
-`site/wrangler.jsonc`. Before the first deploy, make sure `margin@relevate.app` exists, since
+`site/wrangler.jsonc`. Before the first deploy, make sure `hello@relevate.app` exists, since
 every page shows it.
 
 ```sh
@@ -94,3 +94,10 @@ only, not proxied), check `https://push.margin.relevate.app/healthz` answers, an
 `MARGIN_PUSH_RELAY_URL`.
 
 Later deploys are just `fly deploy`.
+
+## A build to hand to someone
+
+`scripts/build-share.sh` makes `.build/share/Margin-mac.dmg` and `Margin-mac.zip`: the Release
+build signed ad hoc. The disk image holds the app and a shortcut to Applications, so it's
+installed by dragging one onto the other. It isn't notarized: the first time, they right-click
+the app and choose Open.

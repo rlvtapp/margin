@@ -17,13 +17,13 @@ public struct GooglePeopleClient: Sendable {
     /// The account's contacts and other contacts, one entry per address.
     public func contacts() async throws -> [Contact] {
         let saved: [GooglePerson] = try await pages(
-            "\(Self.base)/people/me/connections?personFields=names,emailAddresses,organizations&pageSize=1000", key: \.connections)
+            "\(Self.base)/people/me/connections?personFields=names,emailAddresses,organizations,photos&pageSize=1000", key: \.connections)
         let other: [GooglePerson] = try await pages(
-            "\(Self.base)/otherContacts?readMask=names,emailAddresses&pageSize=1000", key: \.otherContacts)
+            "\(Self.base)/otherContacts?readMask=names,emailAddresses,photos&pageSize=1000", key: \.otherContacts)
         return Contact.mergedByEmail((saved + other).map { person in
             Contact(id: "google:\(person.resourceName)", name: person.names?.first?.displayName,
                     emails: person.emailAddresses?.compactMap(\.value) ?? [],
-                    organization: person.organizations?.first?.name, source: .google)
+                    organization: person.organizations?.first?.name, source: .google, picture: person.picture)
         })
     }
 
@@ -60,6 +60,19 @@ struct GooglePerson: Decodable {
     var names: [Name]?
     var emailAddresses: [Email]?
     var organizations: [Organization]?
+    var photos: [Photo]?
+
+    /// The person's own photo. Google also sends a made-up one (a letter on a colour) for people
+    /// without a photo, marked `default`; that one is left out, since Margin draws its own.
+    var picture: ContactPicture? {
+        guard let url = photos?.first(where: { $0.default != true && $0.url?.hasPrefix("https://") == true })?.url else { return nil }
+        return .url(url)
+    }
+
+    struct Photo: Decodable {
+        var url: String?
+        var `default`: Bool?
+    }
 
     struct Name: Decodable { var displayName: String? }
     struct Email: Decodable { var value: String? }

@@ -108,6 +108,11 @@ extension MailModel {
         let request = client.authorizationRequest(loginHint: account.address.address)
         let callback = try await authenticate(request.url, client.callbackScheme)
         let tokens = try await client.exchange(callback: callback, verifier: request.verifier, state: request.state)
+        // Another account said yes (one already signed in, picked by mistake): keep nothing.
+        let mine = Set(([account.address] + (account.aliases ?? [])).map { $0.address.lowercased() })
+        if let who = tokens.signedInAs, !mine.contains(who) {
+            throw MailError.authenticationFailed(String(localized: "You signed in as \(who). Connect again and choose \(account.address.address)."))
+        }
         try await credentials.saveAPITokens(APITokens(tokens: tokens, access: access), for: account)
         apiAccess[account.id] = access
         if wanted.contains(.contacts) { await refreshContacts() }
@@ -145,30 +150,40 @@ extension MailModel {
             }
         }
         var seen = Set<String>()
-        let unique = gathered.filter { seen.insert($0.id).inserted }
+        // Pictures that came with the contacts go into the picture store; the list keeps a note.
+        let unique = await savingPictures(of: gathered.filter { seen.insert($0.id).inserted })
         contactStore = unique
         contactProblems = problems
         contactsFile.save(unique)
+        ContactPictures.shared.refresh()
     }
 
     /// People for what's typed in an address field beyond what's loaded: everyone on saved mail
     /// in every folder and mailbox (Sent included), then the work directories of mailboxes whose
     /// contacts are on (Microsoft 365). Empty when nothing matches.
     public func searchDirectories(_ text: String) async -> [EmailAddress] {
+        await searchDirectories(text, in: accounts).map(\.person)
+    }
+
+    /// The same search, limited to some mailboxes' saved mail and directories, with where each
+    /// person was found.
+    func searchDirectories(_ text: String, in scope: [MailAccount]) async -> [(person: EmailAddress, source: PersonSource)] {
         let typed = text.trimmingCharacters(in: .whitespaces)
         guard typed.count >= 2, !environment.isPreview else { return [] }
         let mine = Set(accounts.flatMap(\.sendAddresses).map { $0.address.lowercased() })
-        var found: [EmailAddress] = await environment.cache.people(matching: typed).filter { !mine.contains($0.address.lowercased()) }
-        for account in accounts where apiAccess[account.id]?.contains(.contacts) == true && oauthProvider(of: account) == .microsoft {
+        let only = scope.count == accounts.count ? nil : Set(scope.map(\.id))
+        var found: [(person: EmailAddress, source: PersonSource)] = await environment.cache.people(matching: typed, accounts: only)
+            .filter { !mine.contains($0.address.lowercased()) }.map { ($0, .savedMail) }
+        for account in scope where apiAccess[account.id]?.contains(.contacts) == true && oauthProvider(of: account) == .microsoft {
             guard let token = try? await credentials.apiToken(for: account) else { continue }
             let graph = MicrosoftGraphClient(accessToken: token)
             // People you deal with first, then anyone else in the organization.
             async let people = try? graph.searchPeople(typed)
             async let users = try? graph.searchUsers(typed)
-            found += (await people ?? []) + (await users ?? [])
+            found += ((await people ?? []) + (await users ?? [])).map { ($0, .directory) }
         }
         var seen = Set<String>()
-        return found.filter { seen.insert($0.address.lowercased()).inserted }
+        return found.filter { seen.insert($0.person.address.lowercased()).inserted }
     }
 
     /// Every address book that's turned on, as adapters made when they're read (account tokens are
@@ -204,7 +219,7 @@ extension MailModel {
             throw ContactsDenied()
         }
         let keys = [CNContactGivenNameKey, CNContactFamilyNameKey, CNContactOrganizationNameKey, CNContactEmailAddressesKey,
-                    CNContactNicknameKey] as [CNKeyDescriptor]
+                    CNContactNicknameKey, CNContactThumbnailImageDataKey] as [CNKeyDescriptor]
         let request = CNContactFetchRequest(keysToFetch: keys)
         return try await Task.detached {
             var found: [Contact] = []
@@ -213,7 +228,8 @@ extension MailModel {
                 guard !emails.isEmpty else { return }
                 let name = [contact.givenName, contact.familyName].filter { !$0.isEmpty }.joined(separator: " ")
                 found.append(Contact(id: "system:\(contact.identifier)", name: name.isEmpty ? contact.nickname : name,
-                                     emails: emails, organization: contact.organizationName, source: .system))
+                                     emails: emails, organization: contact.organizationName, source: .system,
+                                     pictureData: contact.thumbnailImageData))
             }
             return found
         }.value

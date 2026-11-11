@@ -28,6 +28,9 @@ have); they stay on the device in `contacts.json` and refresh at launch and abou
 Suggestions rank people you write to, then people who write to you, then everyone else from the
 address books.
 
+AI apps connected to Margin look people up with `find_people`, which returns the same suggestions
+(with where each was found), leaving out mailboxes hidden from them.
+
 ## Meetings
 
 **New Meeting** (File menu and ⌥⌘N, the command palette, and the iPad keyboard): title, start,
@@ -84,3 +87,29 @@ the mail tokens (`APIAccess`, `APITokens`).
 `MailUI/Model/MailModel+Contacts.swift`, `+Meetings.swift`; `MailUI/Views/ContactsSettings.swift`,
 `NewMeetingView.swift`, `MeetingGuests.swift`. Tests: `CardDAVTests`, `GraphAndPeopleTests`,
 `GoogleCalendarTests`, `MeetingAnswersTests`.
+
+## Pictures
+
+An avatar shows the person's picture when one of your own address books has it, and their
+initials otherwise. Pictures only ever come from where the contact came from:
+
+- **The Contacts app**: the contact's thumbnail, read with the contact.
+- **A contacts server (CardDAV)**: the vCard's `PHOTO`, as bytes or as an https link.
+- **Google**: the photo address the People API gives with the contact (`photos`). Google's
+  made-up letter pictures (`default`) are skipped; Margin draws its own initials.
+- **Microsoft**: saved contacts through `me/contacts/{id}/photo`, colleagues through
+  `users/{address}/photo`. A personal account has no directory, which just means no picture.
+- **Your own mailboxes**: the picture chosen for the mailbox.
+
+Nothing is looked up from the address alone on some other service, so writing to someone never
+tells a third party about them.
+
+How it fits together: each `Contact` carries a `ContactPicture` note (`saved`, a `url`, or a
+Microsoft reference). Pictures that arrive with the contact are written to the picture store
+when contacts are refreshed (`savingPictures`); the rest are fetched the first time that
+person's avatar is drawn (`MailModel.pictureData(for:)`). The store (`ContactPictureStore`,
+`pictures/` in the app's folder) keeps one 192-pixel JPEG per address, in a file named by a
+hash of the address, and remembers for a week that someone has none. `Avatar` reads from
+`ContactPictures.shared`, which asks the model once per address and redraws when it arrives.
+
+Tests: `ContactPictureSourceTests` (MailCore), `ContactPictureStoreTests` (MailUI).

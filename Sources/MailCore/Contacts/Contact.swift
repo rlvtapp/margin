@@ -9,17 +9,42 @@ public struct Contact: Codable, Hashable, Sendable, Identifiable {
     public var emails: [String]
     public var organization: String?
     public var source: ContactSource
+    /// Where the person's picture is, when their address book has one.
+    public var picture: ContactPicture?
+    /// The picture itself, when the address book hands it over with the contact (the Contacts
+    /// app, a vCard). It's put in the picture store when contacts are refreshed and isn't kept
+    /// with the contact.
+    public var pictureData: Data?
 
-    public init(id: String, name: String?, emails: [String], organization: String? = nil, source: ContactSource) {
+    // `pictureData` is left out: pictures live in their own files, not in the contacts list.
+    enum CodingKeys: String, CodingKey { case id, name, emails, organization, source, picture }
+
+    public init(id: String, name: String?, emails: [String], organization: String? = nil, source: ContactSource,
+                picture: ContactPicture? = nil, pictureData: Data? = nil) {
         self.id = id
         self.name = name?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         self.emails = emails.map { $0.trimmingCharacters(in: .whitespaces) }.filter(EmailAddress.isValid)
         self.organization = organization?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         self.source = source
+        self.picture = picture
+        self.pictureData = pictureData
     }
 
     /// One address per email, with the contact's name.
     public var addresses: [EmailAddress] { emails.map { EmailAddress(name: name, address: $0) } }
+}
+
+/// Where a contact's picture comes from. Always the person's own address book: the provider the
+/// contact was read from, or the device. Nothing is looked up anywhere else.
+public enum ContactPicture: Codable, Hashable, Sendable {
+    /// Already in the picture store on this device.
+    case saved
+    /// A picture address the address book gave (Google's contact photos).
+    case url(String)
+    /// A saved Microsoft contact, by its id: read through Microsoft Graph.
+    case microsoftContact(String)
+    /// Someone in the Microsoft account's organization, by address: read through Microsoft Graph.
+    case microsoftUser(String)
 }
 
 public enum ContactSource: String, Codable, Sendable, CaseIterable {

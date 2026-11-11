@@ -112,7 +112,9 @@ struct ContactsSettings: View {
         let wanted: Set<APIAccess> = [.contacts, .calendar]
         do {
             try await model.requestAccess(wanted, for: account) { url, scheme in
-                try await webAuthentication.authenticate(using: url, callbackURLScheme: scheme, preferredBrowserSession: .shared)
+                // A private sign-in with the mailbox's address filled in, so an account already signed in
+                // to the browser can't be picked by mistake.
+                try await webAuthentication.authenticate(using: url, callbackURLScheme: scheme, preferredBrowserSession: .ephemeral)
             }
             problem = nil
         } catch let failure as ASWebAuthenticationSessionError where failure.code == .canceledLogin {

@@ -8,17 +8,25 @@ public enum VCard {
         public var name: String?
         public var emails: [String]
         public var organization: String?
+        /// The card's picture, when it carries one itself.
+        public var photo: Data?
+        /// Or where the card says its picture is.
+        public var photoURL: String?
 
-        public init(uid: String? = nil, name: String? = nil, emails: [String] = [], organization: String? = nil) {
+        public init(uid: String? = nil, name: String? = nil, emails: [String] = [], organization: String? = nil,
+                    photo: Data? = nil, photoURL: String? = nil) {
             self.uid = uid
             self.name = name
             self.emails = emails
             self.organization = organization
+            self.photo = photo
+            self.photoURL = photoURL
         }
 
         /// The card as a contact with the given id and source.
         public func contact(id: String, source: ContactSource) -> Contact {
-            Contact(id: id, name: name, emails: emails, organization: organization, source: source)
+            Contact(id: id, name: name, emails: emails, organization: organization, source: source,
+                    picture: photo == nil ? photoURL.map { .url($0) } : nil, pictureData: photo)
         }
     }
 
@@ -131,6 +139,8 @@ public enum VCard {
         var structuredName: String?
         var emails: [String] = []
         var organization: String?
+        var photo: Data?
+        var photoURL: String?
 
         mutating func read(_ property: Property) {
             switch property.name {
@@ -151,13 +161,25 @@ public enum VCard {
                 }
             case "ORG":
                 organization = VCard.components(property.rawValue).first?.cardTrimmed
+            case "PHOTO":
+                // vCard 4 gives a data: address or a link; vCard 3 gives the bytes as base64.
+                let value = property.rawValue.trimmingCharacters(in: .whitespaces)
+                if value.lowercased().hasPrefix("data:") {
+                    if let comma = value.firstIndex(of: ",") { photo = Data(base64Encoded: String(value[value.index(after: comma)...]), options: .ignoreUnknownCharacters) }
+                } else if value.lowercased().hasPrefix("https://") {
+                    photoURL = VCard.unescape(value)
+                } else if !value.lowercased().hasPrefix("http") {
+                    photo = Data(base64Encoded: value, options: .ignoreUnknownCharacters)
+                }
+                if photo?.isEmpty == true { photo = nil }
             default:
                 break
             }
         }
 
         var parsed: ParsedCard {
-            ParsedCard(uid: uid, name: formattedName ?? structuredName, emails: emails, organization: organization)
+            ParsedCard(uid: uid, name: formattedName ?? structuredName, emails: emails, organization: organization,
+                       photo: photo, photoURL: photoURL)
         }
     }
 }

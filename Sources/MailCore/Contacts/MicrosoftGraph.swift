@@ -27,12 +27,30 @@ public struct MicrosoftGraphClient: Sendable {
             "\(Self.base)/me/people?$top=200&$select=id,displayName,scoredEmailAddresses,companyName")
         let all = saved.map {
             Contact(id: "microsoft:\($0.id)", name: $0.displayName, emails: $0.emailAddresses?.compactMap(\.address) ?? [],
-                    organization: $0.companyName, source: .microsoft)
+                    organization: $0.companyName, source: .microsoft, picture: .microsoftContact($0.id))
         } + people.map {
-            Contact(id: "microsoft:\($0.id)", name: $0.displayName, emails: $0.scoredEmailAddresses?.compactMap(\.address) ?? [],
-                    organization: $0.companyName, source: .microsoft)
+            // People you work with are in the directory under their address.
+            let emails = $0.scoredEmailAddresses?.compactMap(\.address) ?? []
+            return Contact(id: "microsoft:\($0.id)", name: $0.displayName, emails: emails,
+                           organization: $0.companyName, source: .microsoft,
+                           picture: emails.first(where: EmailAddress.isValid).map { .microsoftUser($0) })
         }
         return Contact.mergedByEmail(all)
+    }
+
+    /// A contact's or colleague's picture, or nil when they have none (or this account can't
+    /// see it: a personal account has no directory).
+    public func picture(_ picture: ContactPicture) async throws -> Data? {
+        let path: String
+        switch picture {
+        case .microsoftContact(let id): path = "me/contacts/\(id)/photo/$value"
+        case .microsoftUser(let address): path = "users/\(address)/photo/$value"
+        case .saved, .url: return nil
+        }
+        let (data, response) = try await http.response(for: http.request(Self.base.appending(path: path)))
+        if [400, 403, 404].contains(response.statusCode) { return nil }
+        try http.check(data, response)
+        return data.isEmpty ? nil : data
     }
 
     /// People in the organization (and the person's own circle) matching what's typed, best

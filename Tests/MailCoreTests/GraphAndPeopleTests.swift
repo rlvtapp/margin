@@ -161,7 +161,7 @@ final class GraphFakeAPI: @unchecked Sendable {
 
     @Test func googleConnectionsAndOtherContactsFollowPageTokens() async throws {
         let api = GraphFakeAPI()
-        api.on("connections?personFields=names,emailAddresses,organizations&pageSize=1000&pageToken=two", #"""
+        api.on("connections?personFields=names,emailAddresses,organizations,photos&pageSize=1000&pageToken=two", #"""
         {"connections":[{"resourceName":"people/c2","names":[{"displayName":"Sam Lee"}],"emailAddresses":[{"value":"sam@k.example"}]}]}
         """#)
         api.on("connections", #"""
@@ -176,7 +176,7 @@ final class GraphFakeAPI: @unchecked Sendable {
         let contacts = try await GooglePeopleClient(accessToken: "t", send: api.send).contacts()
         #expect(contacts.map(\.id) == ["google:people/c1", "google:people/c2", "google:otherContacts/o2"])
         #expect(contacts[0].organization == "Postbox" && contacts.allSatisfy { $0.source == .google })
-        #expect(api.urls().contains { $0.contains("otherContacts?readMask=names,emailAddresses&pageSize=1000") })
+        #expect(api.urls().contains { $0.contains("otherContacts?readMask=names,emailAddresses,photos&pageSize=1000") })
     }
 
     // MARK: Invitations

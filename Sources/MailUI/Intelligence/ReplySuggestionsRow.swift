@@ -28,6 +28,6 @@ struct ReplySuggestionsRow: View {
             }
         }
         .animation(Motion.quick, value: suggestions)
-        .task(id: thread.id) { await model.suggestReplies(for: thread) }
+        .task(id: thread.latest.id) { await model.suggestReplies(for: thread) }
     }
 }

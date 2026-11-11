@@ -115,11 +115,14 @@ public enum AssistantError: LocalizedError, Equatable, Sendable {
     case http(Int, String)
     /// Apple's on-device model failed; the detail is shown in plain words.
     case onDevice(String)
+    /// The provider (named) doesn't support tool calling, so it can't take actions.
+    case toolsUnsupported(String)
 
     public var errorDescription: String? {
         switch self {
         case .unavailable: String(localized: "The assistant isn't available right now.")
         case .onDevice(let detail): detail
+        case .toolsUnsupported(let name): String(localized: "\(name) can answer questions but can't take actions.")
         case .refused: String(localized: "The model declined to help with this conversation.")
         case .badResponse(let detail): String(localized: "The model's answer couldn't be read. \(detail)")
         case .http(401, _), .http(403, _): String(localized: "The API key was refused. Check it in Settings → Assistant.")
@@ -145,7 +148,7 @@ enum AnswerSchema {
             object(["body": ["type": "string", "description": "The email body only."]])
         case .answer:
             object([
-                "answer": ["type": "string", "description": "The answer, briefly."],
+                "answer": ["type": "string", "description": "The answer in Markdown: a direct first sentence, then \"- \" lines for lists."],
                 "sources": ["type": "array", "items": ["type": "integer"], "description": "Numbers of the conversations used."],
             ])
         }

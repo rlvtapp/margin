@@ -56,9 +56,16 @@ public protocol MailLanguageModel: Sendable {
     func answer(_ request: ModelRequest) async throws -> MailAnswer
     /// Three short replies, one per line. The default asks for text and splits it.
     func suggestions(_ request: ModelRequest) async throws -> [String]
+    /// An answer, handing over the text written so far as it comes in. The default waits
+    /// for the whole answer.
+    func answer(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> MailAnswer
 }
 
 extension MailLanguageModel {
+    public func answer(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> MailAnswer {
+        try await answer(request)
+    }
+
     public func suggestions(_ request: ModelRequest) async throws -> [String] {
         MailIntelligence.cleanedSuggestions(try await reply(request))
     }
@@ -118,14 +125,20 @@ public actor MailIntelligence {
 
     static func suggestionsRequest(_ thread: MailThread, bodies: [String: MessageBody], me: EmailAddress,
                                    style: String?, budget: Int) -> ModelRequest {
-        ModelRequest(
+        // No sample replies here: a small model copies them word for word, whatever the mail says.
+        let latest = thread.latest
+        let latestText = String(Transcript.clean(bodies[latest.id]?.text ?? latest.body?.text ?? latest.snippet).prefix(1_500))
+        return ModelRequest(
             task: .reply,
             instructions: """
-            You suggest three very short replies \(me.displayName) could send to the latest message. Each is 2 to 6 \
-            words and a different answer, such as yes, no and not yet. Use the language of the conversation. \
+            You suggest three short replies \(me.displayName) could send to the latest message. Read what that message \
+            actually says or asks and answer it: each reply is 2 to 6 words that only make sense for this message, \
+            picking up its question, plan, time or news in your own words. The three go in different directions. \
+            Never a one-word reply or one that would fit any email. Use the language of the latest message. \
             Write one per line, with no numbering, quotes or greeting.
             """ + (style.map { "\n\nTone: " + $0.components(separatedBy: "\n").filter { $0.contains("casual") || $0.contains("polished") || $0.contains("emoji") || $0.contains("exclamation") }.joined(separator: " ") } ?? ""),
             prompt: "The conversation, oldest first:\n\n" + Transcript.build(thread, bodies: bodies, budget: min(budget, 6_000))
+                + "\n\n===\n\nThe latest message, from \(latest.from.displayName), to answer:\n\n" + latestText
         )
     }
 
@@ -138,15 +151,24 @@ public actor MailIntelligence {
                 while let first = text.first, "-•*0123456789.)".contains(first) { text.removeFirst(); text = text.trimmingCharacters(in: .whitespaces) }
                 return text.trimmingCharacters(in: CharacterSet(charactersIn: "\"“”' "))
             }
-            .filter { !$0.isEmpty && $0.count <= 60 && seen.insert($0.lowercased()).inserted }
+            .filter { !$0.isEmpty && $0.count <= 60 && !isBare($0) && seen.insert($0.lowercased()).inserted }
             .prefix(3)
             .map { $0 }
     }
 
+    /// A single word ("yeah", "Sure!") fits any email, so it isn't worth a button. Chinese and
+    /// Japanese write without spaces, so there it's about length instead.
+    static func isBare(_ text: String) -> Bool {
+        guard text.split(whereSeparator: \.isWhitespace).count < 2 else { return false }
+        let spaceless = text.unicodeScalars.contains { (0x3040...0x30FF).contains($0.value) || (0x4E00...0x9FFF).contains($0.value) }
+        return spaceless ? text.count < 4 : true
+    }
+
     /// Answers a question from the given conversations only, citing which ones it used.
-    public func ask(_ question: String, about threads: [(MailThread, [String: MessageBody])], me: EmailAddress) async throws -> MailAnswer {
-        let request = Self.answerRequest(question, threads: threads, me: me, budget: model.transcriptBudget)
-        var answer = try await model.answer(request)
+    public func ask(_ question: String, about threads: [(MailThread, [String: MessageBody])], me: EmailAddress,
+                    facts: String = "", partial: (@Sendable (String) async -> Void)? = nil) async throws -> MailAnswer {
+        let request = Self.answerRequest(question, threads: threads, me: me, budget: model.transcriptBudget, facts: facts)
+        var answer = if let partial { try await model.answer(request, partial: partial) } else { try await model.answer(request) }
         answer.text = answer.text.trimmingCharacters(in: .whitespacesAndNewlines)
         // Only cite conversations that exist, each once.
         var seen = Set<Int>()
@@ -156,19 +178,36 @@ public actor MailIntelligence {
 
     // MARK: Prompts
 
-    static func answerRequest(_ question: String, threads: [(MailThread, [String: MessageBody])], me: EmailAddress, budget: Int) -> ModelRequest {
-        let share = max(budget / max(threads.count, 1), 400)
+    static func answerRequest(_ question: String, threads: [(MailThread, [String: MessageBody])], me: EmailAddress, budget: Int,
+                              facts: String = "") -> ModelRequest {
+        let share = max((budget - facts.count) / max(threads.count, 1), 400)
         let numbered = threads.enumerated().map { index, item in
             "[\(index + 1)]\n" + Transcript.build(item.0, bodies: item.1, budget: share)
         }.joined(separator: "\n\n=====\n\n")
+        let known = facts.isEmpty ? "" : "What Margin knows right now:\n\(facts)\n\n"
         return ModelRequest(
             task: .answer,
             instructions: """
-            You answer questions about \(me.displayName)'s email, using only the numbered conversations given. \
-            Be brief and specific: names, dates, amounts. If the answer isn't in them, say you couldn't find it. \
-            "sources" lists the numbers of the conversations you used.
+            You answer questions about \(me.displayName)'s email and day, using only what's given: the facts \
+            Margin knows (meetings, bills, mail that needs a reply) and the numbered conversations. \
+            Answer in the language of the question.
+
+            Answer only what was asked. Use a fact or conversation only when it answers the question; a \
+            question about meetings gets meetings, not bills or replies owed. Never pad the answer with \
+            other things you were given, counts you weren't given, or remarks about what you left out.
+
+            Format, in Markdown:
+            - Start with one short sentence that answers the question directly.
+            - Three or more things: put each on its own line starting with "- ", short, with the useful \
+            detail first (time, who, amount), for example "- **Tue 10:00** Design review with Noor".
+            - Use **bold** only for the key detail of a line. No headings, no tables.
+            - Under 80 words unless the question asks for more.
+
+            Facts marked with [n] are conversation n. Ignore spam, scams and adverts unless asked about them. \
+            If the answer isn't there, say so plainly in one sentence. "sources" lists only the numbers of \
+            conversations you actually used for the answer; leave it empty when none helped.
             """,
-            prompt: "Question: \(question)\n\nConversations:\n\n" + (numbered.isEmpty ? "(none found)" : numbered)
+            prompt: "Question: \(question)\n\n" + known + "Conversations:\n\n" + (numbered.isEmpty ? "(none found)" : numbered)
         )
     }
 

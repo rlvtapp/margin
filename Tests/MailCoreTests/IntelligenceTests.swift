@@ -63,6 +63,25 @@ final class FakeModel: MailLanguageModel, @unchecked Sendable {
         #expect(draft.prompt.hasPrefix("Write my reply. What I want to say: say yes"))
     }
 
+    @Test func replySuggestionsAnswerTheLatestMessageNotSamples() async throws {
+        let request = MailIntelligence.suggestionsRequest(thread(), bodies: [:], me: me, style: nil, budget: 1000)
+        // No sample answers for the model to copy, and the message to answer comes last, on its own.
+        #expect(!request.instructions.contains("not yet") && !request.instructions.contains("such as yes"))
+        #expect(request.prompt.hasSuffix(Transcript.clean(thread().latest.body?.text ?? "-")))
+        #expect(request.prompt.contains("The latest message, from \(thread().latest.from.displayName), to answer:"))
+
+        let fake = FakeModel()
+        fake.replyAnswer = "yeah\nnot yet\nsure!\nNot much, you?\nCall you tonight?"
+        let suggestions = try await MailIntelligence(model: fake).suggestReplies(thread(), bodies: [:], me: me)
+        #expect(suggestions == ["not yet", "Not much, you?", "Call you tonight?"])
+    }
+
+    @Test func oneWordSuggestionsAreDropped() {
+        #expect(MailIntelligence.cleanedSuggestions("Yeah\nSure!\nOK\nSounds good to me") == ["Sounds good to me"])
+        // Japanese and Chinese have no spaces: a short phrase is fine there, a single character isn't.
+        #expect(MailIntelligence.cleanedSuggestions("了解しました\n是\n明天见吧") == ["了解しました", "明天见吧"])
+    }
+
     @Test func transcriptKeepsNewestWhenCut() {
         let text = Transcript.build(thread(), bodies: [:], budget: 200)
         #expect(text.contains("Yes! Book it."))

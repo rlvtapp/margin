@@ -8,16 +8,22 @@ import MailUI
 /// to stdout. Opens Margin in the background when it isn't running. Logs go to stderr only,
 /// because stdout belongs to the protocol.
 enum MCPBridge {
-    static func run() -> Never {
-        let defaults = UserDefaults.standard
-        let settings = defaults.data(forKey: "connectionSettings")
+    /// The settings as they are now: read again for every message, so turning things on in
+    /// Margin applies without restarting the AI app.
+    private static var settings: ConnectionSettings {
+        UserDefaults.standard.data(forKey: "connectionSettings")
             .flatMap { try? JSONDecoder().decode(ConnectionSettings.self, from: $0) } ?? ConnectionSettings()
-        let keychain = Keychain(service: Bundle.main.bundleIdentifier ?? "dev.margin.Margin")
-        let url = URL(string: "http://127.0.0.1:\(settings.port)/mcp")!
+    }
+
+    static func run() -> Never {
+        let keychain = Keychain(service: Bundle.main.bundleIdentifier ?? "app.relevate.margin")
+        watchPermissions()
 
         while let line = readLine(strippingNewline: true) {
             guard !line.trimmingCharacters(in: .whitespaces).isEmpty else { continue }
             let id = (try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any])?["id"]
+            let settings = settings
+            let url = URL(string: "http://127.0.0.1:\(settings.port)/mcp")!
             guard settings.enabled else {
                 reply(error: "Margin's connection is off. Turn on Settings → Connections → Let AI apps use Margin.", id: id)
                 continue
@@ -95,7 +101,31 @@ enum MCPBridge {
         if let data = try? JSONSerialization.data(withJSONObject: object) { write(data) }
     }
 
-    private static func write(_ data: Data) {
+    /// When what AI apps may do changes in Margin (Allow changes, sending, settings, which
+    /// mailboxes they see), tell the app its tool list changed, so it asks again instead of
+    /// keeping the tools it was given when it connected. It runs on its own thread, so it only
+    /// compares the saved settings as they are, without decoding them (that belongs to the main
+    /// thread).
+    private static func watchPermissions() {
+        Thread.detachNewThread { @Sendable in
+            var last = UserDefaults.standard.data(forKey: "connectionSettings")
+            while true {
+                Thread.sleep(forTimeInterval: 1.5)
+                let now = UserDefaults.standard.data(forKey: "connectionSettings")
+                guard now != last else { continue }
+                last = now
+                let notice = Data(#"{"jsonrpc":"2.0","method":"notifications/tools/list_changed"}"#.utf8)
+                write(notice)
+            }
+        }
+    }
+
+    nonisolated private static let output = NSLock()
+
+    /// One message per line; replies and notices come from different threads, so one at a time.
+    nonisolated private static func write(_ data: Data) {
+        output.lock()
+        defer { output.unlock() }
         FileHandle.standardOutput.write(data)
         FileHandle.standardOutput.write(Data("\n".utf8))
     }

@@ -104,9 +104,9 @@ public actor MCPServer {
             let version = Self.supportedVersions.contains(requested) ? requested : Self.supportedVersions[0]
             return Self.result(id: id, [
                 "protocolVersion": version,
-                "capabilities": ["tools": ["listChanged": false]],
+                "capabilities": ["tools": ["listChanged": true]],
                 "serverInfo": ["name": name, "version": self.version],
-                "instructions": "Margin is the person's mail app. Use search_mail to find conversations and read_conversation to read them. To sort the inbox, call list_groups, then repeat list_to_sort and sort_into_group (skip_sorting when nothing fits) until nothing is left; use Home's groups, not labels. To draft, call get_writing_style, then save_draft. Only send mail when the person clearly asked you to.",
+                "instructions": "Margin is the person's mail app. Use search_mail to find conversations and read_conversation to read them. For what needs the person now (\"what should I deal with?\"), call list_needs_you. To address mail by name, call find_people. To sort the inbox, call list_groups, then repeat list_to_sort and sort_into_group (skip_sorting when nothing fits) until nothing is left; use Home's groups, not labels. To draft, call get_writing_style, then save_draft. For a standing request about new mail (\"always move mail from X to Y\"), make a rule: check the target with list_groups, list_folders or list_labels, call preview_rule, then create_rule (list_rules, update_rule and delete_rule manage them); rules only act on new mail, so handle what's already in the inbox with the usual tools if asked. Only send mail when the person clearly asked you to.",
             ])
         case "ping":
             return Self.result(id: id, [:])

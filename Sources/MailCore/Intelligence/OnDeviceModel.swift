@@ -103,7 +103,7 @@ struct AppleModel: MailLanguageModel {
     }
 
     @Generable struct Suggestions {
-        @Guide(description: "Three different short replies of 2 to 6 words each.", .count(3))
+        @Guide(description: "Three replies of 2 to 6 words that answer what the latest message says or asks, each going a different way.", .count(3))
         var replies: [String]
     }
 
@@ -112,7 +112,7 @@ struct AppleModel: MailLanguageModel {
     }
 
     @Generable struct Answer {
-        @Guide(description: "The answer, briefly.")
+        @Guide(description: "The answer in Markdown: a direct first sentence, then \"- \" lines for lists.")
         var answer: String
         @Guide(description: "Numbers of the conversations used.")
         var sources: [Int]
@@ -122,6 +122,21 @@ struct AppleModel: MailLanguageModel {
         try await plainErrors {
             let result = try await session(request).respond(to: request.prompt, generating: Answer.self).content
             return MailAnswer(text: result.answer, sources: result.sources)
+        }
+    }
+
+    func answer(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> MailAnswer {
+        try await plainErrors {
+            var latest = MailAnswer(text: "", sources: [])
+            for try await snapshot in session(request).streamResponse(to: request.prompt, generating: Answer.self) {
+                let content = snapshot.content
+                if let text = content.answer, text != latest.text {
+                    latest.text = text
+                    await partial(text)
+                }
+                if let sources = content.sources { latest.sources = sources }
+            }
+            return latest
         }
     }
 
@@ -141,7 +156,7 @@ struct AppleModel: MailLanguageModel {
     }
 
     /// The framework's errors, in words someone can act on.
-    private func plainErrors<T>(_ work: () async throws -> T) async throws -> T {
+    func plainErrors<T>(_ work: () async throws -> T) async throws -> T {
         do {
             return try await work()
         } catch let error as LanguageModelSession.GenerationError {

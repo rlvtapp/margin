@@ -55,8 +55,9 @@ extension MailModel {
         return MCPHTTPServer(port: port, token: token, server: protocolServer)
     }
 
-    private func noteActivity(_ tool: String) {
-        connectionActivity.insert(MCPActivity(date: Date(), tool: tool), at: 0)
+    /// `by` names Margin's own assistant ("by Grok") for its actions; AI apps leave it out.
+    func noteActivity(_ tool: String, by: String? = nil) {
+        connectionActivity.insert(MCPActivity(date: Date(), tool: tool, by: by), at: 0)
         if connectionActivity.count > 30 { connectionActivity.removeLast() }
     }
 }

@@ -40,7 +40,7 @@ struct SummaryBlock: View {
                 }
                 .buttonStyle(.plain)
                 .opacity(isHovered ? 1 : 0)
-                .help("Hide summary")
+                .tip("Hide summary")
             }
             Text(summary.headline)
                 .font(TypeScale.body.weight(.medium))
@@ -106,7 +106,7 @@ struct LabelRow: View {
                             .background(Fill.one, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
                     }
                     .buttonStyle(.plain)
-                    .help("Add a label")
+                    .tip("Add a label")
                 }
             }
         }
@@ -121,27 +121,34 @@ struct LabelChip: View {
     @State private var isHovered = false
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                if style == .suggested { Image(systemName: "plus").font(.system(size: 8, weight: .bold)) }
-                Text(text).lineLimit(1)
-                if style == .applied && isHovered { Image(systemName: "xmark").font(.system(size: 7, weight: .bold)) }
-            }
-            .font(style == .compact ? TypeScale.caption : TypeScale.label)
-            .foregroundStyle(style == .suggested ? Ink.tertiary : Ink.secondary)
-            .padding(.horizontal, style == .compact ? 5 : 8)
-            .frame(height: style == .compact ? 17 : 22)
-            .background(style == .suggested ? Color.clear : Fill.two, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-            .overlay {
-                if style == .suggested {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Line.edge, style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
-                }
+        if style == .compact {
+            // Not a button: a disabled one is drawn dimmed, which made the name hard to read.
+            chip.tip(Text(verbatim: text))
+        } else {
+            Button(action: action) { chip }
+                .buttonStyle(.plain)
+                .onHover { isHovered = $0 }
+                .tip(style == .suggested ? Text("Add this label") : Text("Remove this label"))
+        }
+    }
+
+    private var chip: some View {
+        HStack(spacing: 4) {
+            if style == .suggested { Image(systemName: "plus").font(.system(size: 8, weight: .bold)) }
+            Text(text).lineLimit(1)
+            if style == .applied && isHovered { Image(systemName: "xmark").font(.system(size: 7, weight: .bold)) }
+        }
+        .font(style == .compact ? TypeScale.caption : TypeScale.label)
+        // A label wears its colour: tinted ground, text in a deeper shade of it (AA).
+        .foregroundStyle(style == .suggested ? Ink.tertiary : GroupStyle.textColor(text))
+        .padding(.horizontal, style == .compact ? 5 : 8)
+        .frame(height: style == .compact ? 17 : 22)
+        .background(style == .suggested ? Color.clear : GroupStyle.color(text).opacity(0.14), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+        .overlay {
+            if style == .suggested {
+                RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Line.edge, style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
             }
         }
-        .buttonStyle(.plain)
-        .disabled(style == .compact)
-        .onHover { isHovered = $0 }
-        .help(style == .suggested ? Text("Add this label") : (style == .applied ? Text("Remove this label") : Text(verbatim: text)))
     }
 }
 
@@ -207,7 +214,7 @@ struct TextAction: View {
         .buttonStyle(.plain)
         .disabled(isBusy)
         .onHover { isHovered = $0 }
-        .help(key.map { "\(title)  \($0)" } ?? title) // title is already translated; the key is a glyph
+        .tip(key.map { "\(title)  \($0)" } ?? title) // title is already translated; the key is a glyph
     }
 }
 

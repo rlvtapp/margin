@@ -33,13 +33,21 @@ public struct MCPActivity: Identifiable, Hashable, Sendable {
     public let id = UUID()
     public var date: Date
     public var tool: String
+    /// Margin's own assistant, as "by Grok"; nil for AI apps over MCP.
+    public var by: String? = nil
 }
 
 struct MailToolbox: MCPToolbox {
     let model: MailModel
+    /// What may be changed, when not the MCP connection's switches (Margin's own assistant
+    /// running "Sort my mail" may sort, and nothing else).
+    var permissions: ConnectionSettings? = nil
+    /// Only these tools, when set (a small model gets a short list).
+    var only: Set<String>? = nil
 
     func tools() async -> [MCPTool] {
-        let settings = await model.connectionSettings
+        let settings: ConnectionSettings
+        if let permissions { settings = permissions } else { settings = await model.connectionSettings }
         var tools = [
             MCPTool(name: "list_mailboxes", description: "Lists the person's mailboxes (accounts) with their unread counts.",
                     inputSchema: #"{"type":"object","properties":{},"additionalProperties":false}"#),
@@ -100,6 +108,8 @@ struct MailToolbox: MCPToolbox {
         }
         tools += DraftTools.tools(allowChanges: settings.allowChanges)
         tools += GroupTools.tools(allowChanges: settings.allowChanges)
+        tools += RuleTools.tools(allowChanges: settings.allowChanges)
+        tools += PeopleTools.tools()
         if settings.allowChanges { tools += AgentTools.changing() }
         if settings.allowSettings { tools += AgentTools.settings() }
         if settings.allowSending {
@@ -118,6 +128,7 @@ struct MailToolbox: MCPToolbox {
                 """#
             ))
         }
+        if let only { tools = tools.filter { only.contains($0.name) } }
         return tools
     }
 
@@ -141,6 +152,8 @@ extension MailModel {
     func runTool(_ name: String, _ arguments: [String: MCPValue]) async throws -> String {
         if let answer = try await runDraftTool(name, arguments) { return answer }
         if let answer = try await runGroupTool(name, arguments) { return answer }
+        if let answer = try await runRuleTool(name, arguments) { return answer }
+        if let answer = try await runPeopleTool(name, arguments) { return answer }
         switch name {
         case "list_mailboxes":
             return json(visibleAccounts.map { ["name": $0.label, "address": $0.address.address, "unread": unreadCount(account: $0.id)] })

@@ -1,6 +1,14 @@
 import Foundation
 import MailCore
 
+/// How far a question has got, shown in place of the answer until it's done.
+public enum AskProgress: Equatable, Sendable {
+    case searching
+    case reading(Int)
+    /// The answer as written so far.
+    case writing(String)
+}
+
 /// One Ask conversation: questions, answers and the mail each answer came from.
 public struct AskChat: Identifiable, Codable, Hashable, Sendable {
     public var id = UUID()
@@ -65,6 +73,20 @@ extension MailModel {
         } else {
             ask(trimmed)
         }
+    }
+
+    /// A question typed into search: a new Ask chat answers it, with the conversations it used.
+    public func askFromSearch(_ text: String) {
+        let question = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !question.isEmpty else { return }
+        newAskChat()
+        isAsking = true
+        send(askInput: question)
+    }
+
+    /// Whether search should offer to ask this instead: an assistant is on and it reads as a question.
+    public func offersAsk(for text: String) -> Bool {
+        isAssistantOn && SearchQuery.looksLikeQuestion(text)
     }
 
     public func newAskChat() {
@@ -165,12 +187,15 @@ extension MailModel {
     func ask(_ question: String, restrictedTo threads: [MailThread], shownAs label: String) {
         guard let intelligence else { return }
         assistantWork.insert("ask")
+        askProgress = .reading(threads.count)
         Task {
-            defer { assistantWork.remove("ask") }
-            let context = threads.map { ($0, bodies(of: $0)) }
+            defer { assistantWork.remove("ask"); askProgress = nil }
+            let context = await askContext(threads)
             let me = accounts.first?.address ?? EmailAddress(address: "me@example.com")
             do {
-                let answer = try await intelligence.ask(question, about: context, me: me)
+                let answer = try await intelligence.ask(question, about: context, me: me) { [weak self] text in
+                    await MainActor.run { self?.askProgress = .writing(text) }
+                }
                 recordAsk(label, answer: answer.text, sources: threads)
             } catch {
                 recordAsk(label, answer: error.localizedDescription, sources: [], isError: true)

@@ -153,3 +153,19 @@ extension MailModel {
         }
     }
 }
+
+extension MailModel {
+    /// Colours picked for labels and groups, by lowercased name (palette index).
+    public var labelColors: [String: Int] {
+        get {
+            _ = priorityRevision
+            return environment.defaults.data(forKey: "labelColors").flatMap { try? JSONDecoder().decode([String: Int].self, from: $0) } ?? [:]
+        }
+        set { environment.defaults.set(try? JSONEncoder().encode(newValue), forKey: "labelColors"); priorityRevision += 1 }
+    }
+
+    /// Picks a label's colour; nil goes back to its automatic one.
+    public func setColor(_ index: Int?, forLabel name: String) {
+        labelColors[name.lowercased()] = index
+    }
+}

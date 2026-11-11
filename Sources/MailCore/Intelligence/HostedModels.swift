@@ -35,6 +35,33 @@ public struct AnthropicModel: MailLanguageModel {
         try AnswerSchema.decodeAnswer(try await fetchJSON(request))
     }
 
+    /// Streams the answer: text deltas arrive as server-sent events, and the `answer` field
+    /// of the JSON is read out of what has arrived so far.
+    public func answer(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> MailAnswer {
+        var http = try makeRequest(request)
+        var body = (try JSONSerialization.jsonObject(with: http.httpBody ?? Data()) as? [String: Any]) ?? [:]
+        body["stream"] = true
+        http.httpBody = try JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])
+        let (bytes, response) = try await URLSession.shared.bytes(for: http)
+        try await StreamedAnswer.checkStatus(response, bytes)
+        var reader = StreamedAnswer(partial: partial)
+        for try await line in bytes.lines {
+            guard line.hasPrefix("data:"), let event = StreamedAnswer.json(line) else { continue }
+            switch event["type"] as? String {
+            case "content_block_delta":
+                let delta = event["delta"] as? [String: Any]
+                if delta?["type"] as? String == "text_delta", let text = delta?["text"] as? String { await reader.add(text) }
+            case "message_delta":
+                if (event["delta"] as? [String: Any])?["stop_reason"] as? String == "refusal" { throw AssistantError.refused }
+            case "error":
+                let error = event["error"] as? [String: Any]
+                throw AssistantError.badResponse(error?["message"] as? String ?? String(localized: "The answer stopped."))
+            default: break
+            }
+        }
+        return try AnswerSchema.decodeAnswer(Data(reader.text.utf8))
+    }
+
     private func fetchJSON(_ request: ModelRequest) async throws -> Data {
         let (data, response) = try await URLSession.shared.data(for: try makeRequest(request))
         try HTTPCheck.ok(response, data)
@@ -120,6 +147,32 @@ public struct OpenAICompatibleModel: MailLanguageModel {
         try AnswerSchema.decodeAnswer(try await fetchJSON(request))
     }
 
+    /// Streams the answer as chat-completion chunks; servers without schema support get
+    /// plain JSON mode, as in `fetchJSON`.
+    public func answer(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> MailAnswer {
+        func streaming(strict: Bool) throws -> URLRequest {
+            var http = try makeRequest(request, strictSchema: strict)
+            var body = (try JSONSerialization.jsonObject(with: http.httpBody ?? Data()) as? [String: Any]) ?? [:]
+            body["stream"] = true
+            http.httpBody = try JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])
+            return http
+        }
+        var (bytes, response) = try await URLSession.shared.bytes(for: try streaming(strict: true))
+        if let status = (response as? HTTPURLResponse)?.statusCode, status == 400 || status == 422 {
+            (bytes, response) = try await URLSession.shared.bytes(for: try streaming(strict: false))
+        }
+        try await StreamedAnswer.checkStatus(response, bytes)
+        var reader = StreamedAnswer(partial: partial)
+        for try await line in bytes.lines {
+            guard line.hasPrefix("data:"), let event = StreamedAnswer.json(line),
+                  let delta = (event["choices"] as? [[String: Any]])?.first?["delta"] as? [String: Any] else { continue }
+            if let refusal = delta["refusal"] as? String, !refusal.isEmpty { throw AssistantError.refused }
+            if let text = delta["content"] as? String { await reader.add(text) }
+        }
+        guard !reader.text.isEmpty else { throw AssistantError.badResponse(String(localized: "The answer was empty.")) }
+        return try AnswerSchema.decodeAnswer(Data(reader.text.utf8))
+    }
+
     /// Asks for schema-constrained JSON; servers that don't support schemas (some local
     /// ones) get plain JSON mode with the schema spelled out in the instructions.
     private func fetchJSON(_ request: ModelRequest) async throws -> Data {
@@ -192,5 +245,69 @@ enum HTTPCheck {
     static func ids(in data: Data) -> [String] {
         let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         return (object?["data"] as? [[String: Any]] ?? []).compactMap { $0["id"] as? String }
+    }
+}
+
+/// Collects a streamed JSON answer and passes on its `answer` text whenever it grows.
+struct StreamedAnswer {
+    let partial: @Sendable (String) async -> Void
+    private(set) var text = ""
+    private var shown = ""
+
+    init(partial: @escaping @Sendable (String) async -> Void) { self.partial = partial }
+
+    mutating func add(_ delta: String) async {
+        text += delta
+        guard let answer = Self.answerSoFar(in: text), answer != shown else { return }
+        shown = answer
+        await partial(answer)
+    }
+
+    /// The `"answer"` string of a JSON object that may still be cut off part-way, with escapes
+    /// read; nil until its opening quote has arrived.
+    static func answerSoFar(in json: String) -> String? {
+        guard let key = json.range(of: "\"answer\"") else { return nil }
+        let rest = Array(json[key.upperBound...].unicodeScalars)
+        var i = 0
+        while i < rest.count, rest[i] == " " || rest[i] == ":" || rest[i] == "\n" || rest[i] == "\t" { i += 1 }
+        guard i < rest.count, rest[i] == "\"" else { return nil }
+        i += 1
+        var result = String.UnicodeScalarView()
+        while i < rest.count {
+            let scalar = rest[i]
+            if scalar == "\"" { break }
+            guard scalar == "\\" else { result.append(scalar); i += 1; continue }
+            // An escape; stop at one that hasn't fully arrived yet.
+            guard i + 1 < rest.count else { break }
+            switch rest[i + 1] {
+            case "n": result.append("\n")
+            case "t": result.append("\t")
+            case "r", "b", "f": break
+            case "u":
+                guard i + 5 < rest.count, let code = UInt32(String(String.UnicodeScalarView(rest[(i + 2)...(i + 5)])), radix: 16) else {
+                    return String(result)
+                }
+                if let decoded = Unicode.Scalar(code) { result.append(decoded) }
+                i += 6
+                continue
+            default: result.append(rest[i + 1])
+            }
+            i += 2
+        }
+        return String(result)
+    }
+
+    static func json(_ line: String) -> [String: Any]? {
+        let payload = line.dropFirst(5).trimmingCharacters(in: .whitespaces)
+        guard payload != "[DONE]" else { return nil }
+        return try? JSONSerialization.jsonObject(with: Data(payload.utf8)) as? [String: Any]
+    }
+
+    /// A failed request's body is read whole, so its error message can be shown.
+    static func checkStatus(_ response: URLResponse, _ bytes: URLSession.AsyncBytes) async throws {
+        guard let status = (response as? HTTPURLResponse)?.statusCode, !(200..<300).contains(status) else { return }
+        var data = Data()
+        for try await byte in bytes { data.append(byte) }
+        try HTTPCheck.ok(response, data)
     }
 }

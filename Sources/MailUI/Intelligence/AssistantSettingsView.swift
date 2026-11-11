@@ -71,6 +71,7 @@ struct AssistantSettingsView: View {
                     }
                 }
             }
+            if model.isAssistantOn { AgentPermissionsSection(model: model) }
             WritingProfileView(model: model)
         }
         .formStyle(.grouped)

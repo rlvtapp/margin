@@ -107,9 +107,7 @@ struct ConnectionsSettingsView: View {
                 if !model.connectionActivity.isEmpty {
                     Section {
                         ForEach(model.connectionActivity.prefix(6)) { entry in
-                            LabeledContent(Self.describe(entry.tool)) {
-                                Text(entry.date.formatted(.relative(presentation: .named)))
-                            }
+                            ActivityRow(entry: entry)
                         }
                     } header: {
                         Text("Recent activity")
@@ -192,6 +190,13 @@ struct ConnectionsSettingsView: View {
         case "skip_sorting": String(localized: "Sorted mail")
         case "sort_into_group": String(localized: "Sorted mail")
         case "create_group": String(localized: "Added a group")
+        case "list_rules": String(localized: "Looked at rules")
+        case "preview_rule": String(localized: "Checked a rule")
+        case "create_rule": String(localized: "Added a rule")
+        case "update_rule": String(localized: "Changed a rule")
+        case "delete_rule": String(localized: "Deleted a rule")
+        case "list_needs_you": String(localized: "Looked at what needs you")
+        case "find_people": String(localized: "Looked up people")
         case "archive": String(localized: "Archived mail")
         case "set_read", "set_starred": String(localized: "Changed mail")
         case "snooze": String(localized: "Snoozed mail")
@@ -214,6 +219,8 @@ struct ConnectionsSettingsView: View {
         case "get_settings": String(localized: "Looked at settings")
         case "trash": String(localized: "Moved mail to Trash")
         case "mark_spam": String(localized: "Moved mail to Junk")
+        case "list_spam": String(localized: "Looked at Junk")
+        case "not_spam": String(localized: "Took mail out of Junk")
         case "stop_waiting": String(localized: "Stopped waiting for a reply")
         case "unsubscribe": String(localized: "Unsubscribed from a newsletter")
         case "archive_newsletter": String(localized: "Archived a newsletter")

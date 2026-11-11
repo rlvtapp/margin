@@ -127,6 +127,7 @@ enum AgentChange {
     case settings(appearance: AppAppearance, layout: ListLayout, undoSend: Int, followUp: Int,
                   sound: AlertSound, leading: [SwipeAction], trailing: [SwipeAction])
     case signature(accountID: UUID, previous: String?)
+    case rules([MailRule])
 }
 
 /// A conversation moved out of where it was. After an IMAP move its messages have new ids,
@@ -254,6 +255,9 @@ extension MailModel {
         case .signature(let accountID, let previous):
             setSignature(previous ?? "", for: accountID)
             return "The signature is back as it was."
+        case .rules(let snapshot):
+            mailRules = snapshot
+            return "Rules are back as they were."
         }
     }
 

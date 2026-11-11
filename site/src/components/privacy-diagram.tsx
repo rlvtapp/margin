@@ -1,97 +1,156 @@
-import { useEffect, useRef } from "react";
+import { ProviderIcon, type ProviderId, providerMarks } from "@/components/provider-icons";
 
-const providers = ["Gmail", "Outlook", "iCloud", "Fastmail", "Any IMAP or JMAP"];
-const top = 40;
-const gap = 64;
+const endpoints: ProviderId[] = ["gmail", "outlook", "icloud", "yahoo", "fastmail", "imap"];
+/** The rest Margin sets up by name, shown bobbing under the drawing. */
+const others: ProviderId[] = ["proton", "zoho", "gmx", "webde", "mailbox", "posteo", "aol"];
+
+const top = 30;
+const gap = 68;
+const tile = { x: 56, width: 250, height: 52 };
+/** Where every route ends: the device's front door. */
+const door = { x: 852, y: top + (endpoints.length - 1) * gap * 0.5 + tile.height / 2 };
+const corner = 14;
 
 /**
- * Mail moving straight between each provider and your device, with the empty space where a
- * company's server would usually sit.
+ * A route with square turns: out of the provider, along to the one spine every route shares,
+ * down or up that to the trunk, and along the trunk to the device.
  */
-export function PrivacyDiagram() {
-	const svg = useRef<SVGSVGElement>(null);
-	useEffect(() => {
-		if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) svg.current?.pauseAnimations();
-	}, []);
+function route(i: number) {
+	const y = top + i * gap + tile.height / 2;
+	const lane = 560;
+	const start = tile.x + tile.width;
+	const down = y < door.y ? 1 : -1;
+	return [
+		`M${start} ${y}`,
+		`H${lane - corner}`,
+		`Q${lane} ${y} ${lane} ${y + down * corner}`,
+		`V${door.y - down * corner}`,
+		`Q${lane} ${door.y} ${lane + corner} ${door.y}`,
+		`H${door.x}`,
+	].join(" ");
+}
 
+/**
+ * Light running along a route: a faint tail with a bright head. Toward your device it's bright;
+ * the other way (mail you send) it's dimmer.
+ */
+function Beam({ d, duration, delay, outbound }: { d: string; duration: number; delay: number; outbound?: boolean }) {
+	const style = { animationDuration: `${duration}s`, animationDelay: `${delay}s` };
 	return (
-		<>
-			<NarrowDiagram />
-			<svg ref={svg} className="diagram" viewBox="0 0 1000 380" role="img" aria-label="Mail goes straight from your provider to your device, with no server in between">
-			<defs>
-				{providers.map((name, i) => {
-					const y = top + i * gap + 22;
-					return <path key={name} id={`wire-${i}`} d={`M250 ${y} C 470 ${y}, 560 190, 760 190`} />;
-				})}
-			</defs>
-
-			<g className="empty-server">
-				<rect x="430" y="300" width="150" height="56" rx="12" />
-				<text x="505" y="324" textAnchor="middle">
-					Our servers
-				</text>
-				<text x="505" y="343" textAnchor="middle" className="small">
-					nothing passes here
-				</text>
-			</g>
-
-			{providers.map((name, i) => {
-				const y = top + i * gap;
-				return (
-					<g key={name}>
-						<use href={`#wire-${i}`} className="wire" />
-						<rect className="node" x="80" y={y} width="170" height="44" rx="12" />
-						<text className="node-label" x="165" y={y + 27} textAnchor="middle">
-							{name}
-						</text>
-						{[0, 1].map((n) => (
-							<circle key={n} r="4" className={n === 0 ? "packet" : "packet back"}>
-								<animateMotion
-									dur={`${2.6 + i * 0.35}s`}
-									begin={`${-i * 0.7 - n * 1.3}s`}
-									repeatCount="indefinite"
-									keyPoints={n === 0 ? "0;1" : "1;0"}
-									keyTimes="0;1"
-									calcMode="linear"
-								>
-									<mpath href={`#wire-${i}`} />
-								</animateMotion>
-							</circle>
-						))}
-					</g>
-				);
-			})}
-
-			<g className="device" transform="translate(770 130)">
-				<rect x="0" y="0" width="130" height="86" rx="8" />
-				<rect x="10" y="10" width="110" height="66" rx="3" className="screen" />
-				<path d="M-14 100 H144" />
-				<rect x="150" y="34" width="40" height="72" rx="8" />
-				<text x="95" y="140" textAnchor="middle" className="node-label">
-					Your Mac and iPhone
-				</text>
-			</g>
-		</svg>
-		</>
+		<g className={outbound ? "bp-beam out" : "bp-beam"}>
+			<path d={d} pathLength={1} className="tail" style={style} />
+			<path d={d} pathLength={1} className="head" style={style} />
+		</g>
 	);
 }
 
-/** The same idea stacked for phones, where the wide drawing would be too small to read. */
+/**
+ * How mail travels, as a drawing on dark paper: each provider on the left, your devices on the
+ * right, one thin square-cornered line straight between them with light moving along it, and
+ * the dashed outline of the mail server that isn't there. The one thing of ours that does
+ * exist, the relay that wakes an iPhone for new mail, is drawn too, off the mail's route.
+ */
+export function PrivacyDiagram() {
+	return (
+		<div className="blueprint">
+			<NarrowDiagram />
+			<svg
+				className="bp-wide"
+				viewBox="0 0 1120 440"
+				role="img"
+				aria-label="Mail goes straight from your provider to your devices, with no server of ours in between"
+			>
+				{/* The server that isn't there. */}
+				<g className="bp-ghost">
+					<rect x="668" y={door.y + 62} width="184" height="64" rx="12" />
+					<text x="760" y={door.y + 90} textAnchor="middle">
+						A mail server of ours
+					</text>
+					<text x="760" y={door.y + 109} textAnchor="middle" className="small">
+						there isn't one
+					</text>
+				</g>
+
+				{/* The relay that wakes an iPhone: ours, and never on the mail's route. */}
+				<g className="bp-relay">
+					<path d={`M1064 ${door.y + 48}V${door.y + 122}`} />
+					<rect x="896" y={door.y + 122} width="196" height="58" rx="12" />
+					<text x="994" y={door.y + 146} textAnchor="middle">
+						Our notification relay
+					</text>
+					<text x="994" y={door.y + 164} textAnchor="middle" className="small">
+						wakes your iPhone, sees no mail
+					</text>
+				</g>
+
+				{endpoints.map((id, i) => {
+					const y = top + i * gap;
+					const d = route(i);
+					return (
+						<g key={id}>
+							<path d={d} className="bp-wire" />
+							<Beam d={d} duration={3.4 + (i % 3) * 0.5} delay={-i * 1.3} />
+							<Beam d={d} duration={4.8 + (i % 3) * 0.5} delay={-i * 1.3 - 2.6} outbound />
+							<rect className="bp-node" x={tile.x} y={y} width={tile.width} height={tile.height} rx="13" />
+							<ProviderIcon id={id} x={tile.x + 12} y={y + 12} />
+							<text className="bp-name" x={tile.x + 52} y={y + 31.5}>
+								{providerMarks[id].name}
+							</text>
+							<circle className="bp-joint" cx={tile.x + tile.width} cy={y + tile.height / 2} r="3.5" />
+						</g>
+					);
+				})}
+
+				<g className="bp-measure">
+					<path d={`M700 ${door.y - 26}v-10M${door.x} ${door.y - 26}v-10M700 ${door.y - 31}H${door.x}`} />
+					<text x="776" y={door.y - 44} textAnchor="middle">
+						direct and encrypted
+					</text>
+				</g>
+
+				<g className="bp-device" transform={`translate(0 ${door.y - 224})`}>
+					<circle className="bp-joint" cx={door.x} cy="224" r="3.5" />
+					<rect x="876" y="158" width="150" height="100" rx="9" />
+					<rect x="886" y="168" width="130" height="80" rx="3" className="screen" />
+					<path d="M858 270h186" />
+					<rect x="1042" y="186" width="44" height="84" rx="9" />
+					<path d="M1058 194h12" />
+					<text x="972" y="308" textAnchor="middle" className="bp-name">
+						Your Mac and iPhone
+					</text>
+				</g>
+			</svg>
+			<ul className="bp-others" aria-label="Also set up by name">
+				{others.map((id, i) => (
+					<li key={id} style={{ animationDelay: `${-i * 0.7}s` }}>
+						<ProviderIcon id={id} size={22} />
+						{providerMarks[id].name}
+					</li>
+				))}
+			</ul>
+		</div>
+	);
+}
+
+/** The same drawing stacked for phones, where the wide one would be too small to read. */
 function NarrowDiagram() {
 	return (
-		<div className="diagram-narrow" aria-hidden="true">
-			<div className="chips">
-				{providers.map((name) => (
-					<span key={name}>{name}</span>
+		<div className="bp-narrow" aria-hidden="true">
+			<ul>
+				{endpoints.map((id) => (
+					<li key={id}>
+						<ProviderIcon id={id} size={22} />
+						{providerMarks[id].name}
+					</li>
 				))}
-			</div>
+			</ul>
 			<div className="stream">
 				<i />
 				<i />
 				<i />
 			</div>
 			<div className="device-chip">Your Mac and iPhone</div>
-			<p>No server of ours in between.</p>
+			<p>For instant alerts, a small relay of ours wakes your iPhone. It never sees your mail.</p>
 		</div>
 	);
 }

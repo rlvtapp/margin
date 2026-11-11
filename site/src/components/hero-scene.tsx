@@ -1,16 +1,15 @@
 import { useEffect, useState } from "react";
 import { CardsBackdrop, PeopleBackdrop } from "@/components/backdrops";
 import { Floaters } from "@/components/floaters";
-import { Landscape } from "@/components/landscape";
 
-type Backdrop = "landscape" | "cards" | "people";
+type Backdrop = "cards" | "people";
 
-const backdrops: Backdrop[] = ["landscape", "cards", "people"];
+const backdrops: Backdrop[] = ["cards", "people"];
 
 /**
- * The hero: the app on a Mac and an iPhone in front of a backdrop. Each visit gets one of the
- * backdrops at random (it's chosen in the browser, so the page is the same for everyone until
- * then); `?bg=landscape|cards|people` asks for a particular one.
+ * The hero: the app on a Mac and an iPhone in front of a backdrop, with a few cards floating in
+ * front. Each visit gets one of the two backdrops at random (it's chosen in the browser, so the
+ * page is the same for everyone until then); `?bg=cards` or `?bg=people` asks for one.
  */
 export function HeroScene() {
 	const [backdrop, setBackdrop] = useState<Backdrop | null>(null);
@@ -20,25 +19,24 @@ export function HeroScene() {
 	}, []);
 
 	return (
-		<div className={`scene scene-${backdrop ?? "none"}`}>
-			{backdrop === "landscape" && <Landscape />}
+		<div className="scene">
 			{backdrop === "cards" && <CardsBackdrop />}
 			{backdrop === "people" && <PeopleBackdrop />}
 
 			<div className="scene-window">
 				<img
 					className="for-light"
-					src="/images/margin-light.jpg"
-					alt="Margin on a Mac: the inbox and the command menu"
-					width={1800}
-					height={1168}
+					src="/images/mac-hero-light.jpg"
+					alt="Margin on a Mac: every inbox in one list, a conversation open, and the next meeting at the side"
+					width={2600}
+					height={1608}
 				/>
 				<img
 					className="for-dark"
-					src="/images/margin-dark.jpg"
-					alt="Margin on a Mac in dark mode: the inbox and a conversation"
-					width={1800}
-					height={1168}
+					src="/images/mac-hero-dark.jpg"
+					alt="Margin on a Mac in dark mode: every inbox in one list, a conversation open, and the next meeting at the side"
+					width={2600}
+					height={1608}
 				/>
 			</div>
 

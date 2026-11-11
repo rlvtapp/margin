@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { RelevateLogo } from "@/components/relevate-logo";
 import { ThemeSwitch } from "@/components/theme-switch";
 import { site } from "@/site";
 
@@ -6,13 +7,14 @@ export function Header() {
 	return (
 		<header className="top">
 			<Link to="/" className="brand">
-				<img src="/icon.svg" alt="" width={22} height={22} />
+				<img src="/icon.svg" alt="" width={26} height={26} />
 				Margin
 			</Link>
 			<nav className="middle">
 				<a href="/#features">Features</a>
 				<a href="/#privacy">Privacy</a>
 				<a href="/#agents">AI apps</a>
+				<a href="/#faq">FAQ</a>
 				<Link to="/support">Support</Link>
 			</nav>
 			<div className="end">
@@ -26,14 +28,14 @@ export function Header() {
 export function Footer() {
 	return (
 		<footer className="bottom">
-			<span>
-				A side project from <a href={site.publisherURL}>{site.publisher}</a> · ©{" "}
-				{new Date().getFullYear()}
-			</span>
+			<a className="made-by" href={site.publisherURL} aria-label={`Made by ${site.publisher}`}>
+				<RelevateLogo height={26} />
+			</a>
 			<nav>
 				<Link to="/privacy">Privacy</Link>
 				<Link to="/terms">Terms</Link>
 				<Link to="/support">Support</Link>
+				<span className="year">© {new Date().getFullYear()}</span>
 			</nav>
 		</footer>
 	);

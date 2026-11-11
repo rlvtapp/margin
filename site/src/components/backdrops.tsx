@@ -1,7 +1,22 @@
 /**
- * Background options for the hero, to compare (?bg=cards, ?bg=people, ?bg=bold). The chosen one
- * stays; the others get deleted.
+ * The hero's two backdrops: message cards floating up, and rows of people sliding past. Now
+ * and then someone reacts: a small emoji pops up on a card or a picture and goes again.
  */
+
+const reactions = ["👍", "❤️", "🎉", "😆", "😲"];
+
+/**
+ * A reaction that pops up on its picture sometimes. Each has its own slow rhythm, so only a few
+ * show at once and never in step.
+ */
+function Reaction({ seed }: { seed: number }) {
+	const style = { animationDuration: `${11 + (seed % 7) * 2.3}s`, animationDelay: `${-((seed * 3.7) % 20)}s` };
+	return (
+		<em className="bg-reaction" style={style}>
+			{reactions[seed % reactions.length]}
+		</em>
+	);
+}
 
 const colors = ["#2f78f5", "#18a874", "#7c5cff", "#e04f9a", "#e0a100", "#e2583e", "#3a8fb7"];
 
@@ -37,6 +52,7 @@ export function CardsBackdrop() {
 						<b />
 						<b />
 					</span>
+					{i % 3 === 1 && <Reaction seed={i} />}
 				</div>
 			))}
 		</div>
@@ -63,6 +79,7 @@ export function PeopleBackdrop() {
 						// biome-ignore lint/suspicious/noArrayIndexKey: a fixed list
 						<i key={i} style={{ background: p.color }}>
 							{p.letter}
+							{(i + r * 2) % 5 === 2 && <Reaction seed={i + r * 5} />}
 						</i>
 					))}
 				</div>

@@ -17,7 +17,7 @@ export const Route = createRootRoute({
 			// Each page adds its own title, description and share tags (see seo.ts).
 			{ name: "color-scheme", content: "light dark" },
 			{ name: "theme-color", content: "#ffffff", media: "(prefers-color-scheme: light)" },
-			{ name: "theme-color", content: "#000000", media: "(prefers-color-scheme: dark)" },
+			{ name: "theme-color", content: "#0c0f15", media: "(prefers-color-scheme: dark)" },
 			{ name: "application-name", content: "Margin" },
 			{ name: "apple-mobile-web-app-title", content: "Margin" },
 			{ name: "format-detection", content: "telephone=no" },
@@ -28,8 +28,9 @@ export const Route = createRootRoute({
 		],
 		links: [
 			{ rel: "stylesheet", href: css },
-			{ rel: "icon", href: "/icon.svg", type: "image/svg+xml" },
-			{ rel: "icon", href: "/favicon-32.png", type: "image/png", sizes: "32x32" },
+			{ rel: "icon", href: "/favicon.ico?v=margin", sizes: "32x32" },
+			{ rel: "icon", href: "/favicon-32.png?v=margin", type: "image/png", sizes: "32x32" },
+			{ rel: "icon", href: "/icon.svg?v=margin", type: "image/svg+xml", sizes: "any" },
 			{ rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
 			{ rel: "manifest", href: "/site.webmanifest" },
 		],

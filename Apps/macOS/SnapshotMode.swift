@@ -51,6 +51,13 @@ struct SnapshotMode {
             if ProcessInfo.processInfo.arguments.contains("-snapshot-plain") { model.prefersPlainText = true }
             if ProcessInfo.processInfo.arguments.contains("-snapshot-blocks") { model.usesBlockComposer = true }
             if ProcessInfo.processInfo.arguments.contains("-snapshot-colorblind") { model.colorBlindSafe = true }
+            // -snapshot-size 1280x800: the main window at that size (points), for pictures of a known shape.
+            if let size = Self.windowSize, let main = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) {
+                // On a Retina screen when there is one, so a picture of the real window is sharp.
+                let retina = NSScreen.screens.first { $0.backingScaleFactor >= 2 }
+                let screen = (retina ?? main.screen)?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1728, height: 1084)
+                main.setFrame(NSRect(x: screen.minX + 20, y: screen.maxY - size.height - 20, width: size.width, height: size.height), display: true)
+            }
             if ProcessInfo.processInfo.arguments.contains("-snapshot-contrast") { model.increaseContrast = true }
             try? await Task.sleep(for: .seconds(1.5))
             if let mailbox, model.accounts.indices.contains(mailbox) {
@@ -63,6 +70,8 @@ struct SnapshotMode {
             let arguments = ProcessInfo.processInfo.arguments
             await model.findInvites()
             if arguments.contains("-snapshot-meeting") { model.addSampleMeeting() }
+            if arguments.contains("-snapshot-calendar") { model.addSampleCalendar() }
+            if arguments.contains("-snapshot-reactions") { model.addSampleReactions() }
             if let index = arguments.firstIndex(of: "-snapshot-layout"), index + 1 < arguments.count,
                let layout = ListLayout(rawValue: arguments[index + 1]) {
                 for thread in model.inboxThreads(nil) {
@@ -85,6 +94,9 @@ struct SnapshotMode {
                 case "waiting": model.go(to: .waiting(account: nil))
 
                 case "snoozed": model.go(to: .snoozed(account: nil))
+                case "calendar":
+                    model.addSampleCalendar()
+                    model.go(to: .calendar)
                 case "subscriptions":
                     model.go(to: .subscriptions)
                     await model.refreshNewsletterHistory()
@@ -103,6 +115,13 @@ struct SnapshotMode {
             }
             if opensPalette { model.isPaletteOpen = true }
             if opensCompose { model.startCompose() }
+            // -snapshot-cc "no": with -snapshot-compose, opens Cc and Bcc with that typed in Cc,
+            // to check the people suggested under it.
+            if opensCompose, let index = arguments.firstIndex(of: "-snapshot-cc"), index + 1 < arguments.count {
+                model.compose?.showsCc = true
+                model.compose?.showsBcc = true
+                model.compose?.cc = arguments[index + 1]
+            }
             if assists {
                 try? await Task.sleep(for: .seconds(1))
                 model.summarizeSelected()
@@ -130,7 +149,11 @@ struct SnapshotMode {
             if let index = arguments.firstIndex(of: "-snapshot-settings"), index + 1 < arguments.count {
                 let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 820, height: 600), styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
                                       backing: .buffered, defer: false)
-                window.contentView = NSHostingView(rootView: MailSettingsView(model: model, startingAt: arguments[index + 1]))
+                // "mailbox": the first mailbox's own settings (name, Send as, signatures).
+                window.contentView = arguments[index + 1] == "mailbox"
+                    ? NSHostingView(rootView: AnyView(MailboxSettingsSnapshot(model: model).frame(width: 560, height: 1300)))
+                    : NSHostingView(rootView: AnyView(MailSettingsView(model: model, startingAt: arguments[index + 1])))
+                if arguments[index + 1] == "mailbox" { window.setContentSize(NSSize(width: 560, height: 1300)) }
                 window.makeKeyAndOrderFront(nil)
                 settingsWindow = window
                 try? await Task.sleep(for: .seconds(1.5))
@@ -153,12 +176,23 @@ struct SnapshotMode {
                     try? await Task.sleep(for: .seconds(1))
                 }
             }
-            // -snapshot-onboarding <step>: the first-launch welcome on that step.
+            // -snapshot-onboarding <step>: the first-launch welcome on that step (0 to 3).
+            // -snapshot-width <points> draws it narrower, as a sheet on a small window would be.
             if let index = arguments.firstIndex(of: "-snapshot-onboarding"), index + 1 < arguments.count {
-                let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 560, height: 560), styleMask: [.titled, .fullSizeContentView],
+                let width = arguments.firstIndex(of: "-snapshot-width").flatMap { $0 + 1 < arguments.count ? Double(arguments[$0 + 1]) : nil } ?? 600
+                let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: width, height: 640), styleMask: [.titled, .fullSizeContentView],
                                       backing: .buffered, defer: false)
                 window.titlebarAppearsTransparent = true
-                window.contentView = NSHostingView(rootView: OnboardingView(model: model, step: Int(arguments[index + 1]) ?? 0))
+                // -snapshot-mailboxes <n>: the welcome as if n mailboxes had been added.
+                let count = arguments.firstIndex(of: "-snapshot-mailboxes").flatMap { $0 + 1 < arguments.count ? Int(arguments[$0 + 1]) : nil } ?? 0
+                let shown = ["ada@example.com", "ada.work@example.org", "team@example.net"].prefix(count).enumerated().map { index, address in
+                    MailAccount(label: address, address: EmailAddress(address: address),
+                                connection: .jmap(sessionURL: URL(string: "https://example.invalid")!), auth: .token, colorIndex: index)
+                }
+                let host = NSHostingView(rootView: OnboardingView(model: model, step: Int(arguments[index + 1]) ?? 0, shownMailboxes: shown))
+                // Keep the asked-for width rather than growing to the welcome's ideal size.
+                if width != 600 { host.sizingOptions = [] }
+                window.contentView = host
                 window.makeKeyAndOrderFront(nil)
                 settingsWindow = window
                 try? await Task.sleep(for: .seconds(1.5))
@@ -194,8 +228,9 @@ struct SnapshotMode {
                 FileHandle.standardError.write(Data(String(format: "RESIZE median %.1f ms, slowest %.1f ms, over 16 ms: %d of %d\n",
                     sorted[sorted.count / 2], sorted.last ?? 0, times.filter { $0 > 16 }.count, times.count).utf8))
             }
-            let window = settingsWindow ?? NSApp.windows.first { $0.isVisible && $0.attachedSheet == nil && $0.contentView != nil }
-                ?? NSApp.windows.first { $0.isVisible }
+            // The biggest visible window: a tooltip's little panel can be visible too.
+            let window = settingsWindow
+                ?? NSApp.windows.filter { $0.isVisible && $0.contentView != nil }.max { $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height }
             if ProcessInfo.processInfo.environment["SNAPSHOT_DEBUG"] != nil, let root = window?.contentView?.superview {
                 func tables(_ view: NSView) -> [NSTableView] { (view as? NSTableView).map { [$0] } ?? view.subviews.flatMap(tables) }
                 for table in tables(root) {
@@ -204,6 +239,19 @@ struct SnapshotMode {
             }
             if ProcessInfo.processInfo.environment["SNAPSHOT_DEBUG"] != nil {
                 FileHandle.standardError.write(Data("snapshot windows: \(NSApp.windows.map { "\(type(of: $0)) visible=\($0.isVisible) sheet=\($0.attachedSheet != nil) frame=\($0.frame)" })\n".utf8))
+            }
+            // -snapshot-glass: a picture of the real window as the system draws it, Liquid Glass and
+            // scrolling parts included (the drawing below can't show those). The window has to be
+            // on screen for a moment; it comes to the front without taking the keyboard.
+            if arguments.contains("-snapshot-glass"), let window {
+                window.orderFrontRegardless()
+                try? await Task.sleep(for: .seconds(1.2))
+                if let image = Self.systemPicture(of: window) {
+                    save(NSBitmapImageRep(cgImage: image), suffix: "")
+                    NSApp.terminate(nil)
+                    return
+                }
+                FileHandle.standardError.write(Data("snapshot: the system gave no picture of the window\n".utf8))
             }
             if let view = window?.contentView?.superview ?? window?.contentView {
                 await write(view)
@@ -220,11 +268,42 @@ struct SnapshotMode {
         }
     }
 
+    /// The window as the window server has it, without its shadow. An app may always picture
+    /// its own windows, so this needs no screen-recording permission. The call left the SDK in
+    /// macOS 15 but is still in the system, so it's looked up by name.
+    private static func systemPicture(of window: NSWindow) -> CGImage? {
+        typealias CreateImage = @convention(c) (CGRect, UInt32, UInt32, UInt32) -> Unmanaged<CGImage>?
+        guard let symbol = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CGWindowListCreateImage") else { return nil }
+        let create = unsafeBitCast(symbol, to: CreateImage.self)
+        let includingWindow: UInt32 = 1 << 3, ignoreFraming: UInt32 = 1 << 0, bestResolution: UInt32 = 1 << 3
+        return create(.null, includingWindow, UInt32(window.windowNumber), ignoreFraming | bestResolution)?.takeRetainedValue()
+    }
+
+    /// `-snapshot-size 1280x800`, in points.
+    private static var windowSize: NSSize? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-snapshot-size"), index + 1 < arguments.count else { return nil }
+        let parts = arguments[index + 1].split(separator: "x").compactMap { Double($0) }
+        return parts.count == 2 ? NSSize(width: parts[0], height: parts[1]) : nil
+    }
+
+    /// A bitmap to draw the view into: the screen's own scale, or two pixels a point with
+    /// `-snapshot-size` (so pictures are sharp whatever screen the window is on).
+    @MainActor
+    private func bitmap(for view: NSView) -> NSBitmapImageRep? {
+        guard Self.windowSize != nil else { return view.bitmapImageRepForCachingDisplay(in: view.bounds) }
+        let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(view.bounds.width * 2), pixelsHigh: Int(view.bounds.height * 2),
+                                   bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                                   bytesPerRow: 0, bitsPerPixel: 0)
+        rep?.size = view.bounds.size
+        return rep
+    }
+
     /// Draws the view hierarchy, then paints each web view's own snapshot over its frame:
     /// WebKit draws in another process, so the cached bitmap has blanks where mail is.
     @MainActor
     private func write(_ view: NSView, suffix: String = "") async {
-        guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
+        guard let rep = bitmap(for: view) else { return }
         view.cacheDisplay(in: view.bounds, to: rep)
         let image = NSImage(size: view.bounds.size)
         image.addRepresentation(rep)

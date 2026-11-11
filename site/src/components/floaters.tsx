@@ -51,6 +51,26 @@ const items: { x: string; y: string; depth: number; tilt: number; speed: number;
 		),
 	},
 	{
+		x: "78%",
+		y: "52%",
+		depth: 20,
+		tilt: 3,
+		speed: 7.5,
+		content: (
+			<div className="float-card reaction">
+				<small>Noor · Booked the flat by the river!</small>
+				<span className="reactions">
+					<i>👍</i>
+					<i className="picked">❤️</i>
+					<i>🎉</i>
+					<i>😆</i>
+					<i>😲</i>
+					<i>😢</i>
+				</span>
+			</div>
+		),
+	},
+	{
 		x: "56%",
 		y: "84%",
 		depth: 26,

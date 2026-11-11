@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import { MiniInbox } from "@/components/mini-inbox";
+import { TranslateDemo } from "@/components/translate-demo";
 
 type Tab = { id: string; title: string; text: string; card: () => React.ReactNode };
 
 function HomeCard() {
 	return (
 		<div className="card">
-			<h3>Good morning, Alex</h3>
-			<p className="card-sub">12 emails came in today</p>
+			<h3>Tuesday, 10 November</h3>
+			<p className="card-sub">2 replies to write and a bill to open.</p>
 			<div className="nudge">
-				<b>Don't forget</b> 1 bill to pay · 1 invitation to answer
+				<b>Needs you</b> Noor, a reply owed &nbsp;·&nbsp; Fieldwork Bank, a bill
 			</div>
 			<ul className="buckets">
 				<li>
@@ -35,7 +36,7 @@ function MeetingCard() {
 		<div className="card">
 			<p className="card-sub">Invitation from Lena Fischer</p>
 			<h3>Quarterly planning</h3>
-			<p className="card-sub">Thursday 10:00 – 11:00 · Room Harbour</p>
+			<p className="card-sub">Friday 10:00 to 11:00, Harbor office</p>
 			<div className="people">
 				{["#7c5cff", "#18a874", "#e0a100", "#e04f9a"].map((c, i) => (
 					<i key={c} style={{ background: c }}>
@@ -63,7 +64,7 @@ function SummaryCard() {
 	];
 	return (
 		<div className="card">
-			<p className="card-sub">Summary · on this Mac</p>
+			<p className="card-sub">Summary, written on this Mac</p>
 			<h3>Can we move Thursday's review?</h3>
 			<ul className="typed">
 				{lines.map((line, i) => (
@@ -84,25 +85,31 @@ const tabs: Tab[] = [
 	{
 		id: "keys",
 		title: "Keyboard first",
-		text: "J and K to move, E to mark done, S to star, ⌘K for everything else. Try it on the card.",
+		text: "J and K to move, E to mark done, S to star, ⌘K for everything else. Or two fingers sideways on the trackpad. Try it on the card.",
 		card: () => <MiniInbox />,
 	},
 	{
 		id: "home",
 		title: "A calmer Home",
-		text: "What needs you today, at the top. People, updates and newsletters sorted on your device.",
+		text: "What needs you today, at the top, each with its reason. Everything else is sorted underneath, on your device.",
 		card: () => <HomeCard />,
 	},
 	{
 		id: "meetings",
 		title: "Meetings",
-		text: "Answer invitations in one click, see who's coming, and book a room.",
+		text: "Invitations from your mail and your Google and Outlook calendars on one page. Answer in one click, see what overlaps, join the call.",
 		card: () => <MeetingCard />,
+	},
+	{
+		id: "translate",
+		title: "Translate",
+		text: "Mail in a language you don't read, translated in place. The layout stays and nothing leaves your device.",
+		card: () => <TranslateDemo active />,
 	},
 	{
 		id: "assistant",
 		title: "Assistant",
-		text: "Summaries and reply drafts from the model on your Mac, or your own key. Only when you ask.",
+		text: "Summaries, suggested replies and answers about your mail, from the model on your Mac or with your own key. Or leave it off.",
 		card: () => <SummaryCard />,
 	},
 ];

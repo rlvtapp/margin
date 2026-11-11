@@ -79,7 +79,17 @@ function Support() {
 			<h2>Contact</h2>
 			<p>
 				Email <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a>,
-				for questions and bug reports alike.
+				for questions and bug reports alike. Or find us on X:{" "}
+				{site.x.map(({ handle, who }, n) => (
+					<span key={handle}>
+						{n > 0 && " and "}
+						<a href={`https://x.com/${handle}`} rel="noreferrer">
+							@{handle}
+						</a>{" "}
+						({who})
+					</span>
+				))}
+				.
 			</p>
 		</Prose>
 	);

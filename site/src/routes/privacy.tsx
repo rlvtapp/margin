@@ -96,9 +96,11 @@ function Privacy() {
 			<h2>Contacts and calendars</h2>
 			<p>
 				If you allow it, Margin reads the Contacts app on your device to suggest
-				addresses and show names. It can also read contacts from your Google or
-				Microsoft account, or from a contacts server you add. Contacts stay on
-				your device and are never uploaded. Meeting invitations are answered by
+				addresses and show names and pictures. It can also read contacts from
+				your Google or Microsoft account, or from a contacts server you add. A
+				person's picture comes only from the address book they're in; Margin
+				never looks an address up anywhere else. Contacts stay on your device
+				and are never uploaded. Meeting invitations are answered by
 				sending standard replies through your own mail account.
 			</p>
 

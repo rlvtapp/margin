@@ -19,7 +19,7 @@ export function seo({ path, title, description, hidden }: Page) {
 	const url = `${site.url}${path}`;
 	const fullTitle = path === "/" ? title : `${title} · ${site.name}`;
 	const image = `${site.url}/images/share.jpg`;
-	const imageAlt = "Margin on a Mac and an iPhone: the inbox and a conversation";
+	const imageAlt = "Margin on a Mac and an iPhone: every inbox in one list, with a conversation open";
 	return {
 		meta: [
 			{ title: fullTitle },
@@ -76,7 +76,7 @@ export const structuredData = {
 			applicationCategory: "CommunicationApplication",
 			operatingSystem: "macOS, iOS, iPadOS, watchOS",
 			image: `${site.url}/images/share.jpg`,
-			screenshot: [`${site.url}/images/margin-light.jpg`, `${site.url}/images/margin-iphone-light.jpg`],
+			screenshot: [`${site.url}/images/mac-hero-light.jpg`, `${site.url}/images/margin-iphone-light.jpg`],
 			offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
 			publisher: { "@id": `${site.publisherURL}/#organization` },
 		},

@@ -14,7 +14,7 @@ extension ReaderView {
             }
             .tint(thread.isStarred ? Status.star : Ink.primary)
             .sensoryFeedback(.impact(weight: .light), trigger: thread.isStarred)
-            ReaderMoreMenu(model: model, thread: thread, showsTranslation: $showsTranslation, addsLabel: $addsLabel)
+            ReaderMoreMenu(model: model, thread: thread, addsLabel: $addsLabel)
         }
         ToolbarItemGroup(placement: .bottomBar) {
             Button { model.perform(.done) } label: { Label("Done", systemImage: "checkmark.circle") }

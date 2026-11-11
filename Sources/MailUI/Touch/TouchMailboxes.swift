@@ -75,6 +75,7 @@ struct TouchMailboxes: View {
                 .listRowSeparator(.hidden)
                 .selectionDisabled()
             row(String(localized: "Home"), symbol: "house", count: nil, place: .home(group: nil))
+            row(String(localized: "Calendar"), symbol: "calendar", count: nil, place: .calendar)
             let rarely = model.newsletterSuggestions.count
             row(String(localized: "Subscriptions"), symbol: "newspaper", count: rarely > 0 ? rarely : nil, place: .subscriptions)
         }
@@ -89,11 +90,6 @@ struct TouchMailboxes: View {
             ToolbarItem(placement: .principal) { Color.clear.frame(width: 1, height: 1) }
             ToolbarItem(placement: .topBarLeading) {
                 Button { isShowingSettings = true } label: { Label("Settings", systemImage: "gearshape") }
-            }
-            if model.isAssistantOn {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { model.isAsking = true } label: { Label("Ask", systemImage: "sparkles") }
-                }
             }
             // On iPad the list beside this column already has these.
             if isStacked {
@@ -132,6 +128,16 @@ struct TouchMailboxes: View {
                     railButton(isOn: scope == account.id, label: account.label) {
                         AccountAvatar(account: account, size: 38)
                     } action: { pick(account.id) }
+                    .contextMenu {
+                        Button { withAnimation(Motion.quick) { model.moveAccount(account.id, by: -1) } } label: {
+                            Label("Move Up", systemImage: "arrow.up")
+                        }
+                        .disabled(!model.canMoveAccount(account.id, by: -1))
+                        Button { withAnimation(Motion.quick) { model.moveAccount(account.id, by: 1) } } label: {
+                            Label("Move Down", systemImage: "arrow.down")
+                        }
+                        .disabled(!model.canMoveAccount(account.id, by: 1))
+                    }
                 }
                 Button { model.isAddingAccount = true } label: {
                     Image(systemName: "plus")

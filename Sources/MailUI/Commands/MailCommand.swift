@@ -37,6 +37,18 @@ struct MailCommand: Identifiable {
             .init(id: "ask", title: "Ask about your mail", symbol: "text.bubble", keys: ["Q"], needsThread: false, needsAssistant: true) {
                 $0.isAsking = true
             },
+            .init(id: "agent.sort", title: "Sort my mail", symbol: "wand.and.stars", keys: [], needsThread: false, needsAssistant: true) {
+                $0.sortMailWithAssistant()
+            },
+            .init(id: "agent.ask", title: "Ask Margin to…", symbol: "sparkles", keys: [], needsThread: false, needsAssistant: true) { model in
+                #if os(macOS)
+                // The palette stays open for the rest of the sentence.
+                model.paletteSeed = CommandPalette.agentPrefix
+                model.isPaletteOpen = true
+                #else
+                model.isAgentPromptOpen = true
+                #endif
+            },
             .init(id: "summarize", title: "Summarize conversation", symbol: "text.alignleft", keys: ["M"], needsThread: true, needsAssistant: true) {
                 $0.summarizeSelected()
             },

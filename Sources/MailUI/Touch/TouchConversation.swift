@@ -10,7 +10,6 @@ import Translation
 /// Every action sits in the bars, where a thumb reaches it.
 struct TouchConversation: View {
     @Bindable var model: MailModel
-    @State private var showsTranslation = false
     @State private var addsLabel = false
     @State private var newLabel = ""
 
@@ -27,13 +26,16 @@ struct TouchConversation: View {
                             if model.showsAsChat {
                                 ChatConversationView(model: model, thread: conversation)
                             } else {
-                            ForEach(conversation.messages) { message in
+                            // Reactions sit on the message they answer instead of as messages.
+                            let layout = model.reactionLayout(conversation)
+                            ForEach(layout.messages) { message in
                                 Rectangle().fill(Line.hairline).frame(height: 1)
                                 TouchMessageCard(
                                     model: model,
                                     thread: thread,
                                     message: message,
-                                    startsExpanded: message.id == conversation.latest.id || message.isUnread
+                                    reactions: layout.reactions[message.id] ?? [],
+                                    startsExpanded: message.id == layout.messages.last?.id || message.isUnread
                                 )
                                 .id(message.id)
                             }
@@ -51,6 +53,8 @@ struct TouchConversation: View {
                         .frame(maxWidth: .infinity)
                     }
                     .onAppear { proxy.scrollTo(thread.latest.id, anchor: .top) }
+                    // Outlook's own reactions, when they're turned on for this account.
+                    .task(id: thread.id) { await model.loadOutlookReactions(for: thread) }
                 }
                 .toolbar { toolbar(thread) }
             } else {
@@ -61,9 +65,6 @@ struct TouchConversation: View {
         .background(Paper.panel)
         .onScreenForSiri(model.selectedThread)
         .navigationBarTitleDisplayMode(.inline)
-        #if canImport(Translation)
-        .translationPresentation(isPresented: $showsTranslation, text: translatableText)
-        #endif
         .alert("Add a label", isPresented: $addsLabel) {
             TextField("Label", text: $newLabel)
             Button("Cancel", role: .cancel) { newLabel = "" }
@@ -89,8 +90,8 @@ struct TouchConversation: View {
                     if let account = model.account(thread.accountID), model.accounts.count > 1 {
                         GlassChip(Text(verbatim: account.label), symbol: "tray", color: Palette.account(account.colorIndex))
                     }
-                    if thread.messages.count > 1 {
-                        GlassChip(Text("\(thread.messages.count) messages"), symbol: "bubble.left.and.bubble.right")
+                    if model.withoutReactions(thread).messages.count > 1 {
+                        GlassChip(Text("\(model.withoutReactions(thread).messages.count) messages"), symbol: "bubble.left.and.bubble.right")
                     }
                     ForEach(model.labels(for: thread), id: \.self) { label in
                         GlassChip(Text(verbatim: label), symbol: "tag")
@@ -120,7 +121,7 @@ struct TouchConversation: View {
             }
             .tint(thread.isStarred ? Status.star : Ink.primary)
             .sensoryFeedback(.impact(weight: .light), trigger: thread.isStarred)
-            ReaderMoreMenu(model: model, thread: thread, showsTranslation: $showsTranslation, addsLabel: $addsLabel)
+            ReaderMoreMenu(model: model, thread: thread, addsLabel: $addsLabel)
         }
         ToolbarItemGroup(placement: .bottomBar) {
             Button { model.perform(.done) } label: { Label("Done", systemImage: "checkmark.circle") }
@@ -152,11 +153,6 @@ struct TouchConversation: View {
         }
     }
 
-    private var translatableText: String {
-        guard let thread = model.selectedThread else { return "" }
-        let latest = thread.latest
-        return thread.subject + "\n\n" + (model.body(of: latest, in: thread)?.text ?? latest.snippet)
-    }
 }
 
 /// One message, straight on the page and the full width of the screen. Folded: sender, time
@@ -165,15 +161,20 @@ private struct TouchMessageCard: View {
     let model: MailModel
     let thread: MailThread
     let message: MailMessage
+    /// Reactions to this message, shown under it.
+    var reactions: [MailReaction] = []
     @State private var isExpanded: Bool
     @State private var loadsPicturesOnce = false
     @State private var showsOriginal: Bool?
     @State private var showsNoticeText = false
+    @State private var showsPerson = false
+    @State private var showsSource = false
 
-    init(model: MailModel, thread: MailThread, message: MailMessage, startsExpanded: Bool) {
+    init(model: MailModel, thread: MailThread, message: MailMessage, reactions: [MailReaction] = [], startsExpanded: Bool) {
         self.model = model
         self.thread = thread
         self.message = message
+        self.reactions = reactions
         _isExpanded = State(initialValue: startsExpanded)
         _loadsPicturesOnce = State(initialValue: PicturesShownOnce.contains(message.id))
     }
@@ -184,17 +185,41 @@ private struct TouchMessageCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             senderLine
+                .sheet(isPresented: $showsPerson) {
+                    ScrollView { PersonCard(model: model, person: message.from).frame(maxWidth: .infinity) }
+                        .presentationDetents([.medium, .large])
+                }
+                .sheet(isPresented: $showsSource) {
+                    NavigationStack { MessageSourceView(model: model, message: message, thread: thread) }
+                }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
                 .padding(.bottom, isExpanded ? 12 : 16)
             if isExpanded {
-                if !showsNoticeText, let notice = MeetingNotice.detect(subject: message.subject, text: content?.text ?? message.snippet) {
+                if !showsNoticeText, let reaction = model.reaction(in: message, of: thread) {
+                    // A reaction whose message isn't here: one line, not Outlook's quoted copy.
+                    ReactionNoticeCard(reaction: reaction, subject: MailReaction.originalSubject(message.subject),
+                                       isMine: model.isMine(reaction, in: thread)) { showsNoticeText = true }
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 12)
+                } else if !showsNoticeText, let notice = MeetingNotice.detect(subject: message.subject, text: content?.text ?? message.snippet) {
                     MeetingNoticeCard(notice: notice, who: message.from.displayName) { showsNoticeText = true }
                         .padding(.horizontal, 20)
                         .padding(.bottom, 12)
                 } else {
-                    messageBody
-                        .transition(.opacity)
+                    TranslatableBody(model: model, message: message, text: content?.text, html: showsHTML ? content?.html.map { SafeHTMLCache.sanitized($0).html } : nil,
+                                     textScale: model.textScale * 17 / 15, inset: 20) {
+                        messageBody
+                    }
+                    .transition(.opacity)
+                    if model.translations.phase(of: message.id) == .translated, !showsHTML, let content, !content.attachments.isEmpty {
+                        attachments(content.attachments).padding(.horizontal, 20).padding(.bottom, 16)
+                    }
+                }
+                if model.reaction(in: message, of: thread) == nil {
+                    ReactionStrip(model: model, thread: thread, message: message, reactions: reactions, touch: true)
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 16)
                 }
             }
         }
@@ -203,13 +228,19 @@ private struct TouchMessageCard: View {
 
     private var senderLine: some View {
         HStack(alignment: .top, spacing: 12) {
-            Avatar(message.from, size: 40)
+            // The picture and the name open the person's card.
+            Button { showsPerson = true } label: { Avatar(message.from, size: 40) }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("About \(message.from.displayName)"))
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: Space.s) {
-                    Text(verbatim: message.from.displayName)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Ink.primary)
-                        .lineLimit(1)
+                    Button { showsPerson = true } label: {
+                        Text(verbatim: message.from.displayName)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(Ink.primary)
+                            .lineLimit(1)
+                    }
+                    .buttonStyle(.plain)
                     Spacer(minLength: Space.s)
                     Text(RowDate.string(message.date))
                         .font(.system(size: 14))
@@ -230,7 +261,7 @@ private struct TouchMessageCard: View {
                         .lineLimit(2)
                 }
             }
-            if isExpanded, content?.html != nil { optionsMenu.padding(.top, -6) }
+            if isExpanded { optionsMenu.padding(.top, -6) }
         }
         .contentShape(Rectangle())
         .onTapGesture { withAnimation(Motion.quick) { isExpanded.toggle() } }
@@ -255,7 +286,7 @@ private struct TouchMessageCard: View {
                         .padding(.bottom, 12)
                 }
                 // The mail fills the card: its own colors, margins and a reading size.
-                HTMLMessageView(html: safe, allowsRemote: allowsRemote, zoom: model.textScale, fillsCard: true) {
+                HTMLMessageView(html: model.translations.shown(safe, for: message.id), allowsRemote: allowsRemote, zoom: model.textScale, fillsCard: true) {
                     model.startCompose(mailto: $0)
                 }
                 attachments(content.attachments)
@@ -317,11 +348,28 @@ private struct TouchMessageCard: View {
     private var optionsMenu: some View {
         let original = showsOriginal ?? !model.prefersPlainText
         return Menu {
-            Button(original ? "Show as plain text" : "Show original layout") { showsOriginal = !original }
-            if original, !model.trustsPictures(from: message.from) {
-                Button("Load pictures") { PicturesShownOnce.allow(message.id); loadsPicturesOnce = true }
-                Button("Always load pictures from \(message.from.displayName)") { model.trustPictures(from: message.from) }
+            if content?.html != nil {
+                Button(original ? "Show as plain text" : "Show original layout") { showsOriginal = !original }
+                if original, !model.trustsPictures(from: message.from) {
+                    Button("Load pictures") { PicturesShownOnce.allow(message.id); loadsPicturesOnce = true }
+                    Button("Always load pictures from \(message.from.displayName)") { model.trustPictures(from: message.from) }
+                }
+                Divider()
             }
+            Button { model.startReply(to: message) } label: { Label("Reply", systemImage: "arrowshape.turn.up.left") }
+            Button { model.startReply(to: message, all: true) } label: { Label("Reply all", systemImage: "arrowshape.turn.up.left.2") }
+            Button { model.startForward(message) } label: { Label("Forward", systemImage: "arrowshape.turn.up.right") }
+            Divider()
+            if model.translations.language(of: message.id) != nil {
+                Button(model.translations.phase(of: message.id) == .translated ? "Show Original" : "Translate") { model.translations.toggle(message.id) }
+                Divider()
+            }
+            if model.canReact(to: message, in: thread) {
+                ReactMenu(model: model, thread: thread, message: message)
+                Divider()
+            }
+            Button("About \(message.from.displayName)") { showsPerson = true }
+            Button("Show Source") { showsSource = true }
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 16, weight: .semibold))

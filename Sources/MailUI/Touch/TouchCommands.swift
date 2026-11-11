@@ -42,6 +42,10 @@ public struct TouchCommands: Commands {
             Divider()
             Button("Ask About Your Mail") { model.isAsking = true }
                 .keyboardShortcut("k")
+            Button("Sort My Mail") { model.sortMailWithAssistant() }
+                .disabled(!model.isAssistantOn)
+            Button("Ask Margin To…") { model.isAgentPromptOpen = true }
+                .disabled(!model.isAssistantOn)
             Button("Check for New Mail") { Task { await model.reload() } }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
         }

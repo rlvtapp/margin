@@ -106,6 +106,9 @@ public struct TouchMailView: View {
             DeviceLinkSheet(model: model)
         }
         .sheet(isPresented: $model.isAsking) { AskView(model: model) }
+        .sheet(isPresented: $model.isAgentPromptOpen) { AgentPromptSheet(model: model) }
+        .overlay(alignment: .bottom) { AgentRunCard(model: model).padding(.horizontal, Space.l).padding(.bottom, 64) }
+        .animation(Motion.present, value: model.agentRun?.id)
         .sheet(isPresented: $isShowingSettings) { TouchSettingsView(model: model) }
         // Done, Trash, Snooze and Send are felt as well as seen; errors feel different.
         .sensoryFeedback(trigger: model.notice?.id) { _, _ in

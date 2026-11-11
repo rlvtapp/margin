@@ -24,7 +24,7 @@ struct ReaderMetaLine: View {
     }
 
     private var meta: String {
-        let count = thread.messages.count
+        let count = model.withoutReactions(thread).messages.count
         var parts = [count == 1 ? String(localized: "1 message") : String(localized: "\(count) messages"), thread.split.title]
         if thread.hasAttachments { parts.append(String(localized: "Attachments")) }
         if let until = model.snoozedUntil(thread) {
@@ -131,7 +131,6 @@ struct PillButtonStyle: ButtonStyle {
 struct ReaderMoreMenu: View {
     let model: MailModel
     let thread: MailThread
-    @Binding var showsTranslation: Bool
     @Binding var addsLabel: Bool
 
     var body: some View {
@@ -140,12 +139,13 @@ struct ReaderMoreMenu: View {
         #else
         Menu { items } label: {
             Image(systemName: "ellipsis").font(.system(size: 13)).foregroundStyle(Ink.tertiary).frame(width: 28, height: 28)
+                .contentShape(Rectangle())
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help("More")
+        .tip("More")
         #endif
     }
 
@@ -155,7 +155,9 @@ struct ReaderMoreMenu: View {
             Button("Suggest labels") { model.suggestLabelsForSelected() }
         }
         Button("Add label…") { addsLabel = true }
-        Button("Translate") { showsTranslation = true }
+        // Every message in the conversation, translated where it's written in another language.
+        let ids = thread.messages.map(\.id)
+        Button(model.translations.anyTranslated(ids) ? "Show Original" : "Translate") { model.translations.toggle(all: ids) }
         Toggle("Show as chat", isOn: Binding(get: { model.showsAsChat }, set: { model.showsAsChat = $0 }))
         Divider()
         let folders = thread.accountID.map { model.folders(of: $0).filter { $0.role == .other || $0.role == .archive } } ?? []

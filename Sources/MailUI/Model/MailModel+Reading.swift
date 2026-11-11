@@ -190,7 +190,7 @@ extension MailModel {
         draft.calendar = invite.reply(from: account.address, status: response)
         Task {
             do {
-                try await provider(for: account).send(draft)
+                try await provider(for: account).send(withSenderName(draft, account: account))
                 rsvps[invite.uid] = response
                 notice = Notice(text: String(localized: "\(response.verb) · \(organizer.displayName) has been told"))
             } catch {

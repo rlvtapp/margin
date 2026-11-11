@@ -65,14 +65,13 @@ struct SnoozeMenu: View {
             Divider()
             Button("Pick a date…") { model.isPickingSnoozeDate = true }
         } label: {
-            Image(systemName: "clock").font(.system(size: 13)).foregroundStyle(Ink.tertiary)
-                .frame(width: 28, height: 28)
+            ToolbarLabel(symbol: "clock", title: "Snooze")
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help("Snooze  H")
+        .tip("Snooze  H")
         .sheet(isPresented: $model.isPickingSnoozeDate) {
             DateChoiceSheet(title: "Snooze until", action: "Snooze") { date in model.snooze(until: date) }
         }
@@ -159,7 +158,7 @@ struct AttachmentChip: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
-        .help("Open \(file.filename)")
+        .tip("Open \(file.filename)")
         .contextMenu {
             Button("Open") { actions?.open(file) }
             Button("Save As…") { actions?.save(file) }

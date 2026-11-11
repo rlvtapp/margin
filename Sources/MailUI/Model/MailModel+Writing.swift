@@ -86,12 +86,17 @@ extension MailModel {
             ?? WritingProfile.language(of: latest.subject + " " + latest.snippet)
     }
 
-    /// Three short replies for mail from a person that's waiting on an answer. Once per conversation.
+    /// Three short replies for mail from a person that's waiting on an answer, written again
+    /// whenever a new message arrives; none when the latest message is your own.
     public func suggestReplies(for thread: MailThread) async {
-        guard suggestsReplies, let intelligence, replySuggestions[thread.id] == nil,
-              thread.split == .people, let account = account(thread.accountID),
-              thread.latest.from.address.caseInsensitiveCompare(account.address.address) != .orderedSame else { return }
+        // Answers to what people wrote, not to their reactions.
+        let thread = withoutReactions(thread)
+        guard replySuggestionsFor[thread.id] != thread.latest.id else { return }
+        replySuggestionsFor[thread.id] = thread.latest.id
         replySuggestions[thread.id] = []
+        let mine = Set(accounts.flatMap { [$0.address] + ($0.aliases ?? []) }.map { $0.address.lowercased() })
+        guard suggestsReplies, let intelligence, thread.split == .people, let account = account(thread.accountID),
+              !mine.contains(thread.latest.from.address.lowercased()) else { return }
         let style = writingStyle(for: thread.latest.from, account: account, language: languageOf(thread))
         let suggestions = (try? await intelligence.suggestReplies(thread, bodies: bodies(of: thread), me: account.address, style: style)) ?? []
         replySuggestions[thread.id] = suggestions.map { inYourStyle($0, language: languageOf(thread)) }

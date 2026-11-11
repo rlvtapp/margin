@@ -29,7 +29,8 @@ struct ReplyPrompt: View {
 
     /// "Reply to Noor…": whoever wrote last, other than you.
     private var replyTitle: String {
-        let other = thread.messages.reversed().first { !model.isMine($0) }?.from
+        // Not someone who only reacted.
+        let other = thread.messages.reversed().first { !model.isMine($0) && model.reaction(in: $0, of: thread) == nil }?.from
         let name = other.map { EmailAddress.firstName(of: $0) } ?? ""
         return name.isEmpty || name.contains("@") ? String(localized: "Reply…") : String(localized: "Reply to \(name)…")
     }
@@ -41,23 +42,40 @@ struct ReplyEditor: View {
     @Binding var state: ComposeState
     @FocusState private var focused: Bool
     @State private var richText = RichTextController()
+    @State private var toInput = RecipientInput()
+    @State private var ccInput = RecipientInput()
+    @State private var bccInput = RecipientInput()
+    /// Cc or Bcc just opened with its button: it takes the keyboard.
+    @State private var opened: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s) {
             // Who it's from, at the top where you'd check it.
             FromPicker(model: model, state: $state)
             HStack(spacing: Space.s) {
-                Text("To").font(TypeScale.label).foregroundStyle(Ink.tertiary).frame(width: 22, alignment: .leading)
-                TextField("", text: $state.to).textFieldStyle(.plain).font(TypeScale.row)
+                Text("To").font(TypeScale.label).foregroundStyle(Ink.tertiary).frame(width: 26, alignment: .leading)
+                RecipientField(model: model, input: toInput, text: $state.to)
                 if !state.showsCc {
-                    Button("Cc") { state.showsCc = true }.buttonStyle(.plain).font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                    Button("Cc") { opened = "cc"; state.showsCc = true }.buttonStyle(.plain).font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                }
+                if !state.showsBcc {
+                    Button("Bcc") { opened = "bcc"; state.showsBcc = true }.buttonStyle(.plain).font(TypeScale.label).foregroundStyle(Ink.tertiary)
                 }
             }
+            RecipientMatches(model: model, input: toInput)
             if state.showsCc {
                 HStack(spacing: Space.s) {
-                    Text("Cc").font(TypeScale.label).foregroundStyle(Ink.tertiary).frame(width: 22, alignment: .leading)
-                    TextField("", text: $state.cc).textFieldStyle(.plain).font(TypeScale.row)
+                    Text("Cc").font(TypeScale.label).foregroundStyle(Ink.tertiary).frame(width: 26, alignment: .leading)
+                    RecipientField(model: model, input: ccInput, text: $state.cc, autofocus: opened == "cc")
                 }
+                RecipientMatches(model: model, input: ccInput)
+            }
+            if state.showsBcc {
+                HStack(spacing: Space.s) {
+                    Text("Bcc").font(TypeScale.label).foregroundStyle(Ink.tertiary).frame(width: 26, alignment: .leading)
+                    RecipientField(model: model, input: bccInput, text: $state.bcc, autofocus: opened == "bcc")
+                }
+                RecipientMatches(model: model, input: bccInput)
             }
             Rectangle().fill(Line.hairline).frame(height: 1)
             // Replies use the block editor too when it's turned on (Settings → Experimental).
@@ -138,11 +156,16 @@ struct ComposeSheet: View {
     @FocusState private var field: Field?
     @State private var richText = RichTextController()
     @State private var showsFormatting = false
+    @State private var toInput = RecipientInput()
+    @State private var ccInput = RecipientInput()
+    @State private var bccInput = RecipientInput()
+    /// Cc or Bcc just opened with its button: it takes the keyboard.
+    @State private var opened: String?
     /// In the reading pane rather than a sheet: fills it, with the writing kept to a
     /// comfortable width.
     var inPane = false
 
-    enum Field { case to, subject, body }
+    enum Field { case subject, body }
 
     private let inset: CGFloat = 28
 
@@ -166,26 +189,36 @@ struct ComposeSheet: View {
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut("m", modifiers: [.command, .shift])
-                .help(Text("Put the message away to look at other mail (⇧⌘M)"))
+                .tip(Text("Put the message away to look at other mail (⇧⌘M)"))
                 .accessibilityLabel(Text("Put Away"))
                 CloseKeyCap { model.closeComposer(state, isReply: false) }
             }
             row {
                 label("To")
-                TextField("", text: $state.to).textFieldStyle(.plain).font(TypeScale.row).focused($field, equals: .to)
+                // A new message starts in To; one that already has someone starts in the text.
+                RecipientField(model: model, input: toInput, text: $state.to, autofocus: state.to.isEmpty)
                 if !state.showsCc {
-                    Button("Cc") { state.showsCc = true }.buttonStyle(.plain).font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                    Button("Cc") { opened = "cc"; state.showsCc = true }.buttonStyle(.plain).font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                }
+                if !state.showsBcc {
+                    Button("Bcc") { opened = "bcc"; state.showsBcc = true }.buttonStyle(.plain).font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                        .tip(Text("Hidden recipients: they get the message, nobody sees them."))
                 }
             }
-            if field == .to {
-                RecipientSuggestions(model: model, field: $state.to).padding(.horizontal, inset).padding(.vertical, 4)
-            }
+            RecipientMatches(model: model, input: toInput).padding(.horizontal, inset).padding(.vertical, 4)
             if state.showsCc {
                 row {
                     label("Cc")
-                    TextField("", text: $state.cc).textFieldStyle(.plain).font(TypeScale.row)
+                    RecipientField(model: model, input: ccInput, text: $state.cc, autofocus: opened == "cc")
                 }
-                RecipientSuggestions(model: model, field: $state.cc).padding(.horizontal, inset)
+                RecipientMatches(model: model, input: ccInput).padding(.horizontal, inset).padding(.vertical, 4)
+            }
+            if state.showsBcc {
+                row {
+                    label("Bcc")
+                    RecipientField(model: model, input: bccInput, text: $state.bcc, autofocus: opened == "bcc")
+                }
+                RecipientMatches(model: model, input: bccInput).padding(.horizontal, inset).padding(.vertical, 4)
             }
             row {
                 label("Subject")
@@ -229,7 +262,7 @@ struct ComposeSheet: View {
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .help(Text("Formatting"))
+                    .tip(Text("Formatting"))
                     .accessibilityLabel(Text("Formatting"))
                 }
                 Group {
@@ -249,7 +282,7 @@ struct ComposeSheet: View {
         .frame(maxWidth: inPane ? .infinity : nil, maxHeight: inPane ? .infinity : nil)
         .frame(minWidth: inPane ? 0 : 620, idealWidth: inPane ? nil : 720, minHeight: inPane ? 0 : 500, idealHeight: inPane ? nil : 620)
         .background(inPane ? Paper.panel : Paper.popover)
-        .onAppear { field = state.to.isEmpty ? .to : .body }
+        .onAppear { if !state.to.isEmpty { field = .body } }
         .background { CancelKey { model.closeComposer(state, isReply: false) } }
         .dropDestination(for: URL.self) { urls, _ in ComposeAttachments.add(urls, to: &state) }
     }
@@ -258,12 +291,13 @@ struct ComposeSheet: View {
         Text(text).font(TypeScale.label).foregroundStyle(Ink.tertiary).frame(width: 56, alignment: .leading)
     }
 
-    /// One envelope line: 44 points tall, with a hairline under it inside the margins.
+    /// One envelope line: at least 44 points tall (taller when its people wrap onto a second
+    /// line), with a hairline under it inside the margins.
     private func row<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         HStack(spacing: Space.s) { content() }
             .padding(.leading, inset)
             .padding(.trailing, Space.m)
-            .frame(height: 44)
+            .frame(minHeight: 44)
             .overlay(alignment: .bottom) {
                 Rectangle().fill(Line.hairline).frame(height: 1).padding(.leading, inset).padding(.trailing, inset)
             }
@@ -290,7 +324,7 @@ struct CloseKeyCap: View {
     var body: some View {
         Button(action: action) { KeyCap("esc") }
             .buttonStyle(.plain)
-            .help(Text("Close"))
+            .tip(Text("Close"))
             .accessibilityLabel(Text("Close"))
     }
 }
@@ -328,14 +362,23 @@ struct FromPicker: View {
 
     var body: some View {
         let current = model.account(state.accountID)
-        // Every address of every mailbox: each mailbox's main address, then its aliases.
+        // Every address of every mailbox: a section per mailbox, its own address first.
         let choices = model.accounts.flatMap { account in account.sendAddresses.map { (account, $0) } }
+        let current_ = state.draft.from.address.lowercased()
         Menu {
-            ForEach(Array(choices.enumerated()), id: \.offset) { _, choice in
-                Button {
-                    state.send(from: choice.0, previous: model.account(state.accountID), as: choice.1)
-                } label: {
-                    Text(verbatim: "\(choice.0.label) · \(choice.1.address)")
+            ForEach(model.accounts) { account in
+                Section(account.label) {
+                    ForEach(Array(account.sendAddresses.enumerated()), id: \.offset) { _, address in
+                        Button {
+                            state.send(from: account, previous: model.account(state.accountID), as: address)
+                        } label: {
+                            if account.id == state.accountID && address.address.lowercased() == current_ {
+                                Label(address.address, systemImage: "checkmark")
+                            } else {
+                                Text(verbatim: address.address)
+                            }
+                        }
+                    }
                 }
             }
         } label: {
@@ -402,7 +445,7 @@ struct SendControls: View {
             .buttonStyle(.plain)
             .menuIndicator(.hidden)
             .fixedSize()
-            .help("Send later")
+            .tip("Send later")
             IconButton("paperclip", help: "Attach files") { picksFiles = true }
         }
         .alert("Did you mean to attach a file?", isPresented: $warnsAboutAttachment) {
@@ -439,7 +482,7 @@ struct ComposeAttachments: View {
                             Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).foregroundStyle(Ink.tertiary)
                         }
                         .buttonStyle(.plain)
-                        .help("Remove")
+                        .tip("Remove")
                     }
                     .padding(.horizontal, 8)
                     .frame(height: 26)
@@ -487,6 +530,6 @@ struct TemplatesMenu: View {
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help("Templates")
+        .tip("Templates")
     }
 }

@@ -40,19 +40,27 @@ struct TouchThreadList: View {
                 // the buttons go to the bottom instead, where a thumb reaches them.
                 if barsOnSide {
                     ToolbarItemGroup(placement: .bottomBar) {
-                        if model.place != .subscriptions {
+                        if model.place != .subscriptions && model.place != .calendar {
                             Button { withAnimation(Motion.quick) { isSearching = true } } label: { Label("Search", systemImage: "magnifyingglass") }
                             filterMenu
                         }
                         Spacer()
+                        if model.isAssistantOn {
+                            Button { model.isAgentPromptOpen = true } label: { Label("Ask Margin", systemImage: "sparkles") }
+                        }
                         Button { model.startCompose() } label: { Label("New message", systemImage: "square.and.pencil") }
                     }
                 } else {
-                    if model.place != .subscriptions {
+                    if model.place != .subscriptions && model.place != .calendar {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button { withAnimation(Motion.quick) { isSearching = true } } label: { Label("Search", systemImage: "magnifyingglass") }
                         }
                         ToolbarItem(placement: .topBarTrailing) { filterMenu }
+                    }
+                    if model.isAssistantOn {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button { model.isAgentPromptOpen = true } label: { Label("Ask Margin", systemImage: "sparkles") }
+                        }
                     }
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { model.startCompose() } label: { Label("New message", systemImage: "square.and.pencil") }
@@ -111,6 +119,8 @@ struct TouchThreadList: View {
             OutboxList(model: model)
         } else if model.place == .subscriptions {
             SubscriptionsPage(model: model, showsTitle: true)
+        } else if model.place == .calendar {
+            CalendarPage(model: model, showsTitle: false)
         } else {
             List(selection: Binding(get: { model.selectedThreadID }, set: { model.select($0) })) {
                 // Home leads with what needs you, then the rest by day; other places are one list.
@@ -168,7 +178,9 @@ struct TouchThreadList: View {
         ThreadRow(
             thread: thread,
             isSelected: thread.id == model.selectedThreadID,
-            account: model.place.isCombined && model.accounts.count > 1 ? model.account(thread.accountID) : nil,
+            // No mailbox badge on rows: it was a letter that didn't match the mailbox's picture,
+            // and the reader's header names the mailbox.
+            account: nil,
             showsRecipients: model.place.isOutgoing || model.place == .waiting(account: model.place.accountID),
             labels: model.place.isHome ? [] : model.labels(for: thread),
             snoozedUntil: model.snoozedUntil(thread),
@@ -369,6 +381,17 @@ private struct TouchSearch: ViewModifier {
                 .searchable(text: $model.searchText, isPresented: $isOn, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search")
                 // Return searches everything: saved mail now, then every server.
                 .onSubmit(of: .search) { model.runSearch(model.searchText) }
+                // A question offers the assistant first; the search results stay below it.
+                .searchSuggestions {
+                    if model.offersAsk(for: model.searchText) {
+                        Button {
+                            model.askFromSearch(model.searchText)
+                            model.searchText = ""
+                        } label: {
+                            Label("Ask: \(model.searchText.trimmingCharacters(in: .whitespaces))", systemImage: "sparkles")
+                        }
+                    }
+                }
                 .onChange(of: isOn) { _, on in if !on { model.searchText = "" } }
         } else {
             content

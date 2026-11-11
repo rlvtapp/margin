@@ -16,7 +16,29 @@ struct CommandPalette: View {
         let search = MailCommand(id: "searchFor", title: "Search mail for “\(query)”", symbol: "magnifyingglass", keys: ["↩"], needsThread: false) { [query] model in
             model.searchText = query
         }
-        return matches + [search]
+        // What's typed can also be something for the assistant to do ("archive last week's newsletters").
+        guard model.isAssistantOn else { return matches + [search] }
+        let (request, asked) = Self.agentRequest(query)
+        guard !request.isEmpty else { return matches + [search] }
+        let agent = MailCommand(id: "askAgent", title: "Ask Margin to “\(request)”", symbol: "sparkles", keys: [], needsThread: false) { model in
+            model.askAgent(request)
+        }
+        return asked ? [agent] + matches + [search] : matches + [search, agent]
+    }
+
+    /// What the palette starts with for “Ask Margin to…”.
+    static var agentPrefix: String {
+        String(localized: "Ask Margin to ", comment: "Command palette text before a request for the assistant; keep the trailing space")
+    }
+
+    /// The request in what was typed, and whether it began with “Ask Margin to”.
+    static func agentRequest(_ query: String) -> (request: String, asked: Bool) {
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        let prefix = agentPrefix.trimmingCharacters(in: .whitespaces)
+        if trimmed.lowercased().hasPrefix(prefix.lowercased()) {
+            return (String(trimmed.dropFirst(prefix.count)).trimmingCharacters(in: .whitespaces), true)
+        }
+        return (trimmed, false)
     }
 
     var body: some View {

@@ -10,13 +10,18 @@ struct TouchComposer: View {
     @Binding var state: ComposeState
     let isReply: Bool
     @FocusState private var field: Field?
+    @State private var toInput = RecipientInput()
+    @State private var ccInput = RecipientInput()
+    @State private var bccInput = RecipientInput()
+    /// Cc or Bcc just opened with its button: it takes the keyboard.
+    @State private var opened: String?
     @State private var richText = RichTextController()
     @State private var picksFiles = false
     @State private var picksDate = false
     @State private var warnsAboutAttachment = false
     @State private var showsQuoted = false
 
-    enum Field { case to, cc, subject, body }
+    enum Field { case subject, body }
 
     var body: some View {
         NavigationStack {
@@ -33,30 +38,28 @@ struct TouchComposer: View {
                         }
                     }
                     line("To") {
-                        TextField("", text: $state.to)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .focused($field, equals: .to)
+                        RecipientField(model: model, input: toInput, text: $state.to, autofocus: state.to.isEmpty)
                         if !state.showsCc {
-                            Button("Cc") { state.showsCc = true; field = .cc }
+                            Button("Cc") { opened = "cc"; state.showsCc = true }
+                                .font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                        }
+                        if !state.showsBcc {
+                            Button("Bcc") { opened = "bcc"; state.showsBcc = true }
                                 .font(TypeScale.label).foregroundStyle(Ink.tertiary)
                         }
                     }
-                    if field == .to {
-                        RecipientSuggestions(model: model, field: $state.to).padding(.horizontal, Space.l).padding(.vertical, 4)
-                    }
+                    RecipientMatches(model: model, input: toInput).padding(.horizontal, Space.l).padding(.vertical, 4)
                     if state.showsCc {
                         line("Cc") {
-                            TextField("", text: $state.cc)
-                                .keyboardType(.emailAddress)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .focused($field, equals: .cc)
+                            RecipientField(model: model, input: ccInput, text: $state.cc, autofocus: opened == "cc")
                         }
-                        if field == .cc {
-                            RecipientSuggestions(model: model, field: $state.cc).padding(.horizontal, Space.l).padding(.vertical, 4)
+                        RecipientMatches(model: model, input: ccInput).padding(.horizontal, Space.l).padding(.vertical, 4)
+                    }
+                    if state.showsBcc {
+                        line("Bcc") {
+                            RecipientField(model: model, input: bccInput, text: $state.bcc, autofocus: opened == "bcc")
                         }
+                        RecipientMatches(model: model, input: bccInput).padding(.horizontal, Space.l).padding(.vertical, 4)
                     }
                     line("Subject") { TextField("", text: $state.draft.subject).focused($field, equals: .subject) }
                     if model.usesBlockComposer {
@@ -97,7 +100,7 @@ struct TouchComposer: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button { send() } label: { Label("Send", systemImage: "arrow.up") }
-                        .disabled(state.to.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled([state.to, state.cc, state.bcc].allSatisfy { $0.trimmingCharacters(in: .whitespaces).isEmpty })
                 }
                 // The block editor has its own bar above the keyboard; Margin's tools stay at the foot.
                 if !model.usesBlockComposer {
@@ -107,7 +110,7 @@ struct TouchComposer: View {
             }
         }
         .tint(Ink.primary)
-        .onAppear { field = state.to.isEmpty ? .to : .body }
+        .onAppear { if !state.to.isEmpty { field = .body } }
         .fileImporter(isPresented: $picksFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
             if case .success(let urls) = result { _ = ComposeAttachments.add(urls, to: &state) }
         }

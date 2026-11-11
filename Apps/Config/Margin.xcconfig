@@ -2,7 +2,7 @@
 // Put your own values in Margin.local.xcconfig (ignored by git) rather than editing this file.
 
 // The bundle id. Forks should use a domain they own.
-MARGIN_BUNDLE_ID = dev.margin.Margin
+MARGIN_BUNDLE_ID = app.relevate.margin
 
 // OAuth client ids for Google and Microsoft sign-in. Empty means those providers offer
 // app passwords instead. See docs/oauth.md for how to register a client.

@@ -35,7 +35,7 @@ struct HTMLMessageView: View {
     @MainActor static var heights: [Int: CGFloat] = [:]
     static func heightKey(_ html: String, zoom: Double, card: Bool) -> Int {
         var hasher = Hasher()
-        hasher.combine(html)
+        hasher.combine(TextKey.of(html))
         hasher.combine(zoom)
         hasher.combine(card)
         return hasher.finalize()
@@ -106,17 +106,24 @@ struct HTMLMessageView: View {
 @MainActor
 enum RemoteContentRules {
     private static var compiled: WKContentRuleList?
+    private static var compiling: Task<Void, Never>?
 
     static func blockRemote() async -> WKContentRuleList? {
         if let compiled { return compiled }
+        if let compiling { await compiling.value; return compiled }
         let json = """
         [{"trigger":{"url-filter":".*"},"action":{"type":"block"}},
          {"trigger":{"url-filter":"^data:"},"action":{"type":"ignore-previous-rules"}},
          {"trigger":{"url-filter":"^about:"},"action":{"type":"ignore-previous-rules"}},
          {"trigger":{"url-filter":"^blob:"},"action":{"type":"ignore-previous-rules"}}]
         """
-        compiled = try? await WKContentRuleListStore.default()
-            .compileContentRuleList(forIdentifier: "margin.block-remote-content.v2", encodedContentRuleList: json)
+        let task = Task { @MainActor in
+            compiled = try? await WKContentRuleListStore.default()
+                .compileContentRuleList(forIdentifier: "margin.block-remote-content.v2", encodedContentRuleList: json)
+        }
+        compiling = task
+        await task.value
+        compiling = nil
         return compiled
     }
 }
@@ -152,29 +159,73 @@ final class HTMLWebCoordinator: NSObject, WKNavigationDelegate {
         }
     }
 
+    /// Fits the mail to the width it has, then answers with its height. Mail built to a fixed
+    /// width (a 600-point newsletter in a narrow pane or on a phone) is scaled down whole, the
+    /// way a page is in a browser, instead of being cut off at the edge. Mail that already
+    /// fits is left alone. Below `smallestScale` it would be unreadable, so it stops there.
+    static let smallestScale = 0.4
+    static let fitScript = """
+    (function () {
+      var body = document.body, root = document.documentElement;
+      if (!body) { return 0; }
+      // Mail that pins its page to the window's height (height: 100%, hidden overflow) would
+      // answer with the box it's in, not its own length: let the page be as long as it is.
+      [root, body].forEach(function (el) {
+        el.style.setProperty('height', 'auto', 'important');
+        el.style.setProperty('max-height', 'none', 'important');
+        el.style.setProperty('overflow', 'visible', 'important');
+      });
+      body.style.zoom = '';
+      var room = window.innerWidth, needs = root.scrollWidth;
+      if (room > 0 && needs > room + 1) { body.style.zoom = Math.max(\(smallestScale), room / needs); }
+      return Math.ceil(Math.max(root.getBoundingClientRect().height, body.getBoundingClientRect().height));
+    })()
+    """
+
     @MainActor
     func measure(_ webView: WKWebView) {
         // Runs in the app's own script world; the mail's scripts stay off.
-        webView.evaluateJavaScript("Math.ceil(document.documentElement.getBoundingClientRect().height)", in: nil, in: .defaultClient) { [weak self] result in
+        webView.evaluateJavaScript(Self.fitScript, in: nil, in: .defaultClient) { [weak self] result in
             guard let self, case .success(let value) = result, let number = value as? Double, number > 0 else { return }
+            MailBenchmark.onPageMeasured?()
             guard abs(self.height.wrappedValue - number) > 1 else { return }
             // A short ease instead of a jump when the mail reflows to a new width.
             withAnimation(Look.reduceMotion ? nil : .easeOut(duration: 0.15)) { self.height.wrappedValue = number }
         }
     }
 
+    /// What a navigation inside a mail may do.
+    enum LinkDecision: Equatable { case load, openInBrowser, compose, ignore }
+
+    /// The page itself loads (about:, and data: pictures and pages Margin made), but nothing the
+    /// mail does replaces it: a clicked web link opens in the browser, a mail link opens a new
+    /// message, and anything else (data:, file:, other apps' schemes) is ignored.
+    nonisolated static func decision(scheme: String?, isLinkClick: Bool) -> LinkDecision {
+        let scheme = scheme?.lowercased() ?? ""
+        guard isLinkClick else { return scheme == "about" || scheme == "data" ? .load : .ignore }
+        switch scheme {
+        case "http", "https": return .openInBrowser
+        case "mailto": return .compose
+        default: return .ignore
+        }
+    }
+
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
         guard let url = action.request.url else { return .cancel }
-        if url.scheme == "about" || url.scheme == "data" { return .allow }
-        guard action.navigationType == .linkActivated else { return .cancel }
+        let decision = Self.decision(scheme: url.scheme, isLinkClick: action.navigationType == .linkActivated)
         await MainActor.run {
-            switch url.scheme?.lowercased() {
-            case "http", "https": Self.openInBrowser(url)
-            case "mailto": onMailto(url)
-            default: break
+            switch decision {
+            case .openInBrowser: Self.openInBrowser(url)
+            case .compose: onMailto(url)
+            case .load, .ignore: break
             }
         }
-        return .cancel
+        return decision == .load ? .allow : .cancel
+    }
+
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        // Make room for the first HTML layout while images and other resources finish.
+        Task { @MainActor in measure(webView) }
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
@@ -201,7 +252,7 @@ final class HTMLWebCoordinator: NSObject, WKNavigationDelegate {
         configuration.websiteDataStore = .nonPersistent()
         configuration.defaultWebpagePreferences.allowsContentJavaScript = false
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = false
-        configuration.suppressesIncrementalRendering = true
+        configuration.suppressesIncrementalRendering = false
         let webView = MailWebView(frame: .zero, configuration: configuration)
         webView.allowsBackForwardNavigationGestures = false
         #if os(macOS)
@@ -262,13 +313,18 @@ struct HTMLWebView: NSViewRepresentable {
     func makeCoordinator() -> HTMLWebCoordinator { HTMLWebCoordinator(height: $height, onMailto: onMailto) }
 
     func makeNSView(context: Context) -> MailWebView {
-        let webView = HTMLWebCoordinator.makeWebView(background: background)
+        let webView = MailWebViewPool.take(background: background)
         webView.navigationDelegate = context.coordinator
         webView.onWidthChange = { [weak webView, coordinator = context.coordinator] in
             guard let webView else { return }
             coordinator.measure(webView)
         }
         return webView
+    }
+
+    static func dismantleNSView(_ webView: MailWebView, coordinator: HTMLWebCoordinator) {
+        webView.onWidthChange = nil
+        MailWebViewPool.give(webView)
     }
 
     func updateNSView(_ webView: MailWebView, context: Context) {
@@ -296,9 +352,13 @@ struct HTMLWebView: UIViewRepresentable {
     func makeCoordinator() -> HTMLWebCoordinator { HTMLWebCoordinator(height: $height, onMailto: onMailto) }
 
     func makeUIView(context: Context) -> MailWebView {
-        let webView = HTMLWebCoordinator.makeWebView(background: background)
+        let webView = MailWebViewPool.take(background: background)
         webView.navigationDelegate = context.coordinator
         return webView
+    }
+
+    static func dismantleUIView(_ webView: MailWebView, coordinator: HTMLWebCoordinator) {
+        MailWebViewPool.give(webView)
     }
 
     func updateUIView(_ webView: MailWebView, context: Context) {
@@ -309,6 +369,51 @@ struct HTMLWebView: UIViewRepresentable {
     }
 }
 #endif
+
+/// Web views that have shown a mail and are ready for the next one.
+///
+/// A new web view starts a web process of its own, which is most of what opening a formatted
+/// mail costs (well over a tenth of a second on older Macs, on every mail). A view that's done
+/// is kept instead: its page is emptied and everything it stored (cookies, caches, anything a
+/// picture's server left behind) is wiped, and only then may it show another mail. So mail
+/// still can't leave traces for other mail to find, which is why each view had its own store.
+@MainActor
+enum MailWebViewPool {
+    private static var ready: [MailWebView] = []
+    static let capacity = 3
+    /// How many views were handed out again instead of made new (for tests).
+    private(set) static var reused = 0
+
+    static func take(background: UInt32) -> MailWebView {
+        while let view = ready.popLast() {
+            // Still shown somewhere (it shouldn't be): not this one.
+            guard view.superview == nil else { continue }
+            reused += 1
+            #if os(macOS)
+            view.underPageBackgroundColor = NSColor(hex: background, alpha: 1)
+            #endif
+            return view
+        }
+        return HTMLWebCoordinator.makeWebView(background: background)
+    }
+
+    static func give(_ view: MailWebView) {
+        view.navigationDelegate = nil
+        view.stopLoading()
+        guard ready.count < capacity else { return }
+        view.loadHTMLString("", baseURL: nil)
+        view.configuration.userContentController.removeAllContentRuleLists()
+        let store = view.configuration.websiteDataStore
+        store.removeData(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(), modifiedSince: .distantPast) {
+            Task { @MainActor in
+                if ready.count < capacity, !ready.contains(where: { $0 === view }) { ready.append(view) }
+            }
+        }
+    }
+
+    /// For tests.
+    static func empty() { ready = []; reused = 0 }
+}
 
 /// Pictures you chose to load for one message ("Load pictures" without trusting the sender).
 /// Kept for the session, so going back to the message shows them again.

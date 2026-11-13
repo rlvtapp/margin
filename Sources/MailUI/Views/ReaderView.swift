@@ -56,34 +56,47 @@ struct ReaderView: View {
                                         )
                                     )
                                     .id(message.id)
+                                    // A reply to an earlier message opens right under it.
+                                    if drawsToolbar, model.isWritingReply, message.id == inlineReplyTarget(layout.messages) {
+                                        ReplyEditorHost(model: model)
+                                            .padding(.vertical, Space.m)
+                                            .id("reply")
+                                    }
                                 }
                                 }
-                                if model.reply == nil, model.isAssistantOn {
+                                if !model.isWritingReply, model.isAssistantOn {
                                     ReplySuggestionsRow(model: model, thread: thread)
                                         .padding(.top, Space.l)
                                 }
-                                Group {
-                                    // On iPhone and iPad a reply opens full screen instead.
-                                    if drawsToolbar, let reply = Binding(keepingLast: $model.reply) {
-                                        ReplyEditor(model: model, state: reply)
-                                    } else {
-                                        ReplyPrompt(model: model, thread: thread)
+                                // Unless the reply is open under an earlier message, above.
+                                if model.showsAsChat || !(drawsToolbar && model.isWritingReply
+                                                         && inlineReplyTarget(model.reactionLayout(model.conversation(thread)).messages) != nil) {
+                                    Group {
+                                        // On iPhone and iPad a reply opens full screen instead.
+                                        if drawsToolbar, model.isWritingReply {
+                                            ReplyEditorHost(model: model)
+                                        } else {
+                                            ReplyPrompt(model: model, thread: thread)
+                                        }
                                     }
+                                    .padding(.top, Space.l)
+                                    .id("reply")
                                 }
-                                .padding(.top, Space.l)
-                                .id("reply")
                             }
                             .frame(maxWidth: 780, alignment: .leading)
-                            .padding(.horizontal, drawsToolbar ? 36 : 20)
+                            // A narrow window gives the mail its room back.
+                            .padding(.horizontal, drawsToolbar && !model.isWindowNarrow ? 36 : 20)
                             .padding(.top, drawsToolbar ? 28 : 8)
                             .padding(.bottom, 40)
                             .frame(maxWidth: .infinity)
+                            // Dragging a selection past the top or bottom scrolls the mail.
+                            .scrollsWhileSelecting()
                         }
                         .onAppear { proxy.scrollTo(thread.latest.id, anchor: .top) }
                         .onChange(of: thread.id) { _, _ in proxy.scrollTo(thread.latest.id, anchor: .top) }
                         // Outlook's own reactions, when they're turned on for this account.
                         .task(id: thread.id) { await model.loadOutlookReactions(for: thread) }
-                        .onChange(of: model.reply != nil) { _, open in
+                        .onChange(of: model.isWritingReply) { _, open in
                             if open { withAnimation(Motion.quick) { proxy.scrollTo("reply", anchor: .bottom) } }
                         }
                     }
@@ -111,56 +124,61 @@ struct ReaderView: View {
         }
     }
 
+    /// The message a reply answers when it isn't the last one shown, so the reply opens under it.
+    private func inlineReplyTarget(_ messages: [MailMessage]) -> MailMessage.ID? {
+        guard model.reply?.answersOneMessage == true, let answering = model.reply?.draft.inReplyTo,
+              let index = messages.firstIndex(where: { $0.messageID == answering }), index < messages.count - 1 else { return nil }
+        return messages[index].id
+    }
+
+    /// The widest row that fits the pane: names on the buttons (Settings → Appearance), then
+    /// icons, then icons packed tight. A pane too narrow even for that scrolls the row sideways,
+    /// so nothing is ever cut off or pushed out. Which mailbox and group the conversation is in
+    /// is said under its subject (`ReaderMetaLine`), not here.
     private func toolbar(_ thread: MailThread) -> some View {
-        HStack(spacing: 2) {
-            if let onBack {
-                IconButton("chevron.left", help: "Back") { onBack() }
-            } else if model.layout.opensOverList {
-                IconButton("chevron.left", help: "Back to the list  Esc") { model.isReaderOpen = false }
-            }
-            HStack(spacing: 6) {
-                if let account = model.account(thread.accountID), model.accounts.count > 1 {
-                    AccountMark(account, size: 14)
-                    Text(account.label).foregroundStyle(Ink.tertiary)
-                    Image(systemName: "chevron.right").font(.system(size: 8, weight: .bold)).foregroundStyle(Ink.quaternary)
-                }
-                Text(model.split != nil ? thread.split.title : model.title).foregroundStyle(Ink.tertiary)
-            }
-            .font(TypeScale.row)
-            .padding(.leading, Space.s)
-            Spacer(minLength: Space.s)
-            // With names when they fit (Settings → Appearance), otherwise icons with tooltips.
-            if model.buttonNames {
-                ViewThatFits(in: .horizontal) {
-                    actions(thread).environment(\.toolbarLabels, true)
-                    actions(thread).environment(\.toolbarLabels, false)
-                }
-            } else {
-                actions(thread).environment(\.toolbarLabels, false)
+        ViewThatFits(in: .horizontal) {
+            if model.buttonNames { toolbarRow(thread, labels: true) }
+            toolbarRow(thread, labels: false)
+            toolbarRow(thread, labels: false, tight: true)
+            ScrollView(.horizontal, showsIndicators: false) {
+                toolbarRow(thread, labels: false, tight: true)
             }
         }
-        .padding(.leading, Space.s)
-        .padding(.trailing, Space.m)
         .frame(height: MailLayout.topBand)
     }
 
+    private func toolbarRow(_ thread: MailThread, labels: Bool, tight: Bool = false) -> some View {
+        HStack(spacing: 2) {
+            if let onBack {
+                IconButton("chevron.left", help: "Back") { onBack() }
+            } else if model.opensOverList {
+                IconButton("chevron.left", help: "Back to the list  Esc") { model.isReaderOpen = false }
+            }
+            Spacer(minLength: Space.s)
+            actions(thread, tight: tight).environment(\.toolbarLabels, labels)
+        }
+        .padding(.leading, Space.s)
+        .padding(.trailing, Space.m)
+    }
+
     /// Three groups with room between them: handle it, organise it, write.
-    private func actions(_ thread: MailThread) -> some View {
-        HStack(spacing: 0) {
-            HStack(spacing: 4) {
+    private func actions(_ thread: MailThread, tight: Bool = false) -> some View {
+        let between: CGFloat = tight ? 0 : 4
+        return GlassChipRow(spacing: tight ? 4 : 8) {
+            HStack(spacing: between) {
                 ToolbarButton("checkmark.circle", title: "Done", help: "Done  E") { model.perform(.done) }
                 ToolbarButton("trash", title: "Trash", help: "Move to Trash  #") { model.perform(.trash) }
-            }
-            toolbarGap
-            HStack(spacing: 4) {
+            }.padding(3).glassCapsule(tint: nil)
+                .overlay(Capsule().strokeBorder(Line.edge.opacity(0.6)))
+            HStack(spacing: between) {
                 ToolbarButton(thread.isStarred ? "star.fill" : "star", title: thread.isStarred ? "Unstar" : "Star",
                               help: thread.isStarred ? "Remove star  S" : "Star  S") { model.toggleStar() }
                 ToolbarButton(thread.isUnread ? "envelope.open" : "envelope.badge", title: thread.isUnread ? "Read" : "Unread",
                               help: thread.isUnread ? "Mark read  U" : "Mark unread  U") { model.toggleRead() }
                 SnoozeMenu(model: model)
-            }
-            toolbarGap
-            HStack(spacing: 4) {
+            }.padding(3).glassCapsule(tint: nil)
+                .overlay(Capsule().strokeBorder(Line.edge.opacity(0.6)))
+            HStack(spacing: between) {
                 if model.isAssistantOn {
                     if model.isWorking("summary", on: thread) {
                         ProgressView().controlSize(.small).frame(width: 28, height: 28)
@@ -172,13 +190,10 @@ struct ReaderView: View {
                 ToolbarButton("arrowshape.turn.up.left.2", title: "Reply all", help: "Reply all  A") { model.startReply(all: true) }
                 ToolbarButton("arrowshape.turn.up.right", title: "Forward", help: "Forward  F") { model.startForward() }
                 ReaderMoreMenu(model: model, thread: thread, addsLabel: $addsLabel)
-            }
+            }.padding(3).glassCapsule(tint: nil)
+                .overlay(Capsule().strokeBorder(Line.edge.opacity(0.6)))
         }
         .fixedSize()
-    }
-
-    private var toolbarGap: some View {
-        Rectangle().fill(Line.hairline).frame(width: 1, height: 16).padding(.horizontal, 10)
     }
 
     private func header(_ thread: MailThread) -> some View {
@@ -226,6 +241,8 @@ struct MessageView: View {
     @State private var isExpanded: Bool
     @State private var isHovered = false
     @State private var actionsHovered = false
+    /// The earlier mail quoted under this message, unfolded with the "···" button.
+    @State private var showsQuote = false
     /// Pictures allowed for this message only.
     @State private var loadsPicturesOnce = false
     /// This message switched away from the reading preference.
@@ -314,10 +331,15 @@ struct MessageView: View {
 
             if isExpanded {
                 VStack(alignment: .leading, spacing: Space.m) {
-                    TranslatableBody(model: model, message: message, text: content?.text, html: shownHTML?.html, textScale: textScale) {
+                    TranslatableBody(model: model, message: message, text: content?.text, html: shownHTML?.html, textScale: textScale,
+                                     trimsQuote: foldsQuote && !showsQuote) {
                         messageBody
                     }
-                    if showsTranslation, shownHTML == nil, let content, !content.attachments.isEmpty { attachments(content.attachments) }
+                    if showsTranslation, shownHTML == nil, let content {
+                        if foldsQuote, QuotedHistory.textWithoutQuote(content.text) != nil { QuoteToggle(isOpen: $showsQuote) }
+                        if !content.attachments.isEmpty { attachments(content.attachments) }
+                        if content.isPartial == true { AttachmentsLoadingNote() }
+                    }
                     if let model, let thread, model.reaction(in: message, of: thread) == nil {
                         ReactionStrip(model: model, thread: thread, message: message, reactions: reactions)
                     }
@@ -330,6 +352,12 @@ struct MessageView: View {
     }
 
     private var showsTranslation: Bool { model?.translations.phase(of: message.id) == .translated }
+
+    /// Earlier mail quoted under a message is folded away behind "···", except in a forward,
+    /// where the quoted part is the point.
+    private var foldsQuote: Bool {
+        thread != nil && !QuotedHistory.isForward(message.subject)
+    }
 
     /// The HTML this message shows (sanitized), when it's shown in its own layout.
     private var shownHTML: SafeHTML? {
@@ -356,16 +384,23 @@ struct MessageView: View {
             } else if !safe.blockedTrackers.isEmpty || safe.cleanedLinks > 0 {
                 TrackersBlockedNote(safe: safe)
             }
-            HTMLMessageView(html: model?.translations.shown(safe, for: message.id) ?? safe, allowsRemote: allowsRemote, zoom: textScale, onMailto: onMailto)
+            let full = model?.translations.shown(safe, for: message.id) ?? safe
+            let folded = foldsQuote ? QuotedHistory.htmlWithoutQuote(full.html) : nil
+            HTMLMessageView(html: showsQuote ? full : full.replacing(html: folded), allowsRemote: allowsRemote, zoom: textScale, onMailto: onMailto)
+            if folded != nil { QuoteToggle(isOpen: $showsQuote) }
             if !content.attachments.isEmpty { attachments(content.attachments) }
+            if content.isPartial == true { AttachmentsLoadingNote() }
         } else if let content {
-            Text(PlainTextLinks.attributed(content.text))
-                .font(.system(size: 15 * textScale))
+            let folded = foldsQuote ? QuotedHistory.textWithoutQuote(content.text) : nil
+            Text(PlainTextLinks.attributed(showsQuote ? content.text : folded ?? content.text))
+                .font(.system(size: Look.size(15) * textScale))
                 .foregroundStyle(Ink.primary)
                 .lineSpacing(5)
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            if folded != nil { QuoteToggle(isOpen: $showsQuote) }
             if !content.attachments.isEmpty { attachments(content.attachments) }
+            if content.isPartial == true { AttachmentsLoadingNote() }
         } else {
             Text("Loading…").font(TypeScale.body).foregroundStyle(Ink.tertiary)
         }
@@ -407,7 +442,7 @@ struct MessageView: View {
             }
         } label: {
             Image(systemName: "ellipsis")
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: Look.size(12), weight: .medium))
                 .foregroundStyle(Ink.tertiary)
                 .frame(width: 28, height: 28)
                 .contentShape(Rectangle())
@@ -443,6 +478,48 @@ struct MessageView: View {
     }
 }
 
+/// Under a message whose text came ahead of its files (see `MessageBody.isPartial`).
+struct AttachmentsLoadingNote: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            ProgressView().controlSize(.mini)
+            Text("Loading attachments…").font(TypeScale.label).foregroundStyle(Ink.tertiary)
+        }
+        .frame(height: Look.gap(28))
+    }
+}
+
+/// The "···" under a reply: shows or hides the earlier mail it quotes.
+struct QuoteToggle: View {
+    @Binding var isOpen: Bool
+
+    var body: some View {
+        Button {
+            withAnimation(Motion.quick) { isOpen.toggle() }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: Look.size(12), weight: .bold))
+                .foregroundStyle(Ink.secondary)
+                .frame(width: 34, height: 18)
+                .background(isOpen ? Fill.two : Fill.one, in: Capsule())
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .tip(isOpen ? "Hide earlier messages" : "Show earlier messages")
+        .accessibilityLabel(Text(isOpen ? "Hide earlier messages" : "Show earlier messages"))
+    }
+}
+
+extension SafeHTML {
+    /// The same message with other HTML (its quoted history cut off); itself when `html` is nil.
+    func replacing(html: String?) -> SafeHTML {
+        guard let html else { return self }
+        var copy = self
+        copy.html = html
+        return copy
+    }
+}
+
 /// Reply, reply all and forward for one message of a conversation, as three small buttons.
 struct MessageActions: View {
     let model: MailModel
@@ -459,7 +536,7 @@ struct MessageActions: View {
     private func button(_ symbol: String, _ title: LocalizedStringKey, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 11.5, weight: .medium))
+                .font(.system(size: Look.size(11.5), weight: .medium))
                 .foregroundStyle(Ink.tertiary)
                 .frame(width: 26, height: 28)
                 .contentShape(Rectangle())
@@ -479,7 +556,7 @@ private struct RemotePicturesNote: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: "eye.slash").font(.system(size: 11))
+            Image(systemName: "eye.slash").font(.system(size: Look.size(11)))
             status.lineLimit(1)
             Text(verbatim: "·").foregroundStyle(Ink.quaternary)
             Button("Load", action: onLoad)
@@ -507,7 +584,7 @@ struct TrackersBlockedNote: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: "hand.raised").font(.system(size: 11))
+            Image(systemName: "hand.raised").font(.system(size: Look.size(11)))
             Text(summary).lineLimit(1)
         }
         .font(TypeScale.label)
@@ -537,7 +614,7 @@ enum SafeHTMLCache {
 
     static func sanitized(_ html: String) -> SafeHTML {
         var hasher = Hasher()
-        hasher.combine(html)
+        hasher.combine(TextKey.of(html))
         hasher.combine(blocksTrackers)
         let key = hasher.finalize()
         if let hit = cache[key] { return hit }

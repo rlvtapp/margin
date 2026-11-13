@@ -10,7 +10,7 @@ struct ReaderMetaLine: View {
         let labels = model.labels(for: thread)
         let suggestions = model.labelSuggestions[thread.id] ?? []
         FlowRow(spacing: 6) {
-            Text(meta).font(TypeScale.label).foregroundStyle(Ink.tertiary).frame(height: 22)
+            Text(meta).font(TypeScale.label).foregroundStyle(Ink.tertiary).frame(height: Look.gap(22))
             ForEach(labels, id: \.self) { label in
                 LabelChip(text: label, style: .applied) { model.removeLabel(label, from: thread) }
             }
@@ -18,7 +18,7 @@ struct ReaderMetaLine: View {
                 LabelChip(text: label, style: .suggested) { model.addLabel(label, to: thread) }
             }
             if model.isWorking("labels", on: thread) {
-                ProgressView().controlSize(.mini).frame(height: 22)
+                ProgressView().controlSize(.mini).frame(height: Look.gap(22))
             }
         }
     }
@@ -26,6 +26,8 @@ struct ReaderMetaLine: View {
     private var meta: String {
         let count = model.withoutReactions(thread).messages.count
         var parts = [count == 1 ? String(localized: "1 message") : String(localized: "\(count) messages"), thread.split.title]
+        // With several mailboxes, which one this arrived in.
+        if model.accounts.count > 1, let account = model.account(thread.accountID) { parts.append(account.label) }
         if thread.hasAttachments { parts.append(String(localized: "Attachments")) }
         if let until = model.snoozedUntil(thread) {
             parts.append(String(localized: "Snoozed until \(until.formatted(.dateTime.weekday(.abbreviated).hour().minute()))"))
@@ -38,17 +40,29 @@ struct ReaderMetaLine: View {
 struct ReaderSuggestion: View {
     let model: MailModel
     let thread: MailThread
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         if let code = model.signInCode(in: thread) {
             card {
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Sign-in code").font(TypeScale.label).foregroundStyle(Ink.tertiary)
-                    Text(Self.spaced(code)).font(.system(size: 20, weight: .medium, design: .monospaced)).foregroundStyle(Ink.primary)
+                    Text(Self.spaced(code)).font(.system(size: Look.size(20), weight: .medium, design: .monospaced)).foregroundStyle(Ink.primary)
                         .textSelection(.enabled)
                 }
                 Spacer()
                 Button("Copy") { model.copy(code, announce: "Code copied") }.buttonStyle(PillButtonStyle(prominent: true))
+            }
+        } else if let link = model.signInLink(in: thread) {
+            card {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(link.kind == .confirm ? "Confirmation link" : "Sign-in link").font(TypeScale.rowStrong)
+                    Text(verbatim: link.url.host() ?? "").font(TypeScale.label).foregroundStyle(Ink.secondary)
+                }
+                Spacer()
+                Button { openURL(link.url) } label: {
+                    Label("Open in browser", systemImage: "arrow.up.right")
+                }.buttonStyle(PillButtonStyle(prominent: true))
             }
         } else if model.place.isDraftsFolder || thread.messages.contains(where: { $0.flags.contains(.draft) }) {
             card {
@@ -70,7 +84,7 @@ struct ReaderSuggestion: View {
                 Button("Unsnooze") { model.unsnooze(thread) }.buttonStyle(PillButtonStyle())
             }
         } else if let unsubscribe = model.unsubscribeMethod(for: thread) {
-            let count = model.threadsFromSameSender(as: thread).count
+            let count = model.countFromSameSender(as: thread)
             card {
                 note("A newsletter from \(thread.latest.from.displayName).")
                 Spacer()
@@ -119,7 +133,7 @@ struct PillButtonStyle: ButtonStyle {
             .font(TypeScale.label.weight(.medium))
             .foregroundStyle(prominent ? Ink.inverse : Ink.primary)
             .padding(.horizontal, 11)
-            .frame(height: 26)
+            .frame(height: Look.gap(26))
             .background(prominent ? Ink.primary : Paper.panel, in: Capsule())
             .overlay(Capsule().strokeBorder(prominent ? Color.clear : Line.edge))
             .opacity(configuration.isPressed ? 0.8 : 1)
@@ -138,7 +152,7 @@ struct ReaderMoreMenu: View {
         Menu { items } label: { Label("More", systemImage: "ellipsis") }
         #else
         Menu { items } label: {
-            Image(systemName: "ellipsis").font(.system(size: 13)).foregroundStyle(Ink.tertiary).frame(width: 28, height: 28)
+            Image(systemName: "ellipsis").font(.system(size: Look.size(13))).foregroundStyle(Ink.tertiary).frame(width: 28, height: 28)
                 .contentShape(Rectangle())
         }
         .menuStyle(.button)
@@ -169,7 +183,7 @@ struct ReaderMoreMenu: View {
         if model.unsubscribeMethod(for: thread) != nil {
             Button("Unsubscribe") { model.unsubscribe(thread) }
         }
-        let count = model.threadsFromSameSender(as: thread).count
+        let count = model.countFromSameSender(as: thread)
         if count > 1 {
             Button("Archive all \(count) from \(thread.latest.from.displayName)") { model.archiveAll(from: thread) }
         }

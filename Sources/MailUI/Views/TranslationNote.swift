@@ -18,6 +18,9 @@ public final class MessageTranslations {
     /// The language each message is in, once looked at (nil inside: not clear, or the system
     /// can't translate from it).
     private(set) var languages: [String: Locale.Language?] = [:]
+    /// Messages in a language the system can't translate, translated by the assistant instead,
+    /// as plain text.
+    private(set) var byAssistant: Set<String> = []
 
     public init() {}
 
@@ -58,6 +61,8 @@ public final class MessageTranslations {
     }
 
     func noteLanguage(_ language: Locale.Language?, of id: String) { languages[id] = .some(language) }
+    func noteAssistantNeeded(_ id: String) { byAssistant.insert(id) }
+    func usesAssistant(_ id: String) -> Bool { byAssistant.contains(id) }
     func finish(_ id: String, with text: String) { texts[id] = text; phases[id] = .translated }
     func finish(_ id: String, html: String) { htmls[id] = html; phases[id] = .translated }
     /// Part of it translated, shown while the rest comes.
@@ -85,6 +90,8 @@ struct TranslatableBody<Original: View>: View {
     var textScale: Double = 1
     /// Space at the sides for the line and the translation, where the original draws its own.
     var inset: CGFloat = 0
+    /// Leave the quoted earlier mail out of the translated text (it's folded away).
+    var trimsQuote = false
     @ViewBuilder let original: () -> Original
     #if canImport(Translation)
     @State private var request: TranslationSession.Configuration?
@@ -100,9 +107,10 @@ struct TranslatableBody<Original: View>: View {
                                 failed: phase == .failed) { store.toggle(message.id) }
                     .padding(.horizontal, inset)
             }
-            if phase == .translated || phase == .working, html == nil, let translated = store?.translation(of: message.id) {
-                Text(PlainTextLinks.attributed(translated))
-                    .font(.system(size: 15 * textScale))
+            if phase == .translated || phase == .working, html == nil || store?.usesAssistant(message.id) == true,
+               let translated = store?.translation(of: message.id) {
+                Text(PlainTextLinks.attributed(trimsQuote ? QuotedHistory.textWithoutQuote(translated) ?? translated : translated))
+                    .font(.system(size: Look.size(15) * textScale))
                     .foregroundStyle(Ink.primary)
                     .lineSpacing(5)
                     .textSelection(.enabled)
@@ -142,7 +150,10 @@ struct TranslatableBody<Original: View>: View {
         var installed = false
         if let candidate = found {
             let status = await LanguageAvailability().status(from: candidate, to: nil)
-            if status == .unsupported { found = nil }
+            if status == .unsupported {
+                // The system can't translate it; the assistant can, when there is one.
+                if model?.isAssistantOn == true { store.noteAssistantNeeded(message.id) } else { found = nil }
+            }
             installed = status == .installed
         }
         store.noteLanguage(found, of: message.id)
@@ -160,10 +171,28 @@ struct TranslatableBody<Original: View>: View {
             store.skip(message.id)
             return
         }
+        if store.usesAssistant(message.id) {
+            translateWithAssistant(from: language)
+            return
+        }
         if request == nil {
             request = TranslationSession.Configuration(source: language, target: nil)
         } else {
             request?.invalidate()
+        }
+    }
+
+    /// For a language the system can't translate: the assistant writes it in the reader's
+    /// language, as plain text with its paragraphs.
+    private func translateWithAssistant(from language: Locale.Language) {
+        guard let store, let model, let text, !text.isEmpty else { store?.fail(message.id); return }
+        let id = message.id
+        Task {
+            if let translated = await model.translateWithAssistant(text, from: language) {
+                store.finish(id, with: translated)
+            } else {
+                store.fail(id)
+            }
         }
     }
 
@@ -175,7 +204,7 @@ struct TranslatableBody<Original: View>: View {
             return
         }
         if let html {
-            let segments = HTMLTranslation.segments(in: html)
+            let segments = HTMLTranslation.segments(in: html, keepsQuote: QuotedHistory.isForward(message.subject))
             // The same words (a repeated button, a footer line) are translated once.
             var unique: [String] = []
             var seen: Set<String> = []
@@ -196,7 +225,7 @@ struct TranslatableBody<Original: View>: View {
             return
         }
         guard let text else { return }
-        let pieces = MessageTranslation.pieces(text)
+        let pieces = MessageTranslation.pieces(text, keepsQuote: QuotedHistory.isForward(message.subject))
         let texts = pieces.compactMap { piece -> String? in
             if case .text(let value) = piece { return value }
             return nil
@@ -257,7 +286,7 @@ struct TranslationNote: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: "translate").font(.system(size: 11))
+            Image(systemName: "translate").font(.system(size: Look.size(11)))
             Group {
                 if failed {
                     Text("Couldn't translate from \(name)")

@@ -14,7 +14,7 @@ struct ReaderExtras: View {
 
     var body: some View {
         let unsubscribe = model.unsubscribeMethod(for: thread)
-        let fromSender = thread.split == .newsletters || unsubscribe != nil ? model.threadsFromSameSender(as: thread).count : 0
+        let fromSender = thread.split == .newsletters || unsubscribe != nil ? model.countFromSameSender(as: thread) : 0
         let code = model.signInCode(in: thread)
         HStack(spacing: Space.l) {
             if thread.messages.contains(where: { $0.flags.contains(.draft) }) || model.place.isDraftsFolder {
@@ -145,14 +145,14 @@ struct AttachmentChip: View {
     var body: some View {
         Button { actions?.open(file) } label: {
             HStack(spacing: 6) {
-                Image(systemName: Self.symbol(file.mimeType)).font(.system(size: 11)).foregroundStyle(Ink.tertiary)
+                Image(systemName: Self.symbol(file.mimeType)).font(.system(size: Look.size(11))).foregroundStyle(Ink.tertiary)
                 Text(file.filename).font(TypeScale.label).foregroundStyle(Ink.secondary).lineLimit(1)
                 if let size = file.size {
                     Text(size.formatted(.byteCount(style: .file))).font(TypeScale.label).foregroundStyle(Ink.tertiary)
                 }
             }
             .padding(.horizontal, 8)
-            .frame(height: 26)
+            .frame(height: Look.gap(26))
             .background(isHovered ? Fill.one : .clear, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Line.edge))
         }
@@ -206,10 +206,10 @@ struct InviteCard: View {
             HStack(alignment: .top, spacing: Space.m) {
                 VStack(spacing: 0) {
                     Text(invite.start.map { $0.formatted(.dateTime.month(.abbreviated)) }?.uppercased() ?? "")
-                        .font(.system(size: 9.5, weight: .semibold)).foregroundStyle(.white)
+                        .font(.system(size: Look.size(9.5), weight: .semibold)).foregroundStyle(.white)
                         .frame(maxWidth: .infinity).frame(height: 15).background(Status.danger)
                     Text(invite.start.map { $0.formatted(.dateTime.day()) } ?? "–")
-                        .font(.system(size: 18, weight: .medium)).foregroundStyle(Ink.primary).frame(maxHeight: .infinity)
+                        .font(.system(size: Look.size(18), weight: .medium)).foregroundStyle(Ink.primary).frame(maxHeight: .infinity)
                 }
                 .frame(width: 42, height: 46)
                 .background(Paper.sheet)

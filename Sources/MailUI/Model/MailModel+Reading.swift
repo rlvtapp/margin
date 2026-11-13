@@ -13,7 +13,17 @@ extension MailModel {
     // MARK: Unsubscribe
 
     public func unsubscribeMethod(for thread: MailThread) -> Unsubscribe? {
-        thread.messages.reversed().lazy.compactMap { Unsubscribe.method(from: $0.listHeaders) }.first
+        if let method = thread.messages.reversed().lazy.compactMap({ Unsubscribe.method(from: $0.listHeaders) }).first { return method }
+        // No header (plenty of senders leave it out): the link in the newest mail's own text,
+        // once that text is here. Looked for once per mail.
+        let latest = thread.latest
+        guard let account = thread.accountID, let body = bodies[Self.bodyKey(account, latest.id)] else { return nil }
+        if let known = unsubscribeLinks[latest.id] { return known }
+        // Mail a person wrote only counts a link that says unsubscribe itself.
+        let found = Unsubscribe.link(inHTML: body.html ?? "", text: body.text, loose: InboxSplit.classify(latest) != .people)
+        if unsubscribeLinks.count > 500 { unsubscribeLinks.removeAll() }
+        unsubscribeLinks[latest.id] = .some(found)
+        return found
     }
 
     /// Leaves the list the standard way: a one-click POST, an email, or the sender's page.
@@ -28,14 +38,13 @@ extension MailModel {
         switch method {
         case .oneClick(let url):
             Task {
-                do {
-                    let (_, response) = try await URLSession.shared.data(for: Unsubscribe.oneClickRequest(url))
-                    let ok = ((response as? HTTPURLResponse)?.statusCode ?? 500) < 400
-                    notice = ok
-                        ? Notice(text: String(localized: "Unsubscribed from \(sender)"))
-                        : Notice(text: String(localized: "\(sender) didn't accept the request."), isError: true)
-                } catch {
-                    show(error)
+                if await Unsubscribe.confirmOneClick(url) {
+                    notice = Notice(text: String(localized: "Unsubscribed from \(sender)"))
+                } else {
+                    // Not confirmed (refused, sent on to a page, or unreachable): never claim
+                    // it worked. Their page is opened so it can be finished there.
+                    HTMLWebCoordinator.openInBrowser(url)
+                    notice = Notice(text: String(localized: "\(sender) didn't confirm. Their page is open so you can finish there."), isError: true)
                 }
             }
         case .mail(let address, let subject):
@@ -57,6 +66,13 @@ extension MailModel {
     public func threadsFromSameSender(as thread: MailThread) -> [MailThread] {
         let sender = thread.messages.first?.from.address.lowercased()
         return inboxThreads(thread.accountID).filter { $0.messages.first?.from.address.lowercased() == sender }
+    }
+
+    /// How many conversations in the inbox the same sender started: asked on every redraw of
+    /// the reader, so it's a lookup, not a walk through the mailbox.
+    public func countFromSameSender(as thread: MailThread) -> Int {
+        guard let account = thread.accountID, let sender = thread.messages.first?.from.address.lowercased() else { return 0 }
+        return senderCounts(in: account)[sender] ?? 0
     }
 
     /// Marks every conversation from this sender done, with Undo.
@@ -121,10 +137,26 @@ extension MailModel {
         let folder = FileManager.default.temporaryDirectory.appending(path: "Margin Attachments", directoryHint: .isDirectory)
             .appending(path: UUID().uuidString, directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let safeName = attachment.filename.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
+        let safeName = AttachmentSafety.safeFilename(attachment.filename)
         let url = folder.appending(path: safeName.isEmpty ? String(localized: "Attachment") : safeName)
         try data.write(to: url, options: .atomic)
+        Self.markAsDownloaded(url)
         return url
+    }
+
+    /// Marks a file as downloaded from the internet, as a browser does, so macOS checks it
+    /// (Gatekeeper) and asks before opening an app or script from it. Done by hand, so it holds
+    /// with or without the sandbox.
+    nonisolated static func markAsDownloaded(_ url: URL) {
+        #if os(macOS)
+        var values = URLResourceValues()
+        values.quarantineProperties = [
+            kLSQuarantineTypeKey as String: kLSQuarantineTypeOtherDownload as String,
+            kLSQuarantineAgentNameKey as String: "Margin",
+        ]
+        var marked = url
+        try? marked.setResourceValues(values)
+        #endif
     }
 
     public func openAttachment(_ attachment: AttachmentInfo, of message: MailMessage, in thread: MailThread) {
@@ -132,7 +164,14 @@ extension MailModel {
             do {
                 let url = try await attachmentFile(attachment, of: message, in: thread)
                 #if canImport(AppKit)
-                NSWorkspace.shared.open(url)
+                if AttachmentSafety.isRisky(filename: attachment.filename) {
+                    // Apps and scripts from mail are never opened straight away: Finder shows
+                    // the file, for the person to decide.
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                    notice = Notice(text: String(localized: "Margin doesn't open apps or scripts from email. It's shown in Finder."))
+                } else {
+                    NSWorkspace.shared.open(url)
+                }
                 #endif
             } catch {
                 show(error)
@@ -143,13 +182,14 @@ extension MailModel {
     #if canImport(AppKit)
     public func saveAttachment(_ attachment: AttachmentInfo, of message: MailMessage, in thread: MailThread) {
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = attachment.filename
+        panel.nameFieldStringValue = AttachmentSafety.safeFilename(attachment.filename)
         guard panel.runModal() == .OK, let destination = panel.url else { return }
         Task {
             do {
                 let url = try await attachmentFile(attachment, of: message, in: thread)
                 try? FileManager.default.removeItem(at: destination)
                 try FileManager.default.copyItem(at: url, to: destination)
+                Self.markAsDownloaded(destination)
                 notice = Notice(text: String(localized: "Saved \(attachment.filename)"))
             } catch {
                 show(error)

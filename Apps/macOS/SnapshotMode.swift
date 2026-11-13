@@ -156,8 +156,16 @@ struct SnapshotMode {
                 let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 820, height: 600), styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
                                       backing: .buffered, defer: false)
                 // "mailbox": the first mailbox's own settings (name, Send as, signatures).
+                // "signatures": the Signatures page, with a workspace and a signature for all inboxes.
+                if arguments[index + 1] == "signatures", let first = model.accounts.first {
+                    model.workspaces = [Workspace(name: "Studio", colorIndex: 5, accounts: [first.id])]
+                    SignatureSheetSnapshot.fillSharedSignatures(model)
+                }
+                // "signature": a formatted signature open in its editor.
                 window.contentView = arguments[index + 1] == "mailbox"
                     ? NSHostingView(rootView: AnyView(MailboxSettingsSnapshot(model: model).frame(width: 560, height: 1300)))
+                    : arguments[index + 1] == "signature"
+                    ? NSHostingView(rootView: AnyView(SignatureSheetSnapshot()))
                     : NSHostingView(rootView: AnyView(MailSettingsView(model: model, startingAt: arguments[index + 1])))
                 if arguments[index + 1] == "mailbox" { window.setContentSize(NSSize(width: 560, height: 1300)) }
                 window.makeKeyAndOrderFront(nil)

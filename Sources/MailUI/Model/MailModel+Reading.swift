@@ -311,7 +311,8 @@ extension MailModel {
 
     public func setSignature(_ signature: String, for accountID: UUID) {
         guard let index = accounts.firstIndex(where: { $0.id == accountID }) else { return }
-        accounts[index].signature = signature.isEmpty ? nil : signature
+        // New words replace the formatted version too, so what's sent matches them.
+        accounts[index].setSignature(NamedSignature(name: NamedSignature.defaultName, text: signature))
         try? environment.accounts.save(accounts)
     }
 }

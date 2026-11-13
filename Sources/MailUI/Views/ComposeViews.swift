@@ -112,7 +112,7 @@ struct ReplyEditor: View {
             #endif
             RichTextEditor(text: $state.draft.text, html: $state.draft.html, controller: richText, onEscape: close,
                            linkedLastLine: state.sentFrom?.trimmingCharacters(in: .whitespacesAndNewlines),
-                           attachments: $state.draft.attachments)
+                           attachments: $state.draft.attachments, signature: state.signatureInUse)
                 .frame(minHeight: 120)
                 .focused($focused)
             ComposeAttachments(state: $state)
@@ -269,7 +269,7 @@ struct ComposeSheet: View {
                 RichTextEditor(text: $state.draft.text, html: $state.draft.html, controller: richText,
                                onEscape: { model.closeComposer(state, isReply: false) },
                                linkedLastLine: state.sentFrom?.trimmingCharacters(in: .whitespacesAndNewlines),
-                               attachments: $state.draft.attachments)
+                               attachments: $state.draft.attachments, signature: state.signatureInUse)
                 .focused($field, equals: .body)
                 .padding(.horizontal, inset - 4)
                 .padding(.top, Space.l)

@@ -38,9 +38,10 @@ Aliases also count as you: replies owed, conversations with yourself, reactions 
 
 Add an address straight from the From menu (**Add an Address…**): it's added to the mailbox's
 Send as list and used for the message at once. Each send-as address can have **its own signature**
-(the signature button on its row in Settings → Mailboxes); mail sent as it starts with that one,
-switching From swaps it, and an alias without one uses the mailbox's
-(`MailAccount.aliasSignatures`, `signature(sendingAs:forReply:)`). The mailbox itself can be
+(the signature button on its row in Settings → Mailboxes): one of the mailbox's signatures, none,
+or words of its own. Mail sent as it starts with that one, switching From swaps it, and an alias
+without one uses the mailbox's (`MailAccount.aliasSignatureNames`, `aliasSignatures`,
+`signatureChoice(sendingAs:forReply:)`). The mailbox itself can be
 renamed there too (**Mailbox name**, like Work or Personal), apart from the sender name, and a
 picture can be dropped onto its picture.
 
@@ -55,6 +56,57 @@ Settings → Writing turns it off or changes its words for new messages. Reactio
 answers, quick replies from an alert and mail a rule sends don't get it. On iPhone and iPad the
 editor is plain text, so the line is there without the link. The writing profile doesn't learn
 from it.
+
+## Signatures
+
+Signatures can be kept in three places, each with a Default, any others ("Casual", "Formal"),
+and which one replies and forwards use (`SignatureSet`):
+
+- **All inboxes**: shared by every inbox (`SharedSignatures`, saved under "all").
+- **A workspace**: shared by its inboxes, in place of the all-inboxes ones.
+- **An inbox**: its own, which always come first.
+
+An inbox without signatures of its own starts mail with its workspace's, else the all-inboxes
+ones; "Use shared signatures when it has none" turns that off for one inbox
+(`MailAccount.usesSharedSignatures`). An inbox with its own still lists the shared ones in the
+signature menu while writing, a shared default named after where it's from
+(`availableSignatures`). Shared signatures are a setting (`sharedSignatures` in the defaults,
+synced and backed up like the others). The app hands each inbox the ones it falls back on
+(`MailModel.applySharedSignatures`, run whenever mailboxes, workspaces or shared signatures
+change) in `MailAccount.sharedSignatures`, an `Unsaved` value that's never written to disk and
+never makes two mailboxes compare different, so syncing doesn't mistake it for a change.
+
+**Settings → Signatures** (`SignaturesSettings`) shows all three and saves changes as they're
+made. The copy button on a signature puts it anywhere else, as that place's default or next to
+its others (a default copied this way is named after where it came from; `copySignature`). An
+inbox's own list is also in Settings → Mailboxes → a mailbox. **Edit…** opens the signature in the message editor
+(`SignatureSheet`), with the whole formatting bar: fonts, sizes, colours, links, alignment, lists,
+and pictures (a logo, a photo). A picture is kept at most twice as wide as it's shown (300 points
+at most, so 600 pixels) and can be made Small, Medium or Large. **Import HTML…** reads a signature
+made elsewhere into the editor, to change from there. **Make One for Me…** and **Find in Sent
+Mail** fill in the default one.
+
+A signature is a `NamedSignature`: `text` is what the editor holds (each picture is one U+FFFC),
+`html` and `pictures` are what's sent (pictures as inline `cid:` parts), and `rich` is the
+formatting for the editor (an archived attributed string whose pictures point into `pictures`
+by content ID, so each picture is stored once; `SignatureText`). Plain words make a plain
+signature. The default one's parts are on `MailAccount` (`signature`, `signatureHTML`,
+`signaturePictures`, `signatureRich`); `setSignature(_:)` changes any of them.
+
+While writing on the Mac the signature is in the message as it's sent, pictures and all: the
+composer adds its words, and the editor gives them their formatting
+(`RichTextEditor.showSignature`) and marks them, so `EmailHTMLWriter` writes them as one
+`margin-signature` block. A message whose HTML has that block is sent as it is. Anywhere else
+(iPhone and iPad, whose editor is plain, or a signature written as HTML before this) the words
+are in the message and the formatted signature takes their place when sending, with its pictures
+(`MailModel.withFormattedSignature`). Text from outside (another signature from the menu, the
+assistant) replaces only what changed, so what you formatted above the signature stays.
+
+On iPhone and iPad a formatted signature shows as it's sent; changing its words there makes it
+plain. A default signature written as HTML in an earlier version becomes an editable one on the
+Mac once, when its HTML reads back to the same words (`upgradeFormattedSignatures`). Changing the
+signature from an AI app (`set_signature`) sets plain words, and its undo puts the formatted one
+back.
 
 ## Forwarding with formatting
 

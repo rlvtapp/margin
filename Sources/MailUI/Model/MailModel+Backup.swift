@@ -62,6 +62,7 @@ extension MailModel {
         "writingInstructions", "holdSpaceDictates", "vipAddresses", "blocksTrackers", "hidesFromScreenSharing", "alertSound", "dropDownAlerts",
         "showsMenuBarItem", "showsDockBadge", "showsHoverActions", "showsAccountRail", "askPreferences", "remindsAboutAttachments", "reminderSound", "accountAlerts", "eventReminderMinutes", "emailGroups", "sortsNewMail", "showsAsChat",
         "offersTranslation", "aiOff", "quickProvider", "sortProvider", "sentFromMargin", "sentFromMarginText", "showsFormattingBar",
+        "sharedSignatures",
     ]
 
     /// A backup file. Secrets (mail passwords, sign-ins, assistant keys) are included only
@@ -110,6 +111,7 @@ extension MailModel {
     /// Re-reads settings after a restore, so they apply without a restart.
     func applyStoredSettings() {
         let defaults = environment.defaults
+        applySharedSignatures()
         if let data = defaults.data(forKey: "assistantSettings"), let value = try? JSONDecoder().decode(AssistantSettings.self, from: data) {
             assistantSettings = value
         }

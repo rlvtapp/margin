@@ -12,6 +12,9 @@ enum EmailHTMLWriter {
     /// Inline pictures Margin made: their content IDs end with this.
     static let inlineSuffix = "@margin-inline"
 
+    /// Marks a signature in the editor, so the HTML wraps it in one `margin-signature` block.
+    static let signatureKey = NSAttributedString.Key("MarginSignature")
+
     struct Result: Equatable {
         var html: String
         var images: [OutgoingAttachment]
@@ -21,11 +24,19 @@ enum EmailHTMLWriter {
         var images: [OutgoingAttachment] = []
         var blocks: [String] = []
         let string = text.string as NSString
+        var inSignature = false
         string.enumerateSubstrings(in: NSRange(location: 0, length: string.length), options: [.byParagraphs, .substringNotRequired]) { _, range, _, _ in
             let style = range.length > 0 ? text.attribute(.paragraphStyle, at: range.location, effectiveRange: nil) as? NSParagraphStyle : nil
+            // Blank lines inside a signature stay in it.
+            let signature = range.length > 0 ? text.attribute(signatureKey, at: range.location, effectiveRange: nil) != nil : inSignature
+            if signature != inSignature {
+                blocks.append(signature ? "<div class=\"margin-signature\">" : "</div>")
+                inSignature = signature
+            }
             let content = range.length == 0 ? "<br>" : runs(text, in: range, images: &images)
             blocks.append("<div style=\"\(paragraphCSS(style))\">\(content)</div>")
         }
+        if inSignature { blocks.append("</div>") }
         if string.length == 0 || string.hasSuffix("\n") { blocks.append("<div style=\"margin:0\"><br></div>") }
         let html = "<div style=\"font-family:\(baseFamily);font-size:\(Int(baseSize))px\">\n" + blocks.joined(separator: "\n") + "\n</div>"
         return Result(html: html, images: images)
@@ -81,19 +92,26 @@ enum EmailHTMLWriter {
     /// The picture as an inline part, named by its bytes so writing the HTML again keeps the
     /// same name; nil when it has no picture.
     private static func picture(_ attachment: NSTextAttachment, index: Int, images: inout [OutgoingAttachment]) -> String? {
+        guard let part = pictureData(attachment), let image = attachment.image ?? NSImage(data: part.data) else { return nil }
+        let id = part.id
+        if !images.contains(where: { $0.contentID == id }) {
+            images.append(OutgoingAttachment(filename: "picture-\(index + 1).\(part.mimeType == "image/jpeg" ? "jpg" : "png")",
+                                             mimeType: part.mimeType, data: part.data, contentID: id))
+        }
+        let shown = attachment.bounds.width > 0 ? attachment.bounds.width : image.size.width
+        let width = Int(min(shown, 600).rounded())
+        return "<img src=\"cid:\(id)\" width=\"\(width)\" alt=\"\" style=\"max-width:100%;height:auto\">"
+    }
+
+    /// A picture's bytes as they're sent (JPEG for a photo, PNG otherwise) and the content ID
+    /// they're named by.
+    static func pictureData(_ attachment: NSTextAttachment) -> (data: Data, mimeType: String, id: String)? {
         guard let image = attachment.image ?? attachment.fileWrapper?.regularFileContents.flatMap(NSImage.init(data:)),
               let tiff = image.tiffRepresentation, let bitmap = NSBitmapImageRep(data: tiff) else { return nil }
         let isPhoto = bitmap.bitsPerPixel >= 24 && !bitmap.hasAlpha
         guard let data = isPhoto ? bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.85])
                                  : bitmap.representation(using: .png, properties: [:]) else { return nil }
-        let id = "picture-\(String(fnv(data), radix: 16))\(inlineSuffix)"
-        if !images.contains(where: { $0.contentID == id }) {
-            images.append(OutgoingAttachment(filename: "picture-\(index + 1).\(isPhoto ? "jpg" : "png")",
-                                             mimeType: isPhoto ? "image/jpeg" : "image/png", data: data, contentID: id))
-        }
-        let shown = attachment.bounds.width > 0 ? attachment.bounds.width : image.size.width
-        let width = Int(min(shown, 600).rounded())
-        return "<img src=\"cid:\(id)\" width=\"\(width)\" alt=\"\" style=\"max-width:100%;height:auto\">"
+        return (data, isPhoto ? "image/jpeg" : "image/png", "picture-\(String(fnv(data), radix: 16))\(inlineSuffix)")
     }
 
     /// A family other devices understand; nil for the editor's normal one.

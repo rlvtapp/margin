@@ -272,9 +272,11 @@ extension MailModel {
                 return copy
             }
             guard let account = account(state.accountID) else { throw MailError.missingCredentials }
-            // The formatted signature replaces the plain one when the mailbox has one.
-            if state.signature != nil, state.signature == ComposeState.signatureBlock(account) {
-                draft = Self.withFormattedSignature(draft, plain: state.signature, html: account.signatureHTML, after: state.sentFrom)
+            // A formatted signature goes out formatted. The Mac's editor already shows it that way
+            // and its HTML has it; otherwise it takes the plain one's place now.
+            if let used = state.signatureInUse, used.isFormatted, !(draft.html ?? "").contains(Self.signatureMark) {
+                draft = Self.withFormattedSignature(draft, plain: state.signature, html: used.html,
+                                                    pictures: used.pictures ?? [], after: state.sentFrom)
             }
             if let forwarded = state.forwarded { draft = forwarded.appended(to: draft) }
             try await provider(for: account).send(withSenderName(draft, account: account))
@@ -296,6 +298,8 @@ public struct ComposeState: Equatable {
     public var editedDraft: MailThread?
     /// The signature block added at the start, so it can be told apart from what was written.
     var signature: String?
+    /// The signature that block came from, with its formatting and pictures.
+    var signatureInUse: NamedSignature?
     /// "Sent from Margin" under the signature ("\n\n" and the line), when it was added.
     var sentFrom: String?
     public var draft: Draft
@@ -327,7 +331,9 @@ public struct ComposeState: Equatable {
         showsCc = !self.draft.cc.isEmpty
         bcc = self.draft.bcc.map(\.headerValue).joined(separator: ", ")
         showsBcc = !self.draft.bcc.isEmpty
-        signature = Self.block(account.signature(sendingAs: self.draft.from, forReply: isReply))
+        let chosen = account.signatureChoice(sendingAs: self.draft.from, forReply: isReply)
+        signature = Self.block(of: chosen)
+        signatureInUse = signature == nil ? nil : chosen
         if self.draft.text.isEmpty, let signature {
             self.draft.text = signature
         }
@@ -339,10 +345,9 @@ public struct ComposeState: Equatable {
         let newAddress = address ?? account.address
         // A send-as address with its own signature brings it along; leaving one puts the
         // mailbox's back.
-        let leavingOwn = previous?.aliasSignatures?[draft.from.address.lowercased()] != nil
-        let ownSignature = account.aliasSignatures?[newAddress.address.lowercased()]
-        if previous?.id != account.id || leavingOwn || ownSignature != nil {
-            use(signature: ownSignature ?? account.signature)
+        let leavingOwn = previous?.hasOwnSignature(draft.from) == true
+        if previous?.id != account.id || leavingOwn || account.hasOwnSignature(newAddress) {
+            useSignature(account.signatureChoice(sendingAs: newAddress, forReply: false))
         }
         accountID = account.id
         draft.from = newAddress
@@ -350,13 +355,29 @@ public struct ComposeState: Equatable {
 
     /// Swaps the signature at the end of the message, keeping what was written; nil for none.
     public mutating func use(signature text: String?) {
+        useSignature(text.map { NamedSignature(name: "", text: $0) })
+    }
+
+    /// Swaps in one of the mailbox's signatures, formatting and pictures included; nil for none.
+    public mutating func useSignature(_ new: NamedSignature?) {
         // "Sent from Margin" stays last.
         let keepsSentFrom = sentFrom.map { draft.text.hasSuffix($0) } ?? false
         if keepsSentFrom, let sentFrom { draft.text.removeLast(sentFrom.count) }
         if let old = signature, draft.text.hasSuffix(old) { draft.text.removeLast(old.count) }
-        signature = Self.block(text)
+        signature = Self.block(of: new)
+        signatureInUse = signature == nil ? nil : new
         draft.text += signature ?? ""
         if keepsSentFrom, let sentFrom { draft.text += sentFrom }
+    }
+
+    /// The block a signature adds. The Mac's editor shows a formatted one as it's sent, pictures
+    /// and all, so it gets the text with the pictures' places in it; elsewhere it's the words.
+    static func block(of signature: NamedSignature?) -> String? {
+        #if os(macOS)
+        block(signature?.rich != nil ? signature?.text : signature?.plainText)
+        #else
+        block(signature?.plainText)
+        #endif
     }
 
     /// Adds "Sent from Margin" under what's there, once.
@@ -365,8 +386,6 @@ public struct ComposeState: Equatable {
         sentFrom = block
         draft.text += block
     }
-
-    static func signatureBlock(_ account: MailAccount) -> String? { block(account.signature) }
 
     /// Two blank lines for the message, then the signature.
     static func block(_ text: String?) -> String? {

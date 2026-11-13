@@ -106,6 +106,7 @@ public struct MailSettingsView: View {
         case .notifications: NotificationSettings(model: model)
         case .reading: ReadingSettings(model: model)
         case .writing: WritingSettings(model: model)
+        case .signatures: SignaturesSettings(model: model)
         case .appearance: AppearanceSettings(model: model)
         case .sorting: SortingSettings(model: model)
         case .templates: TemplateSettings(model: model)

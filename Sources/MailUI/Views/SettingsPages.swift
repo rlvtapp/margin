@@ -6,7 +6,7 @@ import AppKit
 
 /// The pages of Settings, the same on the Mac and on iPhone and iPad, with words to find them by.
 enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
-    case mailboxes, contacts, workspaces, notifications, reading, writing, appearance, sorting, templates, shortcuts, assistant, rules, connections, backup, experimental, about
+    case mailboxes, contacts, workspaces, notifications, reading, writing, signatures, appearance, sorting, templates, shortcuts, assistant, rules, connections, backup, experimental, about
 
     var id: String { rawValue }
 
@@ -22,7 +22,7 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
     /// The sidebar's groups, as in System Settings: mail, how it behaves, how it looks, the
     /// assistant and AI apps, then your data.
     static var sections: [[SettingsPage]] {
-        [[.mailboxes, .contacts, .workspaces], [.notifications, .reading, .writing, .templates], [.appearance, .shortcuts],
+        [[.mailboxes, .contacts, .workspaces], [.notifications, .reading, .writing, .signatures, .templates], [.appearance, .shortcuts],
          [.assistant, .sorting, .rules, .connections], [.backup, .experimental, .about]]
             .map { $0.filter(available.contains) }
     }
@@ -40,6 +40,7 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
         case .notifications: String(localized: "Notifications")
         case .reading: String(localized: "Reading")
         case .writing: String(localized: "Writing")
+        case .signatures: String(localized: "Signatures")
         case .appearance: String(localized: "Appearance")
         case .sorting: String(localized: "Sorting")
         case .templates: String(localized: "Templates")
@@ -61,6 +62,7 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
         case .notifications: "bell.badge.fill"
         case .reading: "text.justify.left"
         case .writing: "square.and.pencil"
+        case .signatures: "signature"
         case .appearance: "paintbrush.fill"
         case .sorting: "square.stack.3d.up.fill"
         case .templates: "doc.on.doc.fill"
@@ -83,6 +85,7 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
         case .notifications: Palette.account(1)
         case .reading: Palette.account(3)
         case .writing: Palette.account(4)
+        case .signatures: Palette.account(5)
         case .appearance: Palette.account(6)
         case .sorting: Palette.account(7)
         case .templates: Palette.account(8)
@@ -104,6 +107,7 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
         case .workspaces: ["work", "personal", "group", "switch"]
         case .notifications: ["alert", "sound", "vip", "sign-in", "code", "menu bar", "notch", "drop down", "meeting", "reminder", "badge", "quiet"]
         case .reading: ["text size", "plain text", "pictures", "images", "tracker", "privacy", "screen sharing", "chat", "waiting"]
+        case .signatures: ["signature", "sign-off", "logo", "picture", "footer", "inbox", "copy"]
         case .writing: ["undo send", "instructions", "style", "default mail app", "email links", "mailto", "reply"]
         case .appearance: ["theme", "dark", "light", "white", "developer", "accent", "color", "app icon", "icon", "dock", "layout", "tabs", "minimal", "rows", "language", "contrast", "motion", "swipe"]
         case .sorting: ["groups", "home", "classifier", "sort now", "bills", "travel"]
@@ -135,6 +139,7 @@ extension SettingsPage {
         case .notifications: String(localized: "Alerts for new mail, sign-in codes and meetings.")
         case .reading: String(localized: "How mail is shown, and privacy.")
         case .writing: String(localized: "Sending, email links and instructions for the assistant.")
+        case .signatures: String(localized: "Signatures for all inboxes, a workspace or one inbox, with formatting and pictures.")
         case .appearance: String(localized: "Theme, layout, colors and language.")
         case .sorting: String(localized: "The groups Home sorts your inbox into.")
         case .templates: String(localized: "Text you can insert into any message.")

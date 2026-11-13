@@ -147,18 +147,28 @@ extension MailModel {
         return SignatureTools.find(in: texts)
     }
 
-    /// Puts the formatted signature into an outgoing message, in place of the plain one.
-    /// `after` is a last line that may follow the signature ("Sent from Margin"), kept after it.
-    static func withFormattedSignature(_ draft: Draft, plain: String?, html signatureHTML: String?, after: String? = nil) -> Draft {
+    /// The class around a signature in sent HTML. The Mac's editor writes it too, so a message
+    /// that already has its formatted signature isn't given a second one.
+    static let signatureMark = "margin-signature"
+
+    /// Puts the formatted signature into an outgoing message, in place of the plain one, with
+    /// its pictures. `after` is a last line that may follow the signature ("Sent from Margin"),
+    /// kept after it.
+    static func withFormattedSignature(_ draft: Draft, plain: String?, html signatureHTML: String?,
+                                       pictures: [OutgoingAttachment] = [], after: String? = nil) -> Draft {
         guard let signatureHTML, !signatureHTML.isEmpty, let plain, !plain.isEmpty else { return draft }
         let tail = after.flatMap { draft.text.hasSuffix(plain + $0) ? $0 : nil } ?? ""
         guard draft.text.hasSuffix(plain + tail) else { return draft }
         var draft = draft
         func escape(_ s: String) -> String {
-            s.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;")
+            s.replacingOccurrences(of: "\u{FFFC}", with: "")
+                .replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;")
                 .replacingOccurrences(of: "\n", with: "<br>")
         }
-        let block = "<div class=\"margin-signature\">\(signatureHTML)</div>"
+        for picture in pictures where !draft.attachments.contains(where: { $0.contentID == picture.contentID }) {
+            draft.attachments.append(picture)
+        }
+        let block = "<div class=\"\(signatureMark)\">\(signatureHTML)</div>"
         if var html = draft.html {
             let escaped = escape(plain.trimmingCharacters(in: .whitespacesAndNewlines))
             if let range = html.range(of: escaped, options: .backwards) {

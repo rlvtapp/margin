@@ -126,7 +126,7 @@ enum AgentChange {
     case hiddenFolder(accountID: UUID, mailbox: Mailbox, wasHidden: Bool)
     case settings(appearance: AppAppearance, layout: ListLayout, undoSend: Int, followUp: Int,
                   sound: AlertSound, leading: [SwipeAction], trailing: [SwipeAction])
-    case signature(accountID: UUID, previous: String?)
+    case signature(accountID: UUID, previous: NamedSignature?)
     case rules([MailRule])
 }
 
@@ -253,7 +253,10 @@ extension MailModel {
             trailingSwipes = trailing
             return "Settings are back as they were."
         case .signature(let accountID, let previous):
-            setSignature(previous ?? "", for: accountID)
+            if let index = accounts.firstIndex(where: { $0.id == accountID }) {
+                accounts[index].setSignature(previous ?? NamedSignature(name: NamedSignature.defaultName, text: ""))
+                try? environment.accounts.save(accounts)
+            }
             return "The signature is back as it was."
         case .rules(let snapshot):
             mailRules = snapshot
@@ -498,7 +501,7 @@ extension MailModel {
             return "Changed \(changed.joined(separator: ", "))."
         case "set_signature":
             let account = try toolAccount(arguments)
-            record(.signature(accountID: account.id, previous: account.signature))
+            record(.signature(accountID: account.id, previous: account.defaultSignature))
             setSignature(arguments["text"]?.string ?? "", for: account.id)
             return "Updated the signature for \(account.label)."
         default:

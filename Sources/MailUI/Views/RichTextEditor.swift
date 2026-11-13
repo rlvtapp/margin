@@ -19,6 +19,10 @@ struct RichTextEditor: NSViewRepresentable {
     var linkedLastLine: String?
     /// The draft's attachments: pictures put in the text are kept there as inline parts.
     var attachments: Binding<[OutgoingAttachment]>?
+    /// The signature at the end of the text, shown as it's sent: formatted, with its pictures.
+    var signature: NamedSignature?
+    /// Formatted text to start with (a signature being edited); `text` holds its words.
+    var initial: NSAttributedString?
 
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = NSTextView.scrollableTextView()
@@ -37,28 +41,63 @@ struct RichTextEditor: NSViewRepresentable {
         view.isContinuousSpellCheckingEnabled = true
         view.typingAttributes = [.font: NSFont.systemFont(ofSize: fontSize), .foregroundColor: NSColor.labelColor]
         view.delegate = context.coordinator
-        view.string = text
+        if let initial {
+            view.textStorage?.setAttributedString(initial)
+        } else {
+            view.string = text
+        }
         controller.textView = view
         context.coordinator.onChange = { view in
             controller.changed(view, text: $text, html: $html, attachments: attachments)
         }
-        if Self.linkLastLine(linkedLastLine, in: view) { controller.changed(view, text: $text, html: $html, attachments: attachments) }
+        let linked = Self.linkLastLine(linkedLastLine, in: view)
+        if Self.showSignature(signature, in: view) || linked { controller.changed(view, text: $text, html: $html, attachments: attachments) }
         context.coordinator.onEscape = onEscape
         return scroll
     }
 
     func updateNSView(_ scroll: NSScrollView, context: Context) {
-        guard let view = scroll.documentView as? NSTextView else { return }
+        guard let view = scroll.documentView as? NSTextView, let storage = view.textStorage else { return }
         context.coordinator.onEscape = onEscape
-        // Text set from outside (the assistant, a template, a signature): start over as plain text.
+        // Text set from outside (the assistant, a template, another signature): what's new comes
+        // in as plain text, and what stayed the same keeps its formatting.
         if view.string != text {
-            view.textStorage?.setAttributedString(NSAttributedString(string: text, attributes: view.typingAttributes))
-            html = nil
-            if Self.linkLastLine(linkedLastLine, in: view) { controller.changed(view, text: $text, html: $html, attachments: attachments) }
+            let old = view.string as NSString, new = text as NSString
+            var same = 0
+            while same < min(old.length, new.length), old.character(at: same) == new.character(at: same) { same += 1 }
+            if same > 0, CFStringIsSurrogateHighCharacter(old.character(at: same - 1)) { same -= 1 }
+            storage.replaceCharacters(in: NSRange(location: same, length: old.length - same),
+                                      with: NSAttributedString(string: new.substring(from: same), attributes: Self.normal(fontSize)))
+            Self.showSignature(signature, in: view)
+            Self.linkLastLine(linkedLastLine, in: view)
+            controller.changed(view, text: $text, html: $html, attachments: attachments)
         }
     }
 
+    static func normal(_ size: CGFloat) -> [NSAttributedString.Key: Any] {
+        [.font: NSFont.systemFont(ofSize: size), .foregroundColor: NSColor.labelColor]
+    }
+
+    /// Shows a formatted signature at the end of the text as it's sent. Its words (with a
+    /// U+FFFC where each picture goes) are already there; this gives them their formatting and
+    /// pictures. True when it did.
+    @discardableResult
+    static func showSignature(_ signature: NamedSignature?, in view: NSTextView) -> Bool {
+        guard let signature, signature.rich != nil, let storage = view.textStorage else { return false }
+        let words = signature.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let range = (view.string as NSString).range(of: words, options: .backwards)
+        guard !words.isEmpty, range.location != NSNotFound else { return false }
+        let shown = NSMutableAttributedString(attributedString: SignatureText.attributed(signature))
+        guard shown.string == words else { return false }
+        shown.addAttribute(EmailHTMLWriter.signatureKey, value: true, range: NSRange(location: 0, length: shown.length))
+        let selection = view.selectedRanges
+        storage.replaceCharacters(in: range, with: shown)
+        view.selectedRanges = selection
+        return true
+    }
+
     /// Links "Margin" in the last line when the text ends with `line`. True when it did.
+    @discardableResult
     static func linkLastLine(_ line: String?, in view: NSTextView) -> Bool {
         guard let line, !line.isEmpty, let storage = view.textStorage, let url = URL(string: MailModel.marginSite),
               view.string.hasSuffix(line) else { return false }
@@ -93,7 +132,7 @@ final class RichTextController {
     private var pending: Task<Void, Never>?
 
     func changed(_ view: NSTextView, text: Binding<String>, html: Binding<String?>, attachments: Binding<[OutgoingAttachment]>? = nil) {
-        text.wrappedValue = view.string
+        if text.wrappedValue != view.string { text.wrappedValue = view.string }
         // Turning text into HTML takes a moment; do it once typing pauses.
         pending?.cancel()
         let storage = NSAttributedString(attributedString: view.attributedString())
@@ -168,16 +207,23 @@ final class RichTextController {
         changeParagraphs { $0.lineHeightMultiple = multiple }
     }
 
-    /// Puts pictures in the text where the cursor is, shown at most 480 points wide.
+    /// The widest a picture put in the text is shown.
+    var widestPicture: CGFloat = 480
+    /// Pictures are kept no bigger than they're shown (at twice the size, for sharp screens), as
+    /// a signature's are.
+    var keepsPicturesSmall = false
+
+    /// Puts pictures in the text where the cursor is, shown at most `widestPicture` wide.
     func insertPictures(_ urls: [URL]) {
         guard let view = textView, let storage = view.textStorage else { return }
         var at = view.selectedRange().location
         storage.beginEditing()
         for url in urls {
-            guard let image = NSImage(contentsOf: url) else { continue }
+            guard var image = NSImage(contentsOf: url) else { continue }
+            if keepsPicturesSmall { image = SignatureText.smaller(image, shownAt: min(widestPicture, image.size.width)) }
             let attachment = NSTextAttachment()
             attachment.image = image
-            let scale = min(1, 480 / max(image.size.width, 1))
+            let scale = min(1, widestPicture / max(image.size.width, 1))
             attachment.bounds = CGRect(x: 0, y: 0, width: image.size.width * scale, height: image.size.height * scale)
             let piece = NSMutableAttributedString(attachment: attachment)
             piece.append(NSAttributedString(string: "\n", attributes: view.typingAttributes))
@@ -186,6 +232,23 @@ final class RichTextController {
         }
         storage.endEditing()
         view.setSelectedRange(NSRange(location: at, length: 0))
+        view.didChangeText()
+    }
+
+    /// Shows the selected pictures (all of them when none is selected) at `width` points wide.
+    func resizePictures(to width: CGFloat) {
+        guard let view = textView, let storage = view.textStorage else { return }
+        let selected = view.selectedRange()
+        let range = selected.length > 0 ? selected : NSRange(location: 0, length: storage.length)
+        storage.beginEditing()
+        storage.enumerateAttribute(.attachment, in: range) { value, part, _ in
+            guard let attachment = value as? NSTextAttachment, let image = attachment.image, image.size.width > 0 else { return }
+            let resized = NSTextAttachment()
+            resized.image = image
+            resized.bounds = CGRect(x: 0, y: 0, width: width, height: (image.size.height * width / image.size.width).rounded())
+            storage.addAttribute(.attachment, value: resized, range: part)
+        }
+        storage.endEditing()
         view.didChangeText()
     }
 
@@ -534,6 +597,7 @@ struct RichTextEditor: View {
     var onEscape: (() -> Void)?
     var linkedLastLine: String?
     var attachments: Binding<[OutgoingAttachment]>?
+    var signature: NamedSignature?
 
     var body: some View {
         TextEditor(text: $text).font(.system(size: fontSize)).scrollContentBackground(.hidden)

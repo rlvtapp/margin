@@ -164,7 +164,10 @@ public enum UndoKind: Equatable, Sendable {
 @MainActor @Observable
 public final class MailModel {
     public let environment: MailEnvironment
-    public internal(set) var accounts: [MailAccount]
+    public internal(set) var accounts: [MailAccount] {
+        // Each mailbox knows the shared signatures it falls back on.
+        didSet { applySharedSignatures() }
+    }
     public internal(set) var mailboxes: [UUID: [Mailbox]] = [:]
     /// Each mailbox's inbox (see `InboxShelf`). Not watched itself: the two numbers below are,
     /// so that a read mark doesn't make everything that depends on the order start over.
@@ -747,6 +750,7 @@ public final class MailModel {
         if !hasOnboarded && !environment.isPreview { isShowingOnboarding = true }
         await forgetRemovedAccounts()
         pruneLearnedAliases()
+        upgradeFormattedSignatures()
         await loadSavedMail()
         // The conversation that's open shows its saved text now. It used to wait for everything
         // below (the sync, then every mailbox answering from its server), so the mail on screen

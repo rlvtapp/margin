@@ -20,6 +20,7 @@ struct SignatureEditor: View {
     @State private var details = SignatureTools.Details()
     @State private var findingSignature = false
     @State private var signatureNote: String?
+    @State private var editing: SignatureEditing?
 
     var body: some View {
         NavigationStack {
@@ -138,7 +139,14 @@ struct SignatureEditor: View {
                                         all[alias.address.lowercased()] = value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : value
                                         account.wrappedValue.aliasSignatures = all.isEmpty ? nil : all
                                     }
-                                ), address: alias.address)
+                                ), choice: Binding(
+                                    get: { account.wrappedValue.aliasSignatureNames?[alias.address.lowercased()] },
+                                    set: { value in
+                                        var all = account.wrappedValue.aliasSignatureNames ?? [:]
+                                        all[alias.address.lowercased()] = value
+                                        account.wrappedValue.aliasSignatureNames = all.isEmpty ? nil : all
+                                    }
+                                ), names: account.wrappedValue.availableSignatures.map(\.name), address: alias.address)
                                 Button(role: .destructive) { account.wrappedValue.aliases?.remove(at: index) } label: {
                                     Image(systemName: "minus.circle")
                                 }
@@ -176,34 +184,16 @@ struct SignatureEditor: View {
                     }
 
                     Section {
-                        signatureField("Default", text: Binding(
-                            get: { account.wrappedValue.signature ?? "" },
-                            set: { account.wrappedValue.signature = $0.isEmpty ? nil : $0 }
-                        ))
-                        ForEach(Array((account.wrappedValue.moreSignatures ?? []).enumerated()), id: \.offset) { index, _ in
-                            VStack(alignment: .leading, spacing: Space.xs) {
-                                HStack {
-                                    TextField("Name", text: Binding(
-                                        get: { account.wrappedValue.moreSignatures?[index].name ?? "" },
-                                        set: { account.wrappedValue.moreSignatures?[index].name = $0 }
-                                    ))
-                                    .font(TypeScale.rowStrong)
-                                    Button(role: .destructive) { account.wrappedValue.moreSignatures?.remove(at: index) } label: {
-                                        Image(systemName: "minus.circle")
-                                    }
-                                    .buttonStyle(.plain)
-                                    .accessibilityLabel("Remove")
-                                }
-                                signatureEditor(Binding(
-                                    get: { account.wrappedValue.moreSignatures?[index].text ?? "" },
-                                    set: { account.wrappedValue.moreSignatures?[index].text = $0 }
-                                ))
+                        ForEach([account.wrappedValue.defaultSignature ?? NamedSignature(name: NamedSignature.defaultName, text: "")]
+                                + (account.wrappedValue.moreSignatures ?? [])) { signature in
+                            SignatureRow(signature: signature) {
+                                editing = SignatureEditing(original: signature.name, signature: signature)
+                            } remove: {
+                                remove(signature, from: account)
                             }
                         }
-                        Button("Add a signature") {
-                            let number = (account.wrappedValue.moreSignatures?.count ?? 0) + 2
-                            account.wrappedValue.moreSignatures = (account.wrappedValue.moreSignatures ?? [])
-                                + [NamedSignature(name: String(localized: "Signature \(number)"), text: "")]
+                        Button("Add a Signature…") {
+                            editing = SignatureEditing(original: nil, signature: account.wrappedValue.newSignature())
                         }
                         Picker("For replies and forwards", selection: Binding(
                             get: { account.wrappedValue.replySignature ?? NamedSignature.defaultName },
@@ -216,7 +206,7 @@ struct SignatureEditor: View {
                     } header: {
                         Text("Signatures")
                     } footer: {
-                        Text("Pick another signature while writing from the signature menu.")
+                        Text("Signatures can have formatting, links and pictures, and go out the way you see them. Pick another one while writing from the signature menu.")
                     }
 
                     Section {
@@ -229,7 +219,7 @@ struct SignatureEditor: View {
                                 findingSignature = true
                                 Task {
                                     if let found = await model.findSignatureInSentMail(accountID) {
-                                        account.wrappedValue.signature = found
+                                        account.wrappedValue.setSignature(NamedSignature(name: NamedSignature.defaultName, text: found))
                                         signatureNote = String(localized: "Found it in your sent mail.")
                                     } else {
                                         signatureNote = String(localized: "No signature showed up in enough sent messages.")
@@ -240,28 +230,10 @@ struct SignatureEditor: View {
                             .disabled(findingSignature)
                         }
                         Text(verbatim: signatureNote ?? " ").font(TypeScale.label).foregroundStyle(Ink.tertiary)
-                        VStack(alignment: .leading, spacing: Space.xs) {
-                            Text("Formatted (HTML)").font(TypeScale.rowStrong)
-                            signatureEditor(Binding(
-                                get: { account.wrappedValue.signatureHTML ?? "" },
-                                set: { account.wrappedValue.signatureHTML = $0.isEmpty ? nil : $0 }
-                            ))
-                            .font(TypeScale.label.monospaced())
-                            if let html = account.wrappedValue.signatureHTML, !html.isEmpty {
-                                let safe = HTMLSanitizer.sanitize(html)
-                                if safe.html != html.trimmingCharacters(in: .whitespacesAndNewlines), safe.hasRemoteContent {
-                                    Text("Pictures from the web in a signature often show as blocked for the people you write to.")
-                                        .font(TypeScale.label).foregroundStyle(Status.danger)
-                                }
-                                Text("Preview").font(TypeScale.label).foregroundStyle(Ink.tertiary)
-                                HTMLMessageView(html: safe, allowsRemote: true)
-                                    .frame(minHeight: 60)
-                            }
-                        }
                     } header: {
                         Text("Signature tools")
                     } footer: {
-                        Text("The formatted signature is sent in place of the default one; the plain one stays for plain-text mail.")
+                        Text("Both fill in the default signature, to change as you like.")
                     }
                 }
             }
@@ -289,6 +261,12 @@ struct SignatureEditor: View {
             if let account { server = MailboxServerFields(account) }
         }
         .sheet(isPresented: $makingSignature) { makeSignatureSheet }
+        .sheet(item: $editing) { item in
+            SignatureSheet(original: item.signature, isDefault: item.original == NamedSignature.defaultName,
+                           takenNames: Set((account?.allSignatures ?? []).map(\.name)).subtracting([item.original ?? ""])) { saved in
+                save(saved, replacing: item.original)
+            }
+        }
         .fileImporter(isPresented: $choosingPicture, allowedContentTypes: [.image]) { result in
             guard case .success(let url) = result else { return }
             let scoped = url.startAccessingSecurityScopedResource()
@@ -299,20 +277,12 @@ struct SignatureEditor: View {
         }
     }
 
-    private func signatureField(_ title: LocalizedStringKey, text: Binding<String>) -> some View {
-        VStack(alignment: .leading, spacing: Space.xs) {
-            Text(title).font(TypeScale.rowStrong)
-            signatureEditor(text)
-        }
+    private func save(_ saved: NamedSignature, replacing original: String?) {
+        account?.saveSignature(saved, replacing: original)
     }
 
-    private func signatureEditor(_ text: Binding<String>) -> some View {
-        TextEditor(text: text)
-            .font(TypeScale.row)
-            .scrollContentBackground(.hidden)
-            .frame(minHeight: 70)
-            .padding(6)
-            .background(Fill.one, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    private func remove(_ signature: NamedSignature, from account: Binding<MailAccount>) {
+        account.wrappedValue.removeSignature(named: signature.name)
     }
 
     private var makeSignatureSheet: some View {
@@ -334,8 +304,13 @@ struct SignatureEditor: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Use It") {
                         let made = SignatureTools.make(details)
-                        account?.signature = made.text
-                        account?.signatureHTML = made.html
+                        #if canImport(AppKit)
+                        let signature = SignatureText.fromHTML(made.html).map { SignatureText.signature(named: NamedSignature.defaultName, from: $0) }
+                            ?? NamedSignature(name: NamedSignature.defaultName, text: made.text, html: made.html)
+                        #else
+                        let signature = NamedSignature(name: NamedSignature.defaultName, text: made.text, html: made.html)
+                        #endif
+                        account?.setSignature(signature)
                         makingSignature = false
                     }
                 }
@@ -438,11 +413,11 @@ struct SignatureMenu: View {
     @Binding var state: ComposeState
 
     var body: some View {
-        if let account = model.account(state.accountID), account.allSignatures.count > 1 {
+        if let account = model.account(state.accountID), account.availableSignatures.count > 1 {
             Menu {
-                ForEach(account.allSignatures) { signature in
+                ForEach(account.availableSignatures) { signature in
                     Button(signature.name == NamedSignature.defaultName ? String(localized: "Default") : signature.name) {
-                        state.use(signature: signature.text)
+                        state.useSignature(signature)
                     }
                 }
                 Divider()
@@ -492,35 +467,5 @@ public struct MailboxSettingsSnapshot: View {
 
     public var body: some View {
         if let id = model.accounts.first?.id { SignatureEditor(model: model, accountID: id) }
-    }
-}
-
-/// A send-as address's own signature, in a popover from its row; empty uses the mailbox's.
-struct AliasSignatureButton: View {
-    @Binding var signature: String
-    let address: String
-    @State private var isOpen = false
-
-    var body: some View {
-        Button { isOpen = true } label: {
-            Image(systemName: signature.isEmpty ? "signature" : "signature.fill")
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(signature.isEmpty ? Ink.tertiary : Ink.primary)
-        .help(Text("Signature for \(address)"))
-        .popover(isPresented: $isOpen) {
-            VStack(alignment: .leading, spacing: Space.s) {
-                Text("Signature for \(address)").font(TypeScale.rowStrong)
-                TextEditor(text: $signature)
-                    .font(.system(size: 13))
-                    .frame(width: 320, height: 120)
-                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Line.edge))
-                Text("Mail sent as this address uses it. Leave it empty to use the mailbox's signature.")
-                    .font(TypeScale.caption).foregroundStyle(Ink.tertiary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(Space.m)
-            .frame(width: 352)
-        }
     }
 }

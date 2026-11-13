@@ -27,6 +27,7 @@ extension MailModel {
             environment.defaults.set(try? JSONEncoder().encode(newValue), forKey: "workspaces")
             if let current = currentWorkspaceID, !newValue.contains(where: { $0.id == current }) { currentWorkspaceID = nil }
             workspaceRevision += 1
+            applySharedSignatures()
         }
     }
 

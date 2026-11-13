@@ -129,9 +129,84 @@ public actor KeychainCredentials: CredentialSource {
     public init(keychain: Keychain, oauth: OAuthClientRegistry) {
         self.keychain = keychain
         self.oauth = oauth
+        self.now = Date.init
+        self.refresh = { client, tokens in try await client.refresh(tokens) }
     }
 
     private var pushTokens: [UUID: OAuthTokens] = [:]
+
+    // MARK: Refreshing without flooding the provider
+
+    /// Refreshes under way, by account and kind: everyone who needs the same new token waits
+    /// for the one request instead of each sending their own.
+    private var refreshing: [String: Task<OAuthTokens, Error>] = [:]
+    /// Refreshes that failed, and until when not to try again. Asking over and over is what
+    /// makes Microsoft answer "client request loop" (AADSTS50196) and refuse every sign-in.
+    private var paused: [String: (error: Error, until: Date)] = [:]
+    private let refresh: @Sendable (OAuthClient, OAuthTokens) async throws -> OAuthTokens
+    private let now: @Sendable () -> Date
+
+    /// For tests: a stand-in for the provider's token endpoint, and a clock.
+    init(keychain: Keychain, oauth: OAuthClientRegistry, now: @escaping @Sendable () -> Date = Date.init,
+         refresh: @escaping @Sendable (OAuthClient, OAuthTokens) async throws -> OAuthTokens) {
+        self.keychain = keychain
+        self.oauth = oauth
+        self.now = now
+        self.refresh = refresh
+    }
+
+    /// A new token from the provider: one request however many callers want it at once, and
+    /// after a failure, none at all for a while (the same error is given back instead).
+    func refreshed(_ tokens: OAuthTokens, key: String, with client: OAuthClient) async throws -> OAuthTokens {
+        if let pause = paused[key] {
+            if pause.until > now() { throw pause.error }
+            paused[key] = nil
+        }
+        if let running = refreshing[key] { return try await running.value }
+        let task = Task { [refresh] in try await refresh(client, tokens) }
+        refreshing[key] = task
+        do {
+            let fresh = try await task.value
+            refreshing[key] = nil
+            return fresh
+        } catch {
+            refreshing[key] = nil
+            let (shown, wait) = Self.pause(after: error)
+            paused[key] = (shown, now().addingTimeInterval(wait))
+            throw shown
+        }
+    }
+
+    /// How long to leave the provider alone after a failed refresh, and what to say meanwhile.
+    static func pause(after error: Error) -> (error: Error, seconds: TimeInterval) {
+        if error is URLError { return (error, 15) }
+        let text = error.localizedDescription
+        // Microsoft has seen too many requests: it needs a few quiet minutes to let go.
+        if text.contains("AADSTS50196") || text.lowercased().contains("request loop") || text.contains("AADSTS90055") {
+            return (MailError.connectionFailed(String(localized: "Microsoft asked Margin to wait a few minutes before signing in again. It will try again by itself.")), 6 * 60)
+        }
+        // The sign-in itself is no longer good: only signing in again helps, so stop asking.
+        if text.contains("invalid_grant") || text.contains("AADSTS7000") || text.contains("AADSTS50173") || text.contains("AADSTS65001") {
+            return (error, 15 * 60)
+        }
+        return (error, 60)
+    }
+
+    /// A new sign-in wipes the slate: nothing is paused for that account any more.
+    public func forgetPauses(for account: UUID) {
+        for key in paused.keys where key.hasPrefix(account.uuidString) { paused[key] = nil }
+        pushTokens[account] = nil
+    }
+
+    /// After signing in to Microsoft again: the new sign-in also stands for the extras that were
+    /// turned on before (contacts, calendar…), so they don't each need connecting again. Its
+    /// access token is for mail, so it's marked used up and the first call redeems one for them.
+    public func renewAPITokens(from tokens: OAuthTokens, for account: MailAccount) throws {
+        guard let stored = storedAPITokens(account) else { return }
+        var seed = tokens
+        seed.expiresAt = .distantPast
+        try saveAPITokens(APITokens(tokens: seed, access: stored.access), for: account)
+    }
 
     /// A token for asking the provider to report new mail: the mail sign-in itself for Google,
     /// and for Microsoft, a Graph token redeemed from the same sign-in.
@@ -143,9 +218,23 @@ public actor KeychainCredentials: CredentialSource {
               let tokens = try? JSONDecoder().decode(OAuthTokens.self, from: Data(stored.utf8)),
               var client = oauth.client(for: .microsoft) else { throw MailError.missingCredentials }
         client.scopes = ["https://graph.microsoft.com/Mail.ReadBasic", "offline_access"]
-        let fresh = try await client.refresh(tokens)
+        let fresh = try await refreshed(tokens, key: "\(account.id.uuidString).push", with: client)
         pushTokens[account.id] = fresh
+        keepNewestRefreshToken(from: fresh, for: account)
         return fresh.accessToken
+    }
+
+    /// Microsoft gives a new refresh token with every token it hands out, whichever service the
+    /// token was for, and may stop honouring the older one. The mail sign-in always keeps the
+    /// newest, so a token fetched for notifications or the profile can't leave the mailbox
+    /// holding a refresh token that no longer works ("scopes … unauthorized or expired").
+    private func keepNewestRefreshToken(from fresh: OAuthTokens, for account: MailAccount) {
+        guard let newest = fresh.refreshToken,
+              let stored = keychain.read(account: account.id, kind: "oauth"),
+              var tokens = try? JSONDecoder().decode(OAuthTokens.self, from: Data(stored.utf8)),
+              tokens.refreshToken != newest,
+              let encoded = try? JSONEncoder().encode({ tokens.refreshToken = newest; return tokens }()) else { return }
+        try? keychain.save(String(decoding: encoded, as: UTF8.self), account: account.id, kind: "oauth")
     }
 
     /// The addresses a Microsoft 365 mailbox also receives at (its aliases), from the account's
@@ -156,8 +245,9 @@ public actor KeychainCredentials: CredentialSource {
               let tokens = try? JSONDecoder().decode(OAuthTokens.self, from: Data(stored.utf8)),
               var client = oauth.client(for: .microsoft) else { return [] }
         client.scopes = ["https://graph.microsoft.com/User.Read", "offline_access"]
-        guard let fresh = try? await client.refresh(tokens),
-              var request = Optional(URLRequest(url: URL(string: "https://graph.microsoft.com/v1.0/me?$select=proxyAddresses")!)) else { return [] }
+        guard let fresh = try? await refreshed(tokens, key: "\(account.id.uuidString).profile", with: client) else { return [] }
+        keepNewestRefreshToken(from: fresh, for: account)
+        guard var request = Optional(URLRequest(url: URL(string: "https://graph.microsoft.com/v1.0/me?$select=proxyAddresses")!)) else { return [] }
         request.setValue("Bearer \(fresh.accessToken)", forHTTPHeaderField: "Authorization")
         guard let (data, response) = try? await URLSession.shared.data(for: request),
               (response as? HTTPURLResponse)?.statusCode == 200,
@@ -173,6 +263,7 @@ public actor KeychainCredentials: CredentialSource {
     }
 
     public func saveAPITokens(_ tokens: APITokens, for account: MailAccount) throws {
+        paused["\(account.id.uuidString).api"] = nil
         try keychain.save(String(decoding: try JSONEncoder().encode(tokens), as: UTF8.self), account: account.id, kind: "api")
     }
 
@@ -195,8 +286,12 @@ public actor KeychainCredentials: CredentialSource {
         }
         if !stored.tokens.isExpiring { return stored.tokens.accessToken }
         guard let client = oauth.client(for: provider, access: stored.access) else { throw MailError.missingCredentials }
-        let fresh = APITokens(tokens: try await client.refresh(stored.tokens), access: stored.access)
-        try saveAPITokens(fresh, for: account)
+        let key = "\(account.id.uuidString).api"
+        let fresh = APITokens(tokens: try await refreshed(stored.tokens, key: key, with: client), access: stored.access)
+        // Whoever was waiting for the same refresh got the same tokens: saving once is enough.
+        if storedAPITokens(account)?.tokens.accessToken != fresh.tokens.accessToken {
+            try keychain.save(String(decoding: try JSONEncoder().encode(fresh), as: UTF8.self), account: account.id, kind: "api")
+        }
         return fresh.tokens.accessToken
     }
 
@@ -219,9 +314,12 @@ public actor KeychainCredentials: CredentialSource {
             }
             if !tokens.isExpiring { return tokens.accessToken }
             guard let client = oauth.client(for: provider) else { throw MailError.missingCredentials }
-            let fresh = try await client.refresh(tokens)
-            let encoded = String(decoding: try JSONEncoder().encode(fresh), as: UTF8.self)
-            try keychain.save(encoded, account: account.id, kind: "oauth")
+            let fresh = try await refreshed(tokens, key: "\(account.id.uuidString).oauth", with: client)
+            // Whoever was waiting for the same refresh got the same tokens: saving once is enough.
+            let saved = keychain.read(account: account.id, kind: "oauth").flatMap { try? JSONDecoder().decode(OAuthTokens.self, from: Data($0.utf8)) }
+            if saved?.accessToken != fresh.accessToken {
+                try keychain.save(String(decoding: try JSONEncoder().encode(fresh), as: UTF8.self), account: account.id, kind: "oauth")
+            }
             return fresh.accessToken
         }
     }

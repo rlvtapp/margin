@@ -49,7 +49,6 @@ struct SnapshotMode {
         Task { @MainActor in
             // Look settings first: changing them redraws the whole window.
             if ProcessInfo.processInfo.arguments.contains("-snapshot-plain") { model.prefersPlainText = true }
-            if ProcessInfo.processInfo.arguments.contains("-snapshot-blocks") { model.usesBlockComposer = true }
             if ProcessInfo.processInfo.arguments.contains("-snapshot-colorblind") { model.colorBlindSafe = true }
             // -snapshot-size 1280x800: the main window at that size (points), for pictures of a known shape.
             if let size = Self.windowSize, let main = NSApp.windows.first(where: { $0.isVisible && $0.contentView != nil }) {
@@ -58,7 +57,10 @@ struct SnapshotMode {
                 let screen = (retina ?? main.screen)?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1728, height: 1084)
                 main.setFrame(NSRect(x: screen.minX + 20, y: screen.maxY - size.height - 20, width: size.width, height: size.height), display: true)
             }
+            if ProcessInfo.processInfo.arguments.contains("-snapshot-density-compact") { model.density = .compact }
             if ProcessInfo.processInfo.arguments.contains("-snapshot-contrast") { model.increaseContrast = true }
+            // -snapshot-no-next-up: the Next up column closed, as on the website's pictures.
+            if ProcessInfo.processInfo.arguments.contains("-snapshot-no-next-up") { model.showsNextUp = false }
             try? await Task.sleep(for: .seconds(1.5))
             if let mailbox, model.accounts.indices.contains(mailbox) {
                 model.go(to: .inbox(account: model.accounts[mailbox].id, split: nil))
@@ -113,6 +115,10 @@ struct SnapshotMode {
             if let index = arguments.firstIndex(of: "-snapshot-multi"), index + 1 < arguments.count, let count = Int(arguments[index + 1]) {
                 model.selection = Set(model.visibleThreads.prefix(count).map(\.id))
             }
+            // -snapshot-reader: the conversation open over the list (a narrow window shows one or
+            // the other); -snapshot-drawer: the mailbox drawer open, where there's no column.
+            if arguments.contains("-snapshot-reader") { model.isReaderOpen = true }
+            if arguments.contains("-snapshot-drawer") { model.isSidebarDrawerOpen = true }
             if opensPalette { model.isPaletteOpen = true }
             if opensCompose { model.startCompose() }
             // -snapshot-cc "no": with -snapshot-compose, opens Cc and Bcc with that typed in Cc,
@@ -176,7 +182,7 @@ struct SnapshotMode {
                     try? await Task.sleep(for: .seconds(1))
                 }
             }
-            // -snapshot-onboarding <step>: the first-launch welcome on that step (0 to 3).
+            // -snapshot-onboarding <step>: the first-launch welcome on that step (0 to 4).
             // -snapshot-width <points> draws it narrower, as a sheet on a small window would be.
             if let index = arguments.firstIndex(of: "-snapshot-onboarding"), index + 1 < arguments.count {
                 let width = arguments.firstIndex(of: "-snapshot-width").flatMap { $0 + 1 < arguments.count ? Double(arguments[$0 + 1]) : nil } ?? 600
@@ -242,9 +248,12 @@ struct SnapshotMode {
             }
             // -snapshot-glass: a picture of the real window as the system draws it, Liquid Glass and
             // scrolling parts included (the drawing below can't show those). The window has to be
-            // on screen for a moment; it comes to the front without taking the keyboard.
+            // on screen for a moment; it stays behind the other windows without taking the keyboard
+            // (launch it with `open -g` so the app doesn't come forward either). A row under the
+            // pointer shows its hover buttons, so keep the pointer off the window's top left.
             if arguments.contains("-snapshot-glass"), let window {
                 window.orderFrontRegardless()
+                window.orderBack(nil)
                 try? await Task.sleep(for: .seconds(1.2))
                 if let image = Self.systemPicture(of: window) {
                     save(NSBitmapImageRep(cgImage: image), suffix: "")

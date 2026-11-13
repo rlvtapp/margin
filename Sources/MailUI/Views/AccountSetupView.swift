@@ -100,7 +100,7 @@ public struct AccountSetupView: View {
                         Label("Back", systemImage: "chevron.left").labelStyle(.titleAndIcon)
                     }
                     .font(TypeScale.rowStrong)
-                    .frame(minHeight: 44)
+                    .frame(minHeight: Look.gap(44))
                 }
                 Spacer()
                 Button("Cancel") { dismiss() }
@@ -182,7 +182,7 @@ public struct AccountSetupView: View {
             }
             ProviderTile(name: String(localized: "Other")) {
                 Image(systemName: "at")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.system(size: Look.size(13), weight: .medium))
                     .foregroundStyle(Ink.secondary)
                     .frame(width: 28, height: 28)
                     .background(Fill.one, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
@@ -228,7 +228,7 @@ public struct AccountSetupView: View {
                     Button("Use an app password instead") { usePassword = true }
                         .buttonStyle(.plain).font(TypeScale.label).foregroundStyle(Ink.tertiary)
                         #if os(iOS)
-                        .frame(minHeight: 44)
+                        .frame(minHeight: Look.gap(44))
                         #endif
                 }
             } else if preset?.acceptsPasswords == false {

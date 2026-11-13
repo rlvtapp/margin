@@ -579,7 +579,7 @@ struct LookPreview: View {
                     Spacer()
                 }
                 .padding(.horizontal, 9)
-                .frame(height: 20)
+                .frame(height: Look.gap(20))
                 .background(tone(colors.sidebar))
                 #endif
                 HStack(spacing: 0) {
@@ -734,7 +734,7 @@ struct AlertsPreview: View {
             }
             if kinds.isEmpty {
                 Image(systemName: "bell.slash.fill")
-                    .font(.system(size: 26, weight: .medium))
+                    .font(.system(size: Look.size(26), weight: .medium))
                     .foregroundStyle(Ink.tertiary)
                     .frame(width: 64, height: 64)
                     .background(Fill.one, in: Circle())
@@ -783,13 +783,13 @@ struct AlertsPreview: View {
         case .person:
             Circle().fill(Palette.account(4)).frame(width: 12, height: 12)
         case .vip:
-            Image(systemName: "star.fill").font(.system(size: 10, weight: .bold)).foregroundStyle(Status.star)
+            Image(systemName: "star.fill").font(.system(size: Look.size(10), weight: .bold)).foregroundStyle(Status.star)
         case .code:
-            Image(systemName: "key.fill").font(.system(size: 10, weight: .bold)).foregroundStyle(Palette.accent)
+            Image(systemName: "key.fill").font(.system(size: Look.size(10), weight: .bold)).foregroundStyle(Palette.accent)
         case .newsletter:
-            Image(systemName: "newspaper.fill").font(.system(size: 10, weight: .bold)).foregroundStyle(Ink.tertiary)
+            Image(systemName: "newspaper.fill").font(.system(size: Look.size(10), weight: .bold)).foregroundStyle(Ink.tertiary)
         case .receipt:
-            Image(systemName: "bag.fill").font(.system(size: 10, weight: .bold)).foregroundStyle(Ink.tertiary)
+            Image(systemName: "bag.fill").font(.system(size: Look.size(10), weight: .bold)).foregroundStyle(Ink.tertiary)
         }
     }
 }
@@ -825,7 +825,7 @@ struct RelayPreview: View {
 
                     let mailPhase = (time * 0.32).truncatingRemainder(dividingBy: 1)
                     Image(systemName: "envelope.fill")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: Look.size(11), weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(width: 24, height: 24)
                         .background(Ink.secondary, in: Circle())
@@ -869,7 +869,7 @@ struct RelayPreview: View {
     private func node(_ image: Image, label: LocalizedStringKey, tint: Color = Ink.secondary) -> some View {
         VStack(spacing: 6) {
             image
-                .font(.system(size: 17, weight: .medium))
+                .font(.system(size: Look.size(17), weight: .medium))
                 .foregroundStyle(tint)
                 .frame(width: 40, height: 40)
                 .background(Fill.one, in: RoundedRectangle(cornerRadius: 11, style: .continuous))

@@ -103,7 +103,7 @@ private struct DropDownAlertView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s) {
-            if fromNotch { Color.clear.frame(height: 26) } // the notch itself
+            if fromNotch { Color.clear.frame(height: Look.gap(26)) } // the notch itself
             HStack(alignment: .top, spacing: Space.s) {
                 Avatar(thread.latest.from, size: 28)
                 VStack(alignment: .leading, spacing: 2) {
@@ -118,7 +118,7 @@ private struct DropDownAlertView: View {
             if let code {
                 // The code, big, already on the clipboard.
                 HStack {
-                    Text(verbatim: ReaderSuggestion.spaced(code)).font(.system(size: 26, weight: .semibold, design: .rounded).monospacedDigit())
+                    Text(verbatim: ReaderSuggestion.spaced(code)).font(.system(size: Look.size(26), weight: .semibold, design: .rounded).monospacedDigit())
                         .foregroundStyle(primary).textSelection(.enabled)
                     Spacer()
                     Button(copied || model.copiesSignInCodes ? String(localized: "Copied") : String(localized: "Copy")) {

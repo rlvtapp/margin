@@ -30,8 +30,17 @@ extension MailModel {
     /// Home: what needs you first (the conversations with a note: a reply owed, a meeting, a
     /// bill, a code), then everything else by day.
     func homeSections(_ threads: [MailThread]) -> [ListSection] {
-        let now = Date()
-        let needs = threads.filter { marginNote(for: $0, now: now) != nil }
+        // Everything that needs you, wherever it sits in the list: not only what's among the
+        // rows shown so far. Narrowed the way the list is (group, filters, search).
+        let query = SearchQuery(searchText)
+        var needs = needingYou.map(\.thread).filter { thread in
+            (!quickFilters.contains(.unread) || thread.isUnread) && (!quickFilters.contains(.starred) || thread.isStarred)
+                && (!quickFilters.contains(.attachments) || thread.hasAttachments) && (query.isEmpty || query.matches(thread))
+        }
+        if case .home(let group?) = place {
+            needs = needs.filter { thread in labels(for: thread).contains { $0.caseInsensitiveCompare(group) == .orderedSame } }
+        }
+        needs = pinnedFirst(needs)
         let ids = Set(needs.map(\.id))
         var sections: [ListSection] = []
         if !needs.isEmpty {
@@ -108,9 +117,7 @@ struct SparkHeader: View {
                         model.quickFilters.insert(.unread)
                     }
                     ForEach(model.allLabels.prefix(10), id: \.self) { label in
-                        let unread = model.inboxThreads(nil).filter { thread in
-                            thread.isUnread && model.labels(for: thread).contains(label)
-                        }.count
+                        let unread = model.unreadByLabel[label] ?? 0
                         GroupTab.group(label, count: unread, isOn: model.place == .home(group: label)) {
                             model.quickFilters.remove(.unread)
                             model.go(to: .home(group: label))

@@ -114,7 +114,7 @@ public struct IconButton: View {
     public var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 13))
+                .font(.system(size: Look.size(13)))
                 .foregroundStyle(isHovered ? Ink.primary : Ink.tertiary)
                 .frame(width: 28, height: 28)
                 .background(isHovered ? Fill.one : .clear, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
@@ -169,7 +169,7 @@ struct ToolbarLabel: View {
 
     var body: some View {
         HStack(spacing: 5) {
-            Image(systemName: symbol).font(.system(size: 13))
+            Image(systemName: symbol).font(.system(size: Look.size(13)))
             if labels { Text(title).font(TypeScale.label.weight(.medium)).lineLimit(1).fixedSize() }
         }
         .foregroundStyle(isHovered ? Ink.primary : labels ? Ink.secondary : Ink.tertiary)
@@ -228,9 +228,9 @@ public struct FieldStyle: ViewModifier {
             .font(TypeScale.row)
             .padding(.horizontal, 10)
             #if os(macOS)
-            .frame(height: 30)
+            .frame(height: Look.gap(30))
             #else
-            .frame(minHeight: 44)
+            .frame(minHeight: Look.gap(44))
             #endif
             .background(Paper.field, in: RoundedRectangle(cornerRadius: Radius.control, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous).strokeBorder(Line.hairline))

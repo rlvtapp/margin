@@ -102,7 +102,7 @@ struct PersonCard: View {
     private func action(_ symbol: String, _ title: LocalizedStringKey, perform: @escaping () -> Void) -> some View {
         Button(action: perform) {
             VStack(spacing: 4) {
-                Image(systemName: symbol).font(.system(size: 14))
+                Image(systemName: symbol).font(.system(size: Look.size(14)))
                 Text(title).font(TypeScale.caption)
             }
             .foregroundStyle(Ink.primary)
@@ -176,7 +176,7 @@ struct MessageSourceView: View {
                 if let source {
                     ScrollView([.vertical, .horizontal]) {
                         Text(verbatim: showsRaw ? Self.capped(source) : headers(of: source))
-                            .font(.system(size: 12, design: .monospaced))
+                            .font(.system(size: Look.size(12), design: .monospaced))
                             .foregroundStyle(Ink.primary)
                             .textSelection(.enabled)
                             .frame(maxWidth: .infinity, alignment: .leading)

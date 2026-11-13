@@ -147,7 +147,7 @@ private struct TipBubble: View {
 
     var body: some View {
         text
-            .font(.system(size: 11, weight: .medium))
+            .font(.system(size: Look.size(11), weight: .medium))
             .foregroundStyle(Ink.primary)
             .lineLimit(1)
             .padding(.horizontal, 8)

@@ -13,7 +13,7 @@ struct MeetingNoticeCard: View {
         VStack(alignment: .leading, spacing: Space.s) {
             HStack(spacing: Space.m) {
                 Image(systemName: symbol)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: Look.size(15), weight: .semibold))
                     .foregroundStyle(color)
                     .frame(width: 32, height: 32)
                     .background(color.opacity(0.14), in: RoundedRectangle(cornerRadius: 8, style: .continuous))

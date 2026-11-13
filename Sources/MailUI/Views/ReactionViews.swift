@@ -37,7 +37,7 @@ struct ReactionStrip: View {
                 Text(verbatim: emoji).font(.system(size: touch ? 17 : 14))
             }
             Text(verbatim: people.count == 1 ? names[0] : "\(people.count)")
-                .font(touch ? .system(size: 14, weight: .medium) : TypeScale.label.weight(.medium))
+                .font(touch ? .system(size: Look.size(14), weight: .medium) : TypeScale.label.weight(.medium))
                 .foregroundStyle(isMine ? Ink.primary : Ink.secondary)
                 .lineLimit(1)
         }
@@ -129,9 +129,9 @@ struct ReactionNoticeCard: View {
             HStack(spacing: Space.m) {
                 Group {
                     if let emoji = reaction.emoji {
-                        Text(verbatim: emoji).font(.system(size: 18))
+                        Text(verbatim: emoji).font(.system(size: Look.size(18)))
                     } else {
-                        Image(systemName: "face.smiling").font(.system(size: 15, weight: .semibold)).foregroundStyle(Ink.secondary)
+                        Image(systemName: "face.smiling").font(.system(size: Look.size(15), weight: .semibold)).foregroundStyle(Ink.secondary)
                     }
                 }
                 .frame(width: 32, height: 32)

@@ -33,6 +33,13 @@ struct SwipeSettings: View {
             Text("A full swipe does the first action.")
             #endif
         }
+        #if os(macOS)
+        Section {
+            Toggle(isOn: Binding(get: { model.showsHoverActions }, set: { model.showsHoverActions = $0 })) {
+                SettingLabel("Buttons on hover", detail: "Done, Mark read and Move to Trash at the end of a conversation while the pointer is over it.")
+            }
+        }
+        #endif
     }
 }
 
@@ -90,13 +97,13 @@ private struct ActionChoice: View {
         Button(action: choose) {
             VStack(spacing: 5) {
                 Image(systemName: action.symbol)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: Look.size(13), weight: .semibold))
                     .foregroundStyle(isOn ? Color.white : Ink.secondary)
                     .frame(maxWidth: .infinity)
-                    .frame(height: 30)
+                    .frame(height: Look.gap(30))
                     .background(isOn ? action.color : Fill.one, in: Capsule())
                 Text(verbatim: action == .read ? String(localized: "Read") : action.title)
-                    .font(.system(size: 11, weight: isOn ? .semibold : .regular))
+                    .font(.system(size: Look.size(11), weight: isOn ? .semibold : .regular))
                     .foregroundStyle(isOn ? Ink.primary : Ink.tertiary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
@@ -131,12 +138,12 @@ private struct SwipePreview: View {
             ForEach(leading ? actions : actions.reversed()) { action in
                 VStack(spacing: 4) {
                     Image(systemName: action.symbol)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: Look.size(12), weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(width: 50, height: 26)
                         .background(action.color, in: Capsule())
                     Text(verbatim: action == .read ? String(localized: "Read") : action.title)
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.system(size: Look.size(10), weight: .medium))
                         .foregroundStyle(Ink.secondary)
                         .lineLimit(1)
                 }

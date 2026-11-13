@@ -121,7 +121,7 @@ private struct SubscriptionsColumn: View {
                     .buttonStyle(QuietButtonStyle())
             }
             .padding(.horizontal, Space.l)
-            .frame(height: 44)
+            .frame(height: Look.gap(44))
         }
     }
 }
@@ -197,7 +197,7 @@ struct SubscriptionPanel: View {
                 if let account = model.account(sender.latest.accountID), model.accounts.count > 1 {
                     AccountMark(account, size: 14)
                     Text(account.label).foregroundStyle(Ink.tertiary)
-                    Image(systemName: "chevron.right").font(.system(size: 8, weight: .bold)).foregroundStyle(Ink.quaternary)
+                    Image(systemName: "chevron.right").font(.system(size: Look.size(8), weight: .bold)).foregroundStyle(Ink.quaternary)
                 }
                 Text("Subscriptions").foregroundStyle(Ink.tertiary)
             }

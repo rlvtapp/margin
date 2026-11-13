@@ -90,9 +90,39 @@ public enum Look {
     /// The system's Reduce Transparency: chips use flat fills instead of Liquid Glass.
     nonisolated(unsafe) public static var reduceTransparency = false
     nonisolated(unsafe) public static var theme: AppAppearance = .system
+    /// Roomy unless the person chose Compact.
+    nonisolated(unsafe) public static var density: Density = .roomy
+
+    /// A type size for the chosen density. `base` is the compact size on the Mac and the
+    /// roomy size on touch screens, which were already a step up.
+    public static func size(_ base: CGFloat) -> CGFloat {
+        #if os(iOS)
+        density == .compact ? base - 1 : base
+        #else
+        density == .compact ? base : base + (base >= 16 ? 2 : 1)
+        #endif
+    }
+
+    /// One of two hand-picked Mac sizes; touch screens keep the first.
+    public static func pick(_ compact: CGFloat, roomy: CGFloat) -> CGFloat {
+        #if os(iOS)
+        compact
+        #else
+        density == .compact ? compact : roomy
+        #endif
+    }
+
+    /// A gap, padding or control size for the chosen density.
+    public static func gap(_ base: CGFloat) -> CGFloat {
+        #if os(iOS)
+        base
+        #else
+        density == .compact ? base : (base * 1.25).rounded()
+        #endif
+    }
 
     /// Changes whenever any option changes, so the window can redraw everything once.
-    public static var key: String { "\(colorBlindSafe)\(highContrast)\(reduceMotion)\(underlineLinks)\(darkensMail)\(reduceTransparency)\(theme.rawValue)\(LabelColors.signature)" }
+    public static var key: String { "\(colorBlindSafe)\(highContrast)\(reduceMotion)\(underlineLinks)\(darkensMail)\(reduceTransparency)\(theme.rawValue)\(density.rawValue)\(LabelColors.signature)" }
 }
 
 public enum Ink {
@@ -119,13 +149,18 @@ public enum Status {
     public static var done: Color { Look.colorBlindSafe ? .adaptive(0x007A5A, 0x2BB58E) : .adaptive(0x15803D, 0x22C55E) }
 }
 
+/// How much room the interface takes: Roomy is the default, Compact fits more on screen.
+public enum Density: String, CaseIterable, Sendable {
+    case roomy, compact
+}
+
 public enum Space {
-    public static let xs: CGFloat = 4
-    public static let s: CGFloat = 8
-    public static let m: CGFloat = 12
-    public static let l: CGFloat = 16
-    public static let xl: CGFloat = 24
-    public static let xxl: CGFloat = 32
+    public static var xs: CGFloat { Look.gap(4) }
+    public static var s: CGFloat { Look.gap(8) }
+    public static var m: CGFloat { Look.gap(12) }
+    public static var l: CGFloat { Look.gap(16) }
+    public static var xl: CGFloat { Look.gap(24) }
+    public static var xxl: CGFloat { Look.gap(32) }
 }
 
 public enum Radius {
@@ -139,24 +174,24 @@ public enum Radius {
 public enum TypeScale {
     #if os(iOS)
     // A step up on touch screens, read at arm's length.
-    public static let title = Font.system(size: 24, weight: .semibold)
-    public static let heading = Font.system(size: 17, weight: .medium)
-    public static let body = Font.system(size: 16)
-    public static let row = Font.system(size: 15)
-    public static let rowStrong = Font.system(size: 15, weight: .medium)
-    public static let label = Font.system(size: 13)
-    public static let caption = Font.system(size: 12)
-    public static let key = Font.system(size: 11, weight: .medium)
+    public static var title: Font { .system(size: Look.size(24), weight: .semibold) }
+    public static var heading: Font { .system(size: Look.size(17), weight: .medium) }
+    public static var body: Font { .system(size: Look.size(16)) }
+    public static var row: Font { .system(size: Look.size(15)) }
+    public static var rowStrong: Font { .system(size: Look.size(15), weight: .medium) }
+    public static var label: Font { .system(size: Look.size(13)) }
+    public static var caption: Font { .system(size: Look.size(12)) }
+    public static var key: Font { .system(size: Look.size(11), weight: .medium) }
     #else
-    public static let title = Font.system(size: 21, weight: .medium)
-    public static let heading = Font.system(size: 14, weight: .medium)
+    public static var title: Font { .system(size: Look.size(21), weight: .medium) }
+    public static var heading: Font { .system(size: Look.size(14), weight: .medium) }
     /// Message text: a size up from the interface, because this is what you read.
-    public static let body = Font.system(size: 15)
-    public static let row = Font.system(size: 13)
-    public static let rowStrong = Font.system(size: 13, weight: .medium)
-    public static let label = Font.system(size: 12)
-    public static let caption = Font.system(size: 11)
-    public static let key = Font.system(size: 10.5, weight: .medium)
+    public static var body: Font { .system(size: Look.size(15)) }
+    public static var row: Font { .system(size: Look.size(13)) }
+    public static var rowStrong: Font { .system(size: Look.size(13), weight: .medium) }
+    public static var label: Font { .system(size: Look.size(12)) }
+    public static var caption: Font { .system(size: Look.size(11)) }
+    public static var key: Font { .system(size: Look.size(10.5), weight: .medium) }
     #endif
 }
 

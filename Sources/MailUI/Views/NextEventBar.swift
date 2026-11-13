@@ -24,7 +24,7 @@ struct NextEventBar: View {
                 }
             }
             .padding(.horizontal, Space.m)
-            .frame(height: 36)
+            .frame(height: Look.gap(36))
             .background(Fill.one, in: RoundedRectangle(cornerRadius: Radius.row, style: .continuous))
             .padding(.horizontal, Space.m)
             .padding(.bottom, Space.s)
@@ -46,7 +46,7 @@ struct NextEventChip: View {
             HStack(spacing: 6) {
                 Button { model.open(event) } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "calendar").font(.system(size: 11, weight: .semibold))
+                        Image(systemName: "calendar").font(.system(size: Look.size(11), weight: .semibold))
                             .foregroundStyle(happening ? Status.done : Ink.tertiary)
                         Text(verbatim: event.title).font(TypeScale.label.weight(.medium)).foregroundStyle(Ink.primary).lineLimit(1)
                         Text(happening ? String(localized: "now") : event.start.formatted(date: .omitted, time: .shortened))
@@ -60,13 +60,13 @@ struct NextEventChip: View {
                         .font(TypeScale.label.weight(.semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 10)
-                        .frame(height: 22)
+                        .frame(height: Look.gap(22))
                         .background(Palette.accent, in: Capsule())
                 }
             }
             .padding(.leading, 10)
             .padding(.trailing, event.joinURL != nil && (happening || close) ? 3 : 10)
-            .frame(height: 28)
+            .frame(height: Look.gap(28))
             .glassCapsule(tint: nil)
             .frame(maxWidth: 320)
             .tip(event.location ?? event.title)

@@ -16,8 +16,7 @@ struct NextUpColumn: View {
         let agenda = model.agenda(from: now, to: now.addingTimeInterval(7 * 86_400)).filter { $0.response != .declined && $0.end > now }
         let next = agenda.first { !$0.isAllDay }
         let meetings = Array(agenda.filter { $0.id != next?.id }.prefix(5))
-        let snoozed = model.inboxThreads(nil)
-            .compactMap { thread in model.snoozedUntil(thread).map { (thread, $0) } }
+        let snoozed = model.snoozedInInboxes(nil).map { ($0.thread, $0.until) }
             .sorted { $0.1 < $1.1 }
             .prefix(5)
         ScrollView {
@@ -142,7 +141,7 @@ private struct NextMeetingCard: View {
                             .font(TypeScale.label.weight(.semibold))
                             .foregroundStyle(soon ? Ink.inverse : Palette.accent)
                             .frame(maxWidth: .infinity)
-                            .frame(height: 28)
+                            .frame(height: Look.gap(28))
                             .background(soon ? Palette.accent : Palette.accent.opacity(0.12), in: Capsule())
                     }
                     .buttonStyle(.plain)

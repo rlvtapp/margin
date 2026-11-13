@@ -48,7 +48,7 @@ struct CalendarPage: View {
 
     private var header: some View {
         HStack {
-            Text("Calendar").font(.system(size: 24, weight: .bold)).foregroundStyle(Ink.primary)
+            Text("Calendar").font(.system(size: Look.size(24), weight: .bold)).foregroundStyle(Ink.primary)
             Spacer()
             if isRefreshing {
                 ProgressView().controlSize(.small).frame(width: 28, height: 28)
@@ -111,7 +111,7 @@ struct MonthGrid: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 2) {
                 Text(month.formatted(.dateTime.month(.wide).year()))
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: Look.size(15), weight: .semibold))
                     .foregroundStyle(Ink.primary)
                 Spacer()
                 IconButton("chevron.left", help: "Previous month") { step(-1) }
@@ -121,9 +121,9 @@ struct MonthGrid: View {
             LazyVGrid(columns: columns, spacing: 6) {
                 ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                     Text(verbatim: symbol)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: Look.size(11), weight: .medium))
                         .foregroundStyle(Ink.tertiary)
-                        .frame(height: 22)
+                        .frame(height: Look.gap(22))
                 }
                 ForEach(days, id: \.self) { date in
                     DayCell(date: date, inMonth: Calendar.current.isDate(date, equalTo: month, toGranularity: .month),
@@ -166,7 +166,7 @@ private struct DayCell: View {
         Button(action: action) {
             VStack(spacing: 2) {
                 Text(verbatim: "\(Calendar.current.component(.day, from: date))")
-                    .font(.system(size: 13, weight: isToday ? .bold : .regular))
+                    .font(.system(size: Look.size(13), weight: isToday ? .bold : .regular))
                     .monospacedDigit()
                     .foregroundStyle(isToday ? Palette.accent : inMonth ? Ink.primary : Ink.quaternary)
                     .frame(width: 30, height: 30)
@@ -251,13 +251,13 @@ private struct AgendaList: View {
                     } header: {
                         HStack(spacing: 8) {
                             Text(verbatim: Self.title(for: entry.day))
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.system(size: Look.size(13), weight: .semibold))
                                 .foregroundStyle(isToday ? Palette.accent : Ink.primary)
                             if !Calendar.current.isDateInToday(entry.day) && !Calendar.current.isDateInTomorrow(entry.day) {
                                 EmptyView()
                             } else {
                                 Text(verbatim: entry.day.formatted(.dateTime.weekday(.wide).day().month(.wide)))
-                                    .font(.system(size: 13))
+                                    .font(.system(size: Look.size(13)))
                                     .foregroundStyle(Ink.tertiary)
                             }
                             Spacer()
@@ -356,7 +356,7 @@ private struct NowLine: View {
         HStack(spacing: 8) {
             Circle().fill(Palette.accent).frame(width: 7, height: 7)
             Text(verbatim: time.formatted(date: .omitted, time: .shortened))
-                .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                .font(.system(size: Look.size(11), weight: .semibold).monospacedDigit())
                 .foregroundStyle(Palette.accent)
             Rectangle().fill(Palette.accent.opacity(0.5)).frame(height: 1)
         }
@@ -389,17 +389,17 @@ private struct AgendaRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 5) {
                     Text(verbatim: time)
-                        .font(.system(size: 13))
+                        .font(.system(size: Look.size(13)))
                         .monospacedDigit()
                         .foregroundStyle(Ink.secondary)
                     if item.repeats {
-                        Image(systemName: "repeat").font(.system(size: 9, weight: .semibold)).foregroundStyle(Ink.quaternary)
+                        Image(systemName: "repeat").font(.system(size: Look.size(9), weight: .semibold)).foregroundStyle(Ink.quaternary)
                             .tip("Repeats")
                     }
                 }
                 if let startsIn {
                     Text(verbatim: startsIn)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: Look.size(12), weight: .semibold))
                         .foregroundStyle(Palette.accent)
                 }
             }
@@ -407,7 +407,7 @@ private struct AgendaRow: View {
             VStack(alignment: .leading, spacing: 10) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(verbatim: item.title)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: Look.size(14), weight: .semibold))
                         .foregroundStyle(Ink.primary)
                         .fixedSize(horizontal: false, vertical: true)
                     if !place.isEmpty {
@@ -482,10 +482,10 @@ private struct GoingPicker: View {
                 let isOn = response == option
                 Button { if !isOn { choose(option) } } label: {
                     Text(verbatim: option.shortTitle)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: Look.size(12), weight: .semibold))
                         .foregroundStyle(isOn ? Ink.inverse : Ink.secondary)
                         .padding(.horizontal, 11)
-                        .frame(height: 24)
+                        .frame(height: Look.gap(24))
                         .background(isOn ? Palette.accent : Fill.one, in: Capsule())
                         .contentShape(Capsule())
                 }
@@ -505,10 +505,10 @@ private struct JoinButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 12, weight: .semibold))
+            .font(.system(size: Look.size(12), weight: .semibold))
             .foregroundStyle(prominent ? Ink.inverse : Palette.accent)
             .padding(.horizontal, 16)
-            .frame(height: 28)
+            .frame(height: Look.gap(28))
             .background(prominent ? Palette.accent : Palette.accent.opacity(0.12), in: Capsule())
             .opacity(configuration.isPressed ? 0.75 : 1)
     }
@@ -549,7 +549,7 @@ private struct CalendarSources: View {
                             Button("Connect Again…") { Task { await reconnect(account) } }
                             Button("Disconnect", role: .destructive) { disconnect(account) }
                         } label: {
-                            Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(Ink.tertiary)
+                            Image(systemName: "checkmark").font(.system(size: Look.size(10), weight: .bold)).foregroundStyle(Ink.tertiary)
                                 .frame(width: 20, height: 20)
                                 .contentShape(Rectangle())
                         }

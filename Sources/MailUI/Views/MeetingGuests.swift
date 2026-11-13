@@ -18,7 +18,7 @@ struct MeetingGuests: View {
                         Image(systemName: "person.2").foregroundStyle(Ink.tertiary)
                         Text(verbatim: Self.summary(attendees)).foregroundStyle(Ink.secondary)
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .semibold))
+                            .font(.system(size: Look.size(9), weight: .semibold))
                             .foregroundStyle(Ink.tertiary)
                             .rotationEffect(.degrees(isOpen ? 90 : 0))
                         Spacer(minLength: 0)

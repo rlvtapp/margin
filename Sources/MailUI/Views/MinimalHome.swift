@@ -69,7 +69,7 @@ struct MinimalHomeHeader: View {
                         }
                     } label: {
                         HStack(spacing: Space.s) {
-                            Image(systemName: item.symbol).font(.system(size: 12)).foregroundStyle(item.color).frame(width: 16)
+                            Image(systemName: item.symbol).font(.system(size: Look.size(12))).foregroundStyle(item.color).frame(width: 16)
                             Text(verbatim: item.text).font(TypeScale.row).foregroundStyle(Ink.primary)
                         }
                     }
@@ -86,7 +86,7 @@ struct MinimalHomeHeader: View {
     private var tabs: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             GlassChipRow {
-                GroupTab(title: String(localized: "All"), symbol: "tray.full", count: model.visibleThreads.count, isOn: true) {
+                GroupTab(title: String(localized: "All"), symbol: "tray.full", count: model.listCount, isOn: true) {
                     model.homeScrollTarget = "home-top"
                 }
                 ForEach(model.homeGroups, id: \.group.id) { item in

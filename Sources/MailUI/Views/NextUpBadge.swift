@@ -16,13 +16,13 @@ struct NextUpBadge: View {
                 model.select(thread.id)
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "clock.arrow.circlepath").font(.system(size: 11, weight: .semibold)).foregroundStyle(Ink.tertiary)
+                    Image(systemName: "clock.arrow.circlepath").font(.system(size: Look.size(11), weight: .semibold)).foregroundStyle(Ink.tertiary)
                     Text(verbatim: thread.latest.from.displayName).font(TypeScale.label.weight(.medium)).foregroundStyle(Ink.primary).lineLimit(1)
                     Text("Back \(until.formatted(date: .omitted, time: .shortened))")
                         .font(TypeScale.label.monospacedDigit()).foregroundStyle(Ink.tertiary)
                 }
                 .padding(.horizontal, 10)
-                .frame(height: 28)
+                .frame(height: Look.gap(28))
                 .glassCapsule(tint: nil)
                 .frame(maxWidth: 320)
             }
@@ -34,8 +34,7 @@ struct NextUpBadge: View {
     /// The snoozed conversation that comes back next, if it does today.
     private var comingBack: (MailThread, Date)? {
         _ = model.clockTick
-        return model.inboxThreads(nil)
-            .compactMap { thread in model.snoozedUntil(thread).map { (thread, $0) } }
+        return model.snoozedInInboxes(nil).map { ($0.thread, $0.until) }
             .filter { Calendar.current.isDateInToday($0.1) }
             .min { $0.1 < $1.1 }
     }

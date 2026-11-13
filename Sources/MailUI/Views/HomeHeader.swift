@@ -32,6 +32,10 @@ struct HomeHeader: View {
     let model: MailModel
     /// Off where the date already titles the band above (the Mac's list).
     var showsDate = true
+    /// The margin the list puts around this header: the tabs reach past it, to the column's edge.
+    var edgeInset: CGFloat = 0
+
+    private var inset: CGFloat { model.layout.isCalm ? Space.xs : Space.l }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -39,18 +43,21 @@ struct HomeHeader: View {
             // about what needs you: a page, not a dashboard.
             if showsDate {
                 Text(verbatim: model.homeDate)
-                    .font(.system(size: 26, weight: .semibold))
+                    .font(.system(size: Look.size(26), weight: .semibold))
                     .foregroundStyle(Ink.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
+                    .padding(.horizontal, inset)
             }
             Text(verbatim: summary)
-                .font(.system(size: 15))
+                .font(.system(size: Look.size(15)))
                 .foregroundStyle(Ink.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 6)
                 .padding(.bottom, Space.l)
-            // The groups as glass tabs; the one you're in is filled.
+                .padding(.horizontal, inset)
+            // The groups as glass tabs; the one you're in is filled. They start in line with the
+            // heading and scroll on to the column's edge, past the page's margin.
             ScrollView(.horizontal, showsIndicators: false) {
                 GlassChipRow {
                     GroupTab(title: String(localized: "Everything"), symbol: "tray.full", isOn: model.place == .home(group: nil)) {
@@ -70,14 +77,15 @@ struct HomeHeader: View {
                 }
                 .padding(.vertical, 4)
             }
+            .contentMargins(.horizontal, inset + edgeInset, for: .scrollContent)
+            .padding(.horizontal, -edgeInset)
         }
-        .padding(.horizontal, model.layout.isCalm ? Space.xs : Space.l)
         .padding(.top, Space.l)
         .padding(.bottom, Space.xs)
     }
 
     /// The one quiet sentence about what needs you (`MailModel.homeSummary`).
-    private var summary: String { model.homeSummary() }
+    private var summary: String { model.homeSummaryNow }
 
     private func tab(_ title: String, count: Int?, group: String?) -> some View {
         let selected = model.place == .home(group: group)

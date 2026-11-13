@@ -12,7 +12,7 @@ struct NewsletterSuggestionCard: View {
             Button { model.go(to: .subscriptions) } label: {
                 HStack(spacing: Space.s) {
                     Image(systemName: "newspaper")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: Look.size(13), weight: .medium))
                         .foregroundStyle(Palette.split(.newsletters))
                     Text(count == 1 ? String(localized: "1 newsletter you rarely open") : String(localized: "\(count) newsletters you rarely open"))
                         .font(TypeScale.rowStrong)
@@ -22,11 +22,11 @@ struct NewsletterSuggestionCard: View {
                         .font(TypeScale.label.weight(.medium))
                         .foregroundStyle(Ink.secondary)
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.system(size: Look.size(10), weight: .semibold))
                         .foregroundStyle(Ink.tertiary)
                 }
                 .padding(.horizontal, Space.m)
-                .frame(minHeight: 40)
+                .frame(minHeight: Look.gap(40))
                 .background(Fill.one, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .contentShape(Rectangle())
             }
@@ -175,7 +175,7 @@ struct SubscriptionsPage: View {
                     .font(TypeScale.label.weight(.medium))
                     .foregroundStyle(Ink.secondary)
                     .padding(.horizontal, 6)
-                    .frame(height: 30)
+                    .frame(height: Look.gap(30))
                     .fixedSize()
             }
             if canLeave && !picksForPanel {
@@ -184,7 +184,7 @@ struct SubscriptionsPage: View {
                     .font(TypeScale.label.weight(.semibold))
                     .foregroundStyle(suggested ? Ink.inverse : Ink.primary)
                     .padding(.horizontal, 12)
-                    .frame(height: 30)
+                    .frame(height: Look.gap(30))
                     .background(suggested ? Ink.primary : Fill.two, in: Capsule())
                     .fixedSize()
             }

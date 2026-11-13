@@ -35,15 +35,15 @@ public struct GlassChip: View {
     #if os(iOS)
     private static let height: CGFloat = 36
     private static let iconSize: CGFloat = 13
-    private static let titleFont = Font.system(size: 15, weight: .medium)
-    private static let countFont = Font.system(size: 13, weight: .semibold).monospacedDigit()
+    private static var titleFont: Font { Font.system(size: Look.size(15), weight: .medium) }
+    private static var countFont: Font { Font.system(size: Look.size(13), weight: .semibold).monospacedDigit() }
     private static let sidePadding: CGFloat = 13
     private static let gap: CGFloat = 6
     #else
     private static let height: CGFloat = 26
     private static let iconSize: CGFloat = 10.5
-    private static let titleFont = TypeScale.label.weight(.medium)
-    private static let countFont = TypeScale.label.monospacedDigit()
+    private static var titleFont: Font { TypeScale.label.weight(.medium) }
+    private static var countFont: Font { TypeScale.label.monospacedDigit() }
     private static let sidePadding: CGFloat = 10
     private static let gap: CGFloat = 4
     #endif

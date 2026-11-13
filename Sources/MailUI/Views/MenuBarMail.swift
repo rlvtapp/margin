@@ -19,7 +19,7 @@ extension MailModel {
     /// Conversations from the last 15 minutes with a sign-in code or link.
     var recentSignIns: [MailThread] {
         let since = Date().addingTimeInterval(-15 * 60)
-        return inboxThreads(nil).filter { $0.date > since && (signInCode(in: $0) != nil || signInLink(in: $0) != nil) }
+        return inboxThreads(since: since).filter { signInCode(in: $0) != nil || signInLink(in: $0) != nil }
     }
 }
 
@@ -41,7 +41,7 @@ public struct MenuBarMail: View {
                 ForEach(signIns) { thread in signInRow(thread) }
             }
             section("Unread")
-            let unread = model.inboxThreads(nil).filter { $0.isUnread && !model.isSnoozed($0) }.prefix(6)
+            let unread = model.unreadInInboxes(limit: 6) { !model.isSnoozed($0) }
             if unread.isEmpty {
                 Text("You're all caught up").font(TypeScale.row).foregroundStyle(Ink.tertiary).padding(.horizontal, Space.s)
             }

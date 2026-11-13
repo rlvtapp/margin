@@ -155,12 +155,12 @@ private struct SwipeTile: View {
         Button(action: run) {
             VStack(spacing: 5) {
                 Image(systemName: symbol)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: Look.size(14), weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(width: stretched ? max(58, width - 28) : 58, height: 32)
                     .background(color, in: Capsule())
                 Text(verbatim: title)
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: Look.size(11), weight: .medium))
                     .foregroundStyle(Ink.secondary)
                     .lineLimit(1)
             }

@@ -2,6 +2,8 @@
 
 A free, open-source mail app for the Mac. It's fast and keyboard-first, and it connects directly to your mail provider.
 
+![Margin on the Mac, showing the inbox and a conversation](site/public/images/mac-hero-light.jpg)
+
 - **No account and no middleman.** Margin talks to your provider straight from your device, over IMAP and SMTP or JMAP. No server of ours sits in between, and nothing is tracked.
 - **All your mailboxes in one window.** Each mailbox has its own picture in the rail on the left, with its unread count. "All" combines every mailbox: one Inbox, Starred, Drafts, Sent, Archive, Junk and Trash, and each conversation shows which mailbox it's in.
 - **Keyboard first.** `J`/`K` to move, `E` to mark done, `R` to reply, `⌘K` for every command, `?` for the full list. Shortcuts are printed next to the actions, so you learn them as you go.
@@ -10,7 +12,7 @@ A free, open-source mail app for the Mac. It's fast and keyboard-first, and it c
 - **An assistant you choose.** Summaries, suggested labels and reply drafts from Apple's on-device model by default, or from Ollama, LM Studio, Claude, ChatGPT or any OpenAI-compatible server with your own key. It only runs when you ask.
 - **Talk to your mail from AI apps.** An optional MCP connection lets Claude, ChatGPT and other MCP apps search and read your mail through Margin, on this Mac only. Changing and sending need their own switches.
 
-Licensed under [Apache 2.0](LICENSE).
+Licensed under [Apache 2.0](LICENSE). The code lives at [github.com/rlvtapp/margin](https://github.com/rlvtapp/margin); the website is [margin.relevate.app](https://margin.relevate.app).
 
 ## Status
 
@@ -24,7 +26,7 @@ Early. What works today:
 | Calendar | Invitations show with Join, Add to Calendar, and Accept / Maybe / Decline sent back as standard replies |
 | Make it yours | Light or dark, accent colour, one- or three-line rows, side-by-side or wide list, change any shortcut |
 | Backup | Export and restore settings, mailboxes, labels, templates; password-encrypted backups can carry passwords too |
-| Reading (IMAP, JMAP) | Folders, latest 200 conversations per folder, threading, HTML mail in a locked-down view (no scripts, remote pictures and trackers blocked until you allow them), attachment names |
+| Reading (IMAP, JMAP) | Folders, the newest conversations of each folder and older ones as you scroll; older mail's headers downloaded quietly in the background (Settings → Mailboxes → Keep on this device: everything on the Mac, a year on iPhone and iPad), so all of it is searchable and scrollable offline; threading, HTML mail in a locked-down view (no scripts, remote pictures and trackers blocked until you allow them), attachment names |
 | Triage | Done (archive), star, read/unread, trash with Undo; snooze; select several with ⌘/⇧-click, X or ⌘A for bulk actions; Unread, Starred and Attachments filters |
 | Clean-up | One-click unsubscribe (RFC 8058, mail or web fallback), archive everything from a sender, copy sign-in codes |
 | Follow-ups | Waiting for reply (sent mail nobody answered after 2–7 days), one-click follow-up |

@@ -51,14 +51,26 @@ pnpm types:check
     the first turns itself on. Keep the wording in step with `ConnectionsSettingsView.swift`.
   - `bring-your-own`: the AI apps Margin adds itself to (the list in `MCPInstaller.swift`) and
     the models the assistant can run on (`AssistantProvider`), as bobbing chips. Keep both lists
-    in step with the app.
+    in step with the app. "Claude subscription" and "ChatGPT subscription" are the Claude Code
+    and Codex providers (your own sign-in, no API key); "Claude API" and "ChatGPT API" use a key.
+  - "Writes like you" in the "And the rest" grid, and "replies that sound like you" on the
+    Assistant tab, are the writing profile (`WritingProfile`): learned on the device from sent
+    mail, plus the optional "Study My Writing" description. `/privacy` says what each sends.
   - The FAQ (`questions` in `routes/index.tsx`, native `<details>`), the contact cards (the
-    address and X handles in `src/site.ts`), "Why we made it", the blue closing panel, and the
-    Relevate logo in the footer (`relevate-logo`).
+    address and X handles in `src/site.ts`, and the GitHub repository), "Why we made it", the
+    blue closing panel, and the Relevate logo in the footer (`relevate-logo`).
   Everything stops for people who turn on Reduce Motion.
+- Margin is open source: the code is at https://github.com/rlvtapp/margin (`site.source`). The
+  home page says so under the hero's buttons, in the FAQ, in a contact card, in "Why we made it"
+  and on the closing panel; the shared footer (`components/chrome.tsx`) links it as "Source
+  code" on every page, and the support page's Contact section mentions it. Plain links only: no
+  GitHub buttons, star counts or anything else that loads from GitHub.
 - What the page says about servers has to stay true: mail never passes through one of ours, but
   the notification relay for iPhone and iPad is ours. Say "your mail never passes through a
   server of ours", not "no server".
+- The Mac app is a direct download, not on the Mac App Store (it isn't sandboxed; see
+  [release.md](release.md)). Until there's a file to link, the hero button, the FAQ and the
+  closing panel say "coming soon"; when there is, make the hero button a real download link.
 - Light and dark follow the system until someone uses the switch in the header; the choice is
   kept in `localStorage` and applied before the page paints.
 - The contact address, source link, publisher and the "last updated" date are in
@@ -66,10 +78,18 @@ pnpm types:check
 - Pictures are in `site/public/images/`. The Mac ones (`mac-hero`, `mac-home`, `mac-calendar`,
   `mac-subs`, each `-light` and `-dark`) are pictures of the real window, taken by the app's
   `-snapshot` mode ([architecture.md](architecture.md)) with `-snapshot-size 1520x940
-  -snapshot-glass`: the window comes up on a Retina screen for a moment and the system's own
-  picture of it is saved, so Liquid Glass and the scrolling parts are in it. Then
-  `sips -s format jpeg -s formatOptions 80 -Z 2600`. The pictures have square corners; the page
-  rounds them to the window's own corners (`.showcase-window`). `margin-iphone-*` is the iPhone.
+  -snapshot-no-next-up -snapshot-glass` (Next up stays closed on the pictures): the window
+  comes up behind your other windows for a moment and the system's own picture of it is saved,
+  so Liquid Glass and the scrolling parts are in it. Launch it in the background so it doesn't
+  take over the screen, and keep the pointer off the window's top left (a row under it shows
+  its hover buttons):
+  `open -g -W -n -a .build/xcode-snapshot/Build/Products/Debug/Margin.app --args -snapshot
+  /tmp/mac-home-dark.png -appearance dark -snapshot-size 1520x940 -snapshot-place home
+  -snapshot-no-next-up -snapshot-glass`. The hero is `-snapshot-select "Lisbon"`, the others
+  `-snapshot-place home`, `calendar` and `subscription`. Then
+  `sips -s format jpeg -s formatOptions 80 -Z 2600`. The window isn't the active one, so its
+  buttons at the top left are grey. The pictures have square corners; the page rounds them to
+  the window's own corners (`.showcase-window`).
   `share.jpg` is the 1200×630 preview card for links, and `apple-touch-icon.png` the home-screen
   icon.
 - The icon (`site/public/icon.svg`) is the default app icon from `Apps/Shared/AppIcon.icon`.

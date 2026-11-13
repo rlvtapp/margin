@@ -61,6 +61,8 @@ public protocol MailLanguageModel: Sendable {
     func answer(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> MailAnswer
     /// A rule for new mail from the person's own words. The default asks for JSON and reads it.
     func ruleParts(_ request: ModelRequest) async throws -> RuleParts
+    /// "3: Travel" lines for a batch of numbered conversations. The default asks for text.
+    func groupLines(_ request: ModelRequest) async throws -> String
     /// A draft, handing over the text written so far as it comes in. The default waits for the
     /// whole draft.
     func reply(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> String
@@ -75,6 +77,10 @@ extension MailLanguageModel {
 
     public func ruleParts(_ request: ModelRequest) async throws -> RuleParts {
         try RuleParts.parse(try await reply(request))
+    }
+
+    public func groupLines(_ request: ModelRequest) async throws -> String {
+        try await reply(request)
     }
 
     public func answer(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> MailAnswer {
@@ -278,22 +284,58 @@ public actor MailIntelligence {
         )
     }
 
-    /// The group a conversation belongs in, from `groups`, or nil when none fits.
-    public func classify(_ thread: MailThread, bodies: [String: MessageBody], groups: [EmailGroup]) async throws -> EmailGroup? {
-        let answer = try await model.reply(Self.groupRequest(thread, bodies: bodies, groups: groups, budget: min(model.transcriptBudget, 4000)))
-        return Self.matchGroup(answer, in: groups)
+    /// How many conversations go into one sorting request: fewer for a model with a small
+    /// context window (Apple's on this Mac: 20 take about 3 seconds), more for the rest.
+    public nonisolated var sortingBatchSize: Int { sortsInParallel ? 30 : 20 }
+
+    /// Whether a few sorting requests can run at once; Apple's model on this Mac takes one
+    /// at a time.
+    public nonisolated var sortsInParallel: Bool { model.transcriptBudget >= 10_000 }
+
+    /// The group for each of a batch of conversations, by conversation id; a conversation the
+    /// model left out, or put in no group, isn't in the result. One request for the whole
+    /// batch, from what the list shows (sender, subject, preview), the way an AI app sorts
+    /// over MCP: no bodies to download and no request per conversation.
+    public func classify(batch threads: [MailThread], groups: [EmailGroup]) async throws -> [String: EmailGroup] {
+        guard !threads.isEmpty else { return [:] }
+        let request = Self.batchGroupRequest(threads, groups: groups, budget: min(model.transcriptBudget, 12_000))
+        return Self.matchGroups(try await model.groupLines(request), threads: threads, groups: groups)
     }
 
-    static func groupRequest(_ thread: MailThread, bodies: [String: MessageBody], groups: [EmailGroup], budget: Int) -> ModelRequest {
+    static func batchGroupRequest(_ threads: [MailThread], groups: [EmailGroup], budget: Int) -> ModelRequest {
         let list = groups.map { "- \($0.name): \($0.detail)" }.joined(separator: "\n")
+        // What's left after the groups, shared out over the conversations.
+        let preview = max(80, min(300, (budget - list.count) / max(threads.count, 1) - 150))
+        let conversations = threads.enumerated().map { index, thread in
+            let snippet = thread.latest.snippet.split(whereSeparator: \.isNewline).joined(separator: " ")
+            return """
+            \(index + 1). From: \(thread.latest.from.headerValue)
+            Subject: \(thread.subject)
+            Preview: \(snippet.prefix(preview))
+            """
+        }.joined(separator: "\n\n")
         return ModelRequest(
             task: .reply,
             instructions: """
-            You sort email into one of the person's groups. Answer with the group's name exactly as written, \
-            and nothing else. Answer None when no group clearly fits.
+            You sort email into the person's groups. For each numbered conversation, write one line: its number, \
+            a colon, and the group's name exactly as written, like "3: Travel". Write None instead of a name when \
+            no group clearly fits. Write nothing else.
             """,
-            prompt: "Groups:\n\(list)\n\nWhich group does this conversation belong in?\n\n" + Transcript.build(thread, bodies: bodies, budget: budget)
+            prompt: "Groups:\n\(list)\n\nConversations:\n\n\(conversations)"
         )
+    }
+
+    /// Reads "3: Travel" lines back into a group per conversation id.
+    static func matchGroups(_ answer: String, threads: [MailThread], groups: [EmailGroup]) -> [String: EmailGroup] {
+        var found: [String: EmailGroup] = [:]
+        for line in answer.split(whereSeparator: \.isNewline) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces.union(CharacterSet(charactersIn: "-*#")))
+            let digits = trimmed.prefix(while: \.isNumber)
+            guard let number = Int(digits), (1...threads.count).contains(number) else { continue }
+            let rest = trimmed.dropFirst(digits.count).drop { ":.)-–— \t".contains($0) }
+            if let group = matchGroup(String(rest), in: groups) { found[threads[number - 1].id] = group }
+        }
+        return found
     }
 
     /// Finds the group a model named, forgiving quotes, case and trailing punctuation.

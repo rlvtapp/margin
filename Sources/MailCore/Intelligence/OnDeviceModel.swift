@@ -209,6 +209,24 @@ struct AppleModel: MailLanguageModel {
         var mailbox: String
     }
 
+    @Generable struct Groups {
+        @Guide(description: "One entry per numbered conversation, in order: the group's name exactly as written, or None.")
+        var groups: [String]
+    }
+
+    /// Sorting asks for a list rather than text: through the plain reply the model sometimes
+    /// writes an email instead. Greedy, so the same mail always lands in the same group.
+    func groupLines(_ request: ModelRequest) async throws -> String {
+        try await plainErrors {
+            let result = try await session(request).respond(to: request.prompt, generating: Groups.self,
+                                                            options: GenerationOptions(sampling: .greedy)).content
+            // It often numbers the entries itself ("3: Travel"); its own number wins.
+            return result.groups.enumerated().map { index, entry in
+                entry.first?.isNumber == true ? entry : "\(index + 1): \(entry)"
+            }.joined(separator: "\n")
+        }
+    }
+
     func ruleParts(_ request: ModelRequest) async throws -> RuleParts {
         try await plainErrors {
             let rule = try await session(request).respond(to: request.prompt, generating: Rule.self).content

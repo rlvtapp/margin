@@ -110,6 +110,12 @@ extension MailModel {
 
     public func removeLabel(_ label: String, from thread: MailThread) {
         labelStore.remove(label, from: thread)
+        // Taking a conversation out of its group this way (the label's ✕) lets Sort Now look at
+        // it again; "Not in a group" (`move(_:toGroup:)`) marks it to stay out afterwards.
+        if emailGroups.contains(where: { $0.name.caseInsensitiveCompare(label) == .orderedSame }),
+           sortingChecked[LabelStore.key(for: thread)] != nil {
+            sortingChecked[LabelStore.key(for: thread)] = nil
+        }
     }
 
     /// How many conversations carry each label.

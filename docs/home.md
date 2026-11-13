@@ -53,7 +53,7 @@ search, AI apps, backups.
   on the device or with the person's own key.
 - **Without it**, only clear cases are sorted, by rules (`EmailSorter.ruleGroup`): invoices,
   receipts, orders, travel, invitations, account notices and newsletters.
-- **Sort now** works through the inbox, shows how far it is, and can be stopped.
+- **Sort now** works through the inbox, shows how far it is, and can be stopped. It looks at conversations it hasn't seen, or that got a new message since. Taking one out of its group with the label's ✕ lets it look again; **Not in a group** (Move to group) keeps it out for good (`MailModel.keptOut`). With nothing new, it looks once more at the conversations nothing fitted (`MailModel.lookedAgain` marks them, so a further click doesn't go round again until new mail arrives in them), and says "Nothing new to sort" when there are none, or "None of them fit a group" when a run sorts nothing.
 - **Sort new mail as it arrives** sorts the last few hours' mail every minute or so.
 
 **Code:** `MailCore/Triage/EmailGroups.swift`, `MailUI/Model/MailModel+Sorting.swift`,

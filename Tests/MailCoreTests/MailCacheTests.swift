@@ -1,4 +1,5 @@
 import Foundation
+import SQLite3
 import Testing
 @testable import MailCore
 
@@ -78,5 +79,124 @@ import Testing
         }
         let reopened = MailCache(url: url)
         #expect(await reopened.threads(account: account, mailbox: "INBOX").first?.subject == "Kept")
+    }
+}
+
+/// Saved mail at size: a refresh writes only what changed, older pages stay, and a file from
+/// before row numbers is brought up to date with nothing lost.
+@Suite struct MailCacheScaleTests {
+    let account = UUID()
+
+    func thread(_ index: Int, flags: MessageFlags = []) -> MailThread {
+        let message = MailMessage(id: "INBOX/\(index)", mailboxID: "INBOX", messageID: "<\(index)@example.com>",
+                                  from: EmailAddress(name: "Sender \(index % 7)", address: "sender\(index % 7)@example.com"),
+                                  to: [EmailAddress(address: "me@example.com")], subject: "Subject \(index)",
+                                  date: Date(timeIntervalSince1970: 1_700_000_000 - Double(index) * 60), snippet: "Preview \(index)", flags: flags)
+        return MailThread(id: "t\(index)", messages: [message])
+    }
+
+    @Test func aRefreshWithNothingNewWritesNothing() async {
+        let cache = MailCache(url: nil)
+        let page = (0..<200).map { thread($0) }
+        await cache.saveThreads(page, account: account, mailbox: "INBOX", limit: 200)
+        #expect(await cache.rowsWritten == 200)
+        await cache.saveThreads(page, account: account, mailbox: "INBOX", limit: 200)
+        #expect(await cache.rowsWritten == 200)
+        // One read mark: one row.
+        var changed = page
+        changed[3] = thread(3, flags: [.seen])
+        await cache.saveThreads(changed, account: account, mailbox: "INBOX", limit: 200)
+        #expect(await cache.rowsWritten == 201)
+        #expect(await cache.threads(account: account, mailbox: "INBOX").first { $0.id.hasSuffix("/3") || $0.messages[0].id == "INBOX/3" }?.isUnread == false)
+        // Still found by its words after the flag changed.
+        #expect(await cache.search("Subject 3").contains { $0.message.id == "INBOX/3" })
+    }
+
+    @Test func olderPagesStayWhenTheNewestPageIsSavedAgain() async {
+        let cache = MailCache(url: nil)
+        // The list was scrolled: 600 conversations were saved, in three pages.
+        await cache.saveThreads((0..<600).map { thread($0) }, account: account, mailbox: "INBOX", limit: 600)
+        #expect(await cache.messageCount(account: account, mailbox: "INBOX") == 600)
+        // Next launch the newest 200 come back, one of them gone and one new.
+        let newest = [thread(-1)] + (0..<200).filter { $0 != 5 }.map { thread($0) }
+        await cache.saveThreads(Array(newest.prefix(200)), account: account, mailbox: "INBOX", limit: 200)
+        // The one that left is out of the folder; the pages below the snapshot are untouched.
+        #expect(await cache.messageCount(account: account, mailbox: "INBOX") == 600)
+        let ids = Set(await cache.threads(account: account, mailbox: "INBOX", limit: 700).flatMap { $0.messages.map(\.id) })
+        #expect(!ids.contains("INBOX/5"))
+        #expect(ids.contains("INBOX/-1"))
+        #expect(ids.contains("INBOX/599"))
+        // The next page down, as the list asks for it.
+        let oldestShown = thread(198).date
+        let older = await cache.threads(account: account, mailbox: "INBOX", limit: 200, before: oldestShown)
+        #expect(older.count == 200)
+        #expect(older.first?.messages[0].id == "INBOX/199")
+        #expect(older.last?.messages[0].id == "INBOX/398")
+    }
+
+    @Test func aWholeSnapshotStillEmptiesWhatLeft() async {
+        let cache = MailCache(url: nil)
+        await cache.saveThreads((0..<50).map { thread($0) }, account: account, mailbox: "INBOX", limit: 200)
+        // Fewer than asked for: this is the whole folder, so anything else has left it.
+        await cache.saveThreads((0..<10).map { thread($0) }, account: account, mailbox: "INBOX", limit: 200)
+        #expect(await cache.messageCount(account: account, mailbox: "INBOX") == 10)
+        #expect(await cache.search("Subject 40").count == 1)   // still searchable
+    }
+
+    @Test func removingAnAccountTakesItsSearchRowsToo() async {
+        let cache = MailCache(url: nil)
+        let other = UUID()
+        await cache.saveThreads((0..<20).map { thread($0) }, account: account, mailbox: "INBOX")
+        await cache.saveThreads((100..<110).map { thread($0) }, account: other, mailbox: "INBOX")
+        #expect(await cache.savedAccounts() == [account, other])
+        await cache.removeAccount(account)
+        #expect(await cache.savedAccounts() == [other])
+        #expect(await cache.search("Subject 13").isEmpty)
+        #expect(await cache.search("Subject 103").count == 1)
+        #expect(await cache.messageCount() == 10)
+    }
+
+    @Test func correspondentsComeFromWhatYouSent() async {
+        let cache = MailCache(url: nil)
+        var sent = MailMessage(id: "Sent/1", mailboxID: "Sent", from: EmailAddress(address: "Me@Example.com"), to: [EmailAddress(address: "Noor@Example.com")],
+                               cc: [EmailAddress(address: "sam@example.com")], subject: "Hi", date: Date())
+        sent.messageID = "<s1@example.com>"
+        await cache.saveThreads([MailThread(id: "s", messages: [sent]), thread(1)], account: account, mailbox: "Sent")
+        #expect(await cache.correspondents(of: ["me@example.com"]) == ["noor@example.com", "sam@example.com"])
+    }
+
+    /// A database written by a build from before row numbers opens with everything in place:
+    /// folders, messages, opened text, and search.
+    @Test func aFileFromBeforeIsBroughtUpToDate() async throws {
+        let url = FileManager.default.temporaryDirectory.appending(path: "margin-cache-\(UUID().uuidString).sqlite")
+        defer { for suffix in ["", "-wal", "-shm"] { try? FileManager.default.removeItem(atPath: url.path + suffix) } }
+        var db: OpaquePointer?
+        #expect(sqlite3_open(url.path, &db) == SQLITE_OK)
+        let message = thread(7).messages[0]
+        let json = String(decoding: try JSONEncoder().encode(message), as: UTF8.self).replacingOccurrences(of: "'", with: "''")
+        let body = String(decoding: try JSONEncoder().encode(MessageBody(text: "The quarterly figures are attached.")), as: UTF8.self)
+        let setUp = """
+        CREATE TABLE messages (account TEXT NOT NULL, id TEXT NOT NULL, mailbox TEXT, date REAL, json BLOB NOT NULL, body BLOB, PRIMARY KEY (account, id));
+        CREATE INDEX messages_by_mailbox ON messages (account, mailbox, date DESC);
+        CREATE TABLE mailboxes (account TEXT PRIMARY KEY, json BLOB NOT NULL);
+        CREATE VIRTUAL TABLE search USING fts5(account UNINDEXED, id UNINDEXED, subject, people, body, tokenize = 'unicode61 remove_diacritics 2');
+        INSERT INTO messages VALUES ('\(account.uuidString)', 'INBOX/7', 'INBOX', \(message.date.timeIntervalSince1970), CAST('\(json)' AS BLOB), CAST('\(body)' AS BLOB));
+        INSERT INTO search (account, id, subject, people, body) VALUES ('\(account.uuidString)', 'INBOX/7', 'Subject 7', 'Sender 0 sender0@example.com', 'The quarterly figures are attached.');
+        INSERT INTO search (account, id, subject, people, body) VALUES ('\(account.uuidString)', 'gone', 'Left behind', '', 'no message for this row');
+        """
+        #expect(sqlite3_exec(db, setUp, nil, nil, nil) == SQLITE_OK)
+        sqlite3_close(db)
+
+        let cache = MailCache(url: url)
+        #expect(await cache.messageCount() == 1)
+        #expect(await cache.threads(account: account, mailbox: "INBOX").first?.subject == "Subject 7")
+        #expect(await cache.body(of: "INBOX/7", account: account)?.text == "The quarterly figures are attached.")
+        #expect(await cache.search("quarterly").map(\.message.id) == ["INBOX/7"])
+        #expect(await cache.search("behind").isEmpty)
+        #expect(await cache.people(matching: "sender").map(\.address) == ["sender0@example.com"])
+        // Saving the same message again finds its row instead of adding another.
+        await cache.saveThreads([thread(7)], account: account, mailbox: "INBOX")
+        #expect(await cache.messageCount() == 1)
+        #expect(await cache.search("quarterly").count == 1)
     }
 }

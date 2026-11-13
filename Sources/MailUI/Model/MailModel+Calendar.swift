@@ -222,6 +222,28 @@ extension MailModel {
         set { environment.defaults.set(newValue, forKey: "eventReminderMinutes"); alertRevision += 1; scheduleEventReminders() }
     }
 
+    /// The sound of meeting reminders, apart from new mail's, so a meeting doesn't pass for an email.
+    public var reminderSound: AlertSound {
+        get { _ = alertRevision; return AlertSound(name: environment.defaults.string(forKey: "reminderSound") ?? "default") }
+        set {
+            environment.defaults.set(newValue.name, forKey: "reminderSound")
+            alertRevision += 1
+            playAlertSound(newValue)
+            scheduleEventReminders()
+        }
+    }
+
+    #if canImport(UserNotifications)
+    /// What a reminder plays: the system's own sound for Margin's default, a named one, or none.
+    static func notificationSound(_ sound: AlertSound) -> UNNotificationSound? {
+        switch sound.name {
+        case "none": nil
+        case "default": .default
+        default: UNNotificationSound(named: UNNotificationSoundName(sound.name + ".aiff"))
+        }
+    }
+    #endif
+
     /// Replaces the pending reminders with one per upcoming event.
     func scheduleEventReminders() {
         #if canImport(UserNotifications)
@@ -242,7 +264,7 @@ extension MailModel {
                     + (event.location.map { " · " + $0 } ?? "")
                 content.userInfo = ["threadID": event.threadID]
                 content.interruptionLevel = .timeSensitive
-                content.sound = .default
+                content.sound = Self.notificationSound(reminderSound)
                 let parts = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: when)
                 let request = UNNotificationRequest(identifier: "event-\(event.id)", content: content,
                                                     trigger: UNCalendarNotificationTrigger(dateMatching: parts, repeats: false))
@@ -256,21 +278,48 @@ extension MailModel {
 extension MailModel {
     /// Loads the bodies of the newest conversations in the inbox, from the offline cache when
     /// they're there, so opening them is instant.
-    func readAhead(count: Int = 12) async {
-        guard !environment.isPreview else { return }
-        for thread in inboxThreads(nil).prefix(count) {
-            guard let account = account(thread.accountID) else { continue }
-            for message in thread.messages.suffix(3) {
-                let key = Self.bodyKey(thread.accountID, message.id)
-                guard bodies[key] == nil else { continue }
-                if let body = message.body {
-                    bodies[key] = body
-                } else if let saved = await environment.cache.body(of: message.id, account: account.id) {
-                    bodies[key] = saved
-                } else if let provider = try? provider(for: account), let body = try? await provider.body(of: message) {
-                    bodies[key] = body
-                    await environment.cache.saveBody(body, of: message, account: account.id)
-                }
+    func readAhead(count: Int = 20) async {
+        guard readsAhead else { return }
+        for thread in newestInInboxes(count) {
+            await readAhead(thread)
+            forgetNote(of: thread.id)
+        }
+    }
+
+    /// Fetches a conversation's latest messages before they're asked for, on the background
+    /// connection, and saves them, so opening it shows the text at once.
+    func readAhead(_ thread: MailThread) async {
+        guard let account = account(thread.accountID) else { return }
+        for message in thread.messages.suffix(3) {
+            guard !Task.isCancelled else { return }
+            let key = Self.bodyKey(thread.accountID, message.id)
+            guard bodies[key] == nil else { continue }
+            if let body = message.body {
+                bodies[key] = body
+            } else if let saved = await environment.cache.body(of: message.id, account: account.id) {
+                bodies[key] = saved
+            } else if let provider = try? provider(for: account), let body = try? await provider.body(of: message) {
+                // The open conversation may have fetched it meanwhile; a start isn't put back
+                // over the whole message.
+                if bodies[key] == nil || bodies[key]?.isPartial == true { bodies[key] = body }
+                await environment.cache.saveBody(body, of: message, account: account.id)
+            }
+        }
+    }
+
+    /// While one conversation is being read, the ones you're most likely to open next are
+    /// fetched: the two below it in the list and the one above. Choosing another conversation
+    /// starts this over from there.
+    func readAhead(around thread: MailThread) {
+        neighbourReading?.cancel()
+        guard readsAhead else { return }
+        let threads = listSections(visibleThreads)?.flatMap(\.threads) ?? visibleThreads
+        guard let index = threads.firstIndex(where: { $0.id == thread.id }) else { return }
+        let next = [index + 1, index + 2, index - 1].filter(threads.indices.contains).map { threads[$0] }
+        neighbourReading = Task { [weak self] in
+            for neighbour in next {
+                guard !Task.isCancelled else { return }
+                await self?.readAhead(neighbour)
             }
         }
     }

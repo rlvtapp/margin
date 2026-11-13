@@ -33,6 +33,27 @@ import Testing
         return ms
     }
 
+    /// Clicking All, Important or Other: the switch itself and the first draw of the new list.
+    @Test func switchingInboxTabsIsQuick() async {
+        let model = await bigModel()
+        let tabs: [InboxSplit?] = [nil] + InboxSplit.tabs + [nil]
+        var worst = 0.0
+        for (index, split) in tabs.enumerated() {
+            // Measured cold, as a click is: the place before was another tab.
+            let elapsed = ContinuousClock().measure {
+                model.go(to: .inbox(account: nil, split: split))
+                _ = model.visibleThreads
+                _ = model.listCount
+                for tab in InboxSplit.tabs { _ = model.unreadCount(account: nil, split: tab) }
+                _ = model.selectedThread
+            }
+            let ms = Double(elapsed.components.attoseconds) / 1e15 + Double(elapsed.components.seconds) * 1000
+            print(String(format: "PERF switch to %@ #%d %8.2f ms", (split.map { $0.tabTitle } ?? "All") as NSString, index, ms))
+            worst = max(worst, ms)
+        }
+        #expect(worst < 50, "a tab switch takes \(worst) ms with 2,000 conversations")
+    }
+
     @Test func redrawWorkStaysWithinAFrame() async {
         let model = await bigModel()
         var results: [String: Double] = [:]

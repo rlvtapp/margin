@@ -13,21 +13,47 @@ extension MailModel {
     /// The starter group bills sort into (its name doesn't change).
     static let billsGroupName = EmailGroup.starters[3].name
 
+    /// How far back a conversation can still "need you" because of its date: a reply is owed
+    /// for three weeks, and a sign-in code older than that is no use to anyone. Meetings and
+    /// bills count at any age. It's also what keeps "needs you" from reading the whole mailbox:
+    /// only mail this recent is looked at, plus the conversations with a meeting or a bill.
+    static let noteHorizon: TimeInterval = 21 * 86_400
+
     /// The note for a conversation, most important reason first; nil when nothing calls for one.
     public func marginNote(for thread: MailThread, now: Date = Date()) -> MarginNote? {
         // Every Home row, the Home header and the account column ask for notes on each redraw;
         // they're worked out once and kept until something they depend on changes.
-        let key = marginNoteKey(now: now)
+        marginNote(for: thread, now: now, key: marginNoteKey(now: now))
+    }
+
+    /// The note for a conversation, with the cache key already worked out: asking for the notes
+    /// of many conversations (the "needs you" count in the account column does, on each redraw)
+    /// works the key out once, not once per conversation. A kept note is found by the
+    /// conversation's id alone, and holds as long as its newest message and that message's
+    /// flags are the same.
+    private func marginNote(for thread: MailThread, now: Date, key: Int) -> MarginNote? {
+        _ = noteRevision
         if marginNoteCache?.key != key { marginNoteCache = (key, [:]) }
-        let threadKey = "\(thread.accountID?.uuidString ?? "-")|\(thread.id)|\(thread.latest.id)|\(thread.latest.flags.rawValue)"
-        if let known = marginNoteCache?.notes[threadKey] { return known }
+        let latest = thread.latest
+        if let known = marginNoteCache?.notes[thread.id], known.flags == latest.flags.rawValue, known.latest == latest.id {
+            return known.note
+        }
         let note = computeMarginNote(for: thread, now: now)
-        marginNoteCache?.notes[threadKey] = .some(note)
+        marginNoteCache?.notes[thread.id] = KeptNote(latest: latest.id, flags: latest.flags.rawValue, note: note)
         return note
     }
 
+    /// A message's text arrived: a sign-in code may be in it, so the conversation's note is
+    /// worked out again.
+    func forgetNote(of threadID: String) {
+        guard marginNoteCache?.notes[threadID] != nil else { return }
+        marginNoteCache?.notes[threadID] = nil
+        noteRevision &+= 1
+    }
+
     /// Changes whenever anything a note depends on does: the minute (meeting times, "owed 3d"),
-    /// Sent, meetings, labels and groups, rules, contacts, and message bodies (sign-in codes).
+    /// Sent, meetings, labels and groups, rules and contacts. (A message's text arriving is
+    /// told to the one conversation it belongs to: `forgetNote`.)
     private func marginNoteKey(now: Date) -> Int {
         var hasher = Hasher()
         hasher.combine(Int(now.timeIntervalSince1970 / 60))
@@ -38,15 +64,15 @@ extension MailModel {
         hasher.combine(rsvps.count)
         hasher.combine(sortingRevision)
         hasher.combine(priorityRevision)
-        hasher.combine(labelStore.labelsByThread.count)
-        hasher.combine(labelStore.labelsByThread.values.reduce(0) { $0 + $1.count })
+        hasher.combine(labelStore.revision)
         hasher.combine(contacts.count)
-        hasher.combine(bodies.count)
         return hasher.finalize()
     }
 
     private func computeMarginNote(for thread: MailThread, now: Date) -> MarginNote? {
-        if signInCode(in: thread) != nil { return MarginNote(kind: .code, text: String(localized: "code")) }
+        if now.timeIntervalSince(thread.latest.date) < Self.noteHorizon, signInCode(in: thread) != nil {
+            return MarginNote(kind: .code, text: String(localized: "code"))
+        }
         if let event = calendarEntries.first(where: { $0.threadID == thread.id && !$0.cancelled && $0.finish > now }) {
             let calendar = Calendar.current
             let time = event.start.formatted(date: .omitted, time: .shortened)
@@ -59,7 +85,10 @@ extension MailModel {
             }
             return MarginNote(kind: .meeting, text: text)
         }
-        if let group = group(of: thread), group.name == Self.billsGroupName {
+        // In the Bills group, but only a bill to act on when it asks you to pay: an invoice
+        // that's taken automatically, or a receipt, needs nothing.
+        if let group = group(of: thread), group.name == Self.billsGroupName,
+           MailNotice.asksForPayment(subject: thread.latest.subject, text: latestText(of: thread)) {
             return MarginNote(kind: .bill, text: String(localized: "bill"))
         }
         if owesReply(thread, now: now) {
@@ -77,8 +106,16 @@ extension MailModel {
               now.timeIntervalSince(latest.date) < 21 * 86_400 else { return false }
         // Answered from anywhere (another app, the web, another device): your reply is in Sent,
         // even when the server doesn't mark their message as answered.
-        guard !answeredInSent(thread) else { return false }
-        return isFromSomeoneYouKnow(thread)
+        guard !answeredInSent(thread), isFromSomeoneYouKnow(thread) else { return false }
+        // A reminder, confirmation or receipt from someone you know still asks nothing. Read
+        // last, as the costliest check, only for mail that passed the rest.
+        return !MailNotice.expectsNoReply(subject: latest.subject, text: latestText(of: thread))
+    }
+
+    /// The newest message's words: its text once downloaded, its preview until then.
+    func latestText(of thread: MailThread) -> String {
+        let latest = thread.latest
+        return body(of: latest, in: thread)?.text ?? latest.snippet
     }
 
     /// Whether something you sent answers the conversation's latest message: a reply to it by
@@ -103,22 +140,85 @@ extension MailModel {
     }
 
     /// How many conversations on Home have a note: what needs you.
-    public var needYouCount: Int { needsYou().count }
+    public var needYouCount: Int { needingYou.count }
+
+    /// Home's one sentence about what needs you, kept the same way as the count.
+    public var homeSummaryNow: String {
+        derived.homeSummary.value { _ = clockTick; return homeSummary() }
+    }
+
+    /// A conversation on Home with its note.
+    struct Needing {
+        var thread: MailThread
+        var note: MarginNote
+    }
+
+    /// What needs you, kept until the mail, labels, Sent or meetings change, or the clock ticks
+    /// (the notes follow the time of day). The account column and Home ask on every redraw.
+    var needingYou: [Needing] {
+        derived.needingYou.value { _ = clockTick; return computeNeedingYou(now: Date()) }
+    }
+
+    /// The conversations that can have a note for a reason other than being recent: the ones
+    /// with a meeting still to come, and the ones in the bills group. Found by one look through
+    /// the mail when conversations arrive or leave, and kept (as id and date) in between.
+    private var olderNoteCandidates: [(id: String, date: Date)] {
+        derived.noteCandidates.value {
+            _ = inboxOrder
+            let now = Date()
+            let meetings = Set(calendarEntries.lazy.filter { !$0.cancelled && $0.finish > now }.map(\.threadID))
+            let billsName = Self.billsGroupName
+            let bills = KeyLookup(labelStore.labelsByThread.lazy.filter { entry in
+                entry.value.contains { $0.caseInsensitiveCompare(billsName) == .orderedSame }
+            }.map(\.key))
+            guard !meetings.isEmpty || !bills.isEmpty else { return [] }
+            let horizon = now.addingTimeInterval(-Self.noteHorizon)
+            var found: [(id: String, date: Date)] = []
+            for id in allInboxesAccounts {
+                guard let shelf = shelves[id] else { continue }
+                for thread in shelf.threads[shelf.countNewer(than: horizon)...] where meetings.contains(thread.id) || bills.contains(thread) {
+                    found.append((thread.id, thread.date))
+                }
+            }
+            return found.sorted { $0.date > $1.date }
+        }
+    }
+
+    private func computeNeedingYou(now: Date) -> [Needing] {
+        _ = inboxRevision
+        let key = marginNoteKey(now: now)
+        let horizon = now.addingTimeInterval(-Self.noteHorizon)
+        let snoozed = KeyLookup(snoozes.lazy.filter { $0.value > now }.map(\.key))
+        var found: [Needing] = []
+        func consider(_ thread: MailThread) {
+            guard !snoozed.contains(thread), let note = marginNote(for: thread, now: now, key: key) else { return }
+            found.append(Needing(thread: thread, note: note))
+        }
+        // Recent mail, newest first across the mailboxes…
+        let recent = allInboxesAccounts.map { shelves[$0] ?? InboxShelf() }
+        let reader = ShelfReader(shelves: recent, rows: recent.map { $0.countNewer(than: horizon) })
+        reader.walk(filter: .everything) { shelf, row in
+            consider(reader.shelves[shelf].threads[row])
+            return true
+        }
+        // …then the older conversations with a meeting or a bill.
+        for candidate in olderNoteCandidates {
+            if let thread = inboxThread(candidate.id, date: candidate.date) { consider(thread) }
+        }
+        return found
+    }
 
     /// The conversations on Home that have a note, newest first, each with its note: all
     /// inboxes, not snoozed. `only` narrows them (AI apps don't see hidden mailboxes).
     public func needsYou(now: Date = Date(), only: ((MailThread) -> Bool)? = nil) -> [(thread: MailThread, note: MarginNote)] {
-        allInboxesThreads(nil).compactMap { thread in
-            guard !isSnoozed(thread), only?(thread) ?? true, let note = marginNote(for: thread, now: now) else { return nil }
-            return (thread, note)
-        }
+        needingYou.compactMap { only?($0.thread) ?? true ? ($0.thread, $0.note) : nil }
     }
 
     /// "Two replies to write and a bill to open. Quarterly planning at 10:00." Or, with
     /// nothing waiting, "Nothing needs you right now." The line under Home's date.
     public func homeSummary(now: Date = Date(), only: ((MailThread) -> Bool)? = nil) -> String {
         var parts: [String] = []
-        let owed = allInboxesThreads(nil).filter { !isSnoozed($0) && (only?($0) ?? true) && owesReply($0, now: now) }.count
+        let owed = needingYou.filter { $0.note.kind == .reply && (only?($0.thread) ?? true) }.count
         if owed > 0 { parts.append(owed == 1 ? String(localized: "a reply to write") : String(localized: "\(owed) replies to write")) }
         let bills = unopenedBills.filter { only?($0) ?? true }.count
         if bills > 0 { parts.append(bills == 1 ? String(localized: "a bill to open") : String(localized: "\(bills) bills to open")) }
@@ -136,6 +236,13 @@ extension MailModel {
     public var homeDate: String {
         Date().formatted(.dateTime.weekday(.wide).day().month(.wide))
     }
+}
+
+/// A conversation's note as it was worked out, with what it was worked out for.
+struct KeptNote {
+    var latest: String
+    var flags: Int
+    var note: MarginNote?
 }
 
 /// Sent mail reduced to what "have I answered this?" needs.

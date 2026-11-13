@@ -166,7 +166,43 @@ public final class MailModel {
     public let environment: MailEnvironment
     public internal(set) var accounts: [MailAccount]
     public internal(set) var mailboxes: [UUID: [Mailbox]] = [:]
-    public internal(set) var inboxes: [UUID: [MailThread]] = [:]
+    /// Each mailbox's inbox (see `InboxShelf`). Not watched itself: the two numbers below are,
+    /// so that a read mark doesn't make everything that depends on the order start over.
+    @ObservationIgnored var shelves: [UUID: InboxShelf] = [:]
+    /// Goes up with every change to an inbox, a read mark included.
+    var inboxRevision = 0
+    /// Goes up when conversations arrive, leave or change places; not for read marks and stars.
+    var inboxOrder = 0
+    /// How many rows the list shows; it grows as its end comes on screen (`listReachedEnd`).
+    public internal(set) var listWindow = MailModel.listPage
+    /// How many conversations each mailbox's inbox is asked for; it grows when the list is
+    /// scrolled past what's loaded, and goes back when the list is left.
+    @ObservationIgnored var inboxLimits: [UUID: Int] = [:]
+    /// How many conversations the open folder is asked for.
+    @ObservationIgnored var folderLimit = MailModel.listPage
+    /// Mailboxes (and the open folder, under nil) whose older mail is all here already.
+    @ObservationIgnored var reachedOldest: Set<UUID?> = []
+    /// Older mail is being fetched for the list.
+    public internal(set) var isLoadingOlder = false
+    /// How much of each folder this device keeps, downloaded in the background (per device).
+    public var keepMail: KeepMail { didSet { environment.defaults.set(keepMail.rawValue, forKey: "keepMail") } }
+    /// How far back mail's text is saved ahead of time (per device).
+    public var keepText: KeepText { didSet { environment.defaults.set(keepText.rawValue, forKey: "keepText"); textWalked = [:] } }
+    /// Per mailbox, how far down this walk for texts has come (see `downloadTexts`).
+    @ObservationIgnored var textWalked: [UUID: Date] = [:]
+    @ObservationIgnored var textWalkStarted: Date?
+    @ObservationIgnored var downloadedTexts = 0
+    /// The background download is fetching pages now.
+    public internal(set) var isDownloadingOlder = false
+    /// What's saved on this device, once asked for (`refreshSavedMailUsage`).
+    public internal(set) var savedMailUsage: SavedMailUsage?
+    @ObservationIgnored var downloadTask: Task<Void, Never>?
+    /// The pause between pages of the background download.
+    @ObservationIgnored var downloadPause: Duration = .seconds(2)
+    @ObservationIgnored var downloadedPages = 0
+    @ObservationIgnored var downloadNetwork: DownloadNetwork?
+    /// Where the open conversation was last seen, so it's found again without a search.
+    @ObservationIgnored var selectedDate: (id: String, date: Date)?
     /// The open folder when the place is a mailbox.
     public internal(set) var folder: [MailThread] = [] {
         // Archiving or deleting in a folder updates what's remembered for it too.
@@ -175,6 +211,45 @@ public final class MailModel {
     /// Message bodies by `BodyKey`.
     public internal(set) var bodies: [String: MessageBody] = [:]
     public internal(set) var loadErrors: [UUID: String] = [:]
+    /// The accounts whose last refresh failed because the network couldn't be reached, as
+    /// opposed to the account refusing (a sign-in problem says so; it isn't "offline").
+    var unreachable: Set<UUID> = []
+    /// Accounts whose provider said no to the sign-in itself (an expired or withdrawn sign-in, a
+    /// changed password). Only signing in again fixes these, so that's what is offered.
+    public internal(set) var signInRefused: Set<UUID> = []
+    /// Accounts that couldn't be reached, with how often in a row and when to try next. They're
+    /// tried again by themselves, sooner than the regular refresh and a little later each time.
+    var retries: [UUID: (failures: Int, next: Date)] = [:]
+    @ObservationIgnored var lastReconnect: Date?
+    /// Lists worked out from the mail and kept until it changes (see `Derived`).
+    @ObservationIgnored let derived = DerivedValues()
+    /// What was last handed to the system's search and Siri (see `reload`).
+    @ObservationIgnored var systemIndexed: Int?
+    /// Whether mail is fetched before it's asked for (see `readAhead`); off in previews.
+    @ObservationIgnored lazy var readsAhead = !environment.isPreview
+    /// Fetching the conversations next to the open one; a new selection starts it over.
+    @ObservationIgnored var neighbourReading: Task<Void, Never>?
+    /// Set by a "Sign in again" button in the window; the window's sign-in sheet picks it up.
+    public var signingInAgain: MailAccount?
+    /// A rule being made from a conversation (Create Rule…), shown as a sheet over the list.
+    public var creatingRule: RuleForm?
+    nonisolated static func isSignInRefusal(_ error: Error) -> Bool {
+        switch error {
+        case MailError.authenticationFailed, MailError.missingCredentials: true
+        default: false
+        }
+    }
+
+    /// Whether an error means "no connection" rather than something wrong with the account.
+    nonisolated static func isNetworkFailure(_ error: Error) -> Bool {
+        if error is URLError { return true }
+        // A mail connection that couldn't be made, dropped, or took too long.
+        if MailError.isConnectionProblem(error) { return true }
+        let nsError = error as NSError
+        if [NSURLErrorDomain, NSPOSIXErrorDomain, "kCFErrorDomainCFNetwork", "kNWErrorDomainDNS", "kNWErrorDomainPOSIX", "NWError"].contains(nsError.domain) { return true }
+        let text = String(describing: type(of: error)) + " " + String(describing: error)
+        return text.contains("NWError") || text.contains("POSIXError")
+    }
     public internal(set) var isLoading = false
     /// A folder (Sent, Archive, a label…) is being fetched for the list.
     public internal(set) var isLoadingFolder = false
@@ -195,6 +270,49 @@ public final class MailModel {
     }
     /// Hides the sidebar for more reading room; the rail stays.
     public var isSidebarHidden = false
+
+    // How the window's width shapes the columns (set by the window as it's resized; none of it
+    // is a setting, and nothing here is saved).
+
+    /// Too narrow for the mailbox column beside the mail: it becomes a drawer, opened with the
+    /// sidebar button and closed by choosing a mailbox.
+    public var sidebarNeedsDrawer = false
+    public var isSidebarDrawerOpen = false
+    /// Too narrow for the list and a message side by side: the list fills the window and a
+    /// conversation opens over it, with a way back.
+    public var isWindowNarrow = false
+
+    /// A conversation opens over the list, not beside it: in the layouts made that way, and in
+    /// any layout when the window is narrow.
+    public var opensOverList: Bool { layout.opensOverList || isWindowNarrow }
+
+    /// The mailbox column isn't on screen, by choice or for lack of room.
+    public var isSidebarOutOfSight: Bool { isSidebarHidden || sidebarNeedsDrawer }
+
+    /// The sidebar button and its shortcut: shows or hides the column, or the drawer when
+    /// there's no room for the column.
+    public func toggleSidebar() {
+        if sidebarNeedsDrawer {
+            isSidebarDrawerOpen.toggle()
+        } else {
+            isSidebarHidden.toggle()
+        }
+    }
+
+    /// The narrowest the list and a message can be side by side: below this, one at a time.
+    public static let narrowestSplit: CGFloat = 320 + 360
+    static var sidebarWidth: CGFloat { Look.pick(220, roomy: 248) }
+
+    /// Works out the columns for a window this wide.
+    public func fit(windowWidth: CGFloat) {
+        let content = windowWidth - MailLayout.railWidth
+        let needsDrawer = content < Self.sidebarWidth + Self.narrowestSplit
+        let sidebarInline = !isSidebarHidden && !needsDrawer && place != .calendar
+        let narrow = content - (sidebarInline ? Self.sidebarWidth : 0) < Self.narrowestSplit
+        if sidebarNeedsDrawer != needsDrawer { sidebarNeedsDrawer = needsDrawer }
+        if !needsDrawer, isSidebarDrawerOpen { isSidebarDrawerOpen = false }
+        if isWindowNarrow != narrow { isWindowNarrow = narrow }
+    }
     /// Senders whose pictures load without asking (kept on this device only).
     public internal(set) var trustedPictureSenders: Set<String> =
         Set(UserDefaults.standard.stringArray(forKey: "trustedPictureSenders") ?? [])
@@ -204,13 +322,24 @@ public final class MailModel {
     /// Text the palette opens with ("Snooze" when H is pressed).
     public var paletteSeed = ""
     public var isShowingShortcuts = false
+    /// The Help panel: feedback, shortcuts, the tour and the settings that fix most problems.
+    public var isShowingHelp = false
+    /// A Settings page another part of Margin wants open ("notifications"); Settings clears it.
+    public var settingsPageRequest: String?
     public var isAddingAccount = false
     public var isNewMeetingOpen = false
     public var isShowingOnboarding = false
     /// The meeting shown on its own (one sent from here, with no message to open).
     public var shownMeetingID: String?
+    /// Whether a new message, or a reply, is being written. These only change when writing starts
+    /// or stops, so the views around the editor can depend on them without being redrawn on
+    /// every keystroke; only the editor itself reads `compose` and `reply`.
+    public private(set) var isWritingNew = false
+    public private(set) var isWritingReply = false
+
     public var compose: ComposeState? {
         didSet {
+            if (compose != nil) != isWritingNew { isWritingNew = compose != nil }
             if compose != oldValue { keepUnsent() }
             // Starting another message while one is put away keeps the first in Drafts.
             if isComposePutAway, let old = oldValue, compose != nil {
@@ -223,6 +352,7 @@ public final class MailModel {
     }
     public var reply: ComposeState? {
         didSet {
+            if (reply != nil) != isWritingReply { isWritingReply = reply != nil }
             if reply != oldValue { keepUnsent() }
             if isReplyPutAway, let old = oldValue, reply != nil {
                 isReplyPutAway = false
@@ -244,6 +374,8 @@ public final class MailModel {
     // Assistant
     public internal(set) var assistantSettings: AssistantSettings
     public internal(set) var summaries: [MailThread.ID: ThreadSummary] = [:]
+    /// Saved summaries were put back once the inboxes first loaded.
+    var summariesRestored = false
     public internal(set) var labelSuggestions: [MailThread.ID: [String]] = [:]
     /// Work in progress: "summary|<thread>", "labels|<thread>", "reply".
     public internal(set) var assistantWork: Set<String> = []
@@ -262,6 +394,9 @@ public final class MailModel {
 
     // Timing: snoozes, the outbox, undo send, follow-ups
     public internal(set) var snoozes: [String: Date]
+    /// A saved copy of each snoozed conversation, by its snooze key, so Snoozed shows them at
+    /// once even when they're older than the inbox mail in memory (`MailModel+SnoozedCopies`).
+    var snoozedCopies: [String: MailThread] = [:]
     public internal(set) var outbox: [ScheduledMessage]
     public internal(set) var templates: [MailTemplate]
     /// Invitations answered in this session, by event id.
@@ -277,6 +412,13 @@ public final class MailModel {
     // Newsletters: which issues were opened, and which lists to stop suggesting
     var newsletterState = NewsletterState()
     var newsletterStateLoaded = false
+    /// Mailing lists found in the mail (see `mailingListsNow`), what they were worked out
+    /// for, and the work in progress.
+    @ObservationIgnored var mailingListsStore: [NewsletterReport.MailingList] = []
+    @ObservationIgnored var mailingListsKey: MailingListsKey?
+    @ObservationIgnored var mailingListsWanted: MailingListsKey?
+    @ObservationIgnored var mailingListsWork: Task<Void, Never>?
+    var mailingListsRevision = 0
     /// Older issues from the archive, loaded when the clean-up is shown.
     public internal(set) var newsletterHistory: [MailThread] = []
     /// The newsletter whose emails are open in a sheet, by list id.
@@ -307,6 +449,8 @@ public final class MailModel {
     var clock: Task<Void, Never>?
     /// One task per mailbox that waits for the server to say new mail arrived (IMAP IDLE).
     var watchers: [UUID: Task<Void, Never>] = [:]
+    /// Tells when the network comes back or changes (see `watchNetwork`).
+    @ObservationIgnored var networkMonitor: AnyObject?
     /// Mailboxes whose server pushes new mail, so the timer can relax for them.
     public internal(set) var pushingAccounts: Set<UUID> = []
     var seenUnread: Set<MailThread.ID>?
@@ -320,7 +464,11 @@ public final class MailModel {
     @ObservationIgnored var sentIndexCache: SentIndex?
     @ObservationIgnored var emailGroupsCache: (revision: Int, groups: [EmailGroup])?
     /// Home's notes per conversation, valid while `key` holds (see `marginNote(for:)`).
-    @ObservationIgnored var marginNoteCache: (key: Int, notes: [String: MarginNote?])?
+    @ObservationIgnored var marginNoteCache: (key: Int, notes: [String: KeptNote])?
+    /// Goes up when one conversation's kept note is dropped (see `forgetNote`).
+    var noteRevision = 0
+    /// Addresses in your contacts, lowercased, for as many contacts as `count` says.
+    @ObservationIgnored var knownAddressCache: (count: Int, addresses: Set<String>)?
     @ObservationIgnored var sentMailLoaded: [UUID: Date] = [:]
     /// Sign-in codes and links already looked for, by message and whether its body was there.
     @ObservationIgnored var signInCodes: [String: String?] = [:]
@@ -329,6 +477,10 @@ public final class MailModel {
 
     // Selection and filters
     public var selection: Set<MailThread.ID> = []
+    /// Unsubscribe links found in a mail's own text, by message id (nil: looked, none).
+    @ObservationIgnored var unsubscribeLinks: [String: Unsubscribe?] = [:]
+    /// The row ⇧↓ or ⇧↑ last reached, so the list can keep it in view.
+    public var selectionEnd: MailThread.ID?
     /// Servers are still being searched for the current search.
     public internal(set) var isSearchingServers = false
     /// The snooze date picker is open.
@@ -350,6 +502,8 @@ public final class MailModel {
             if appIconDark != oldValue { applyAppIcon() }
         }
     }
+    /// Roomy by default; Compact is the tighter look for people who want more on screen.
+    public var density: Density { didSet { environment.defaults.set(density.rawValue, forKey: "density") } }
     public var compactRows: Bool { didSet { environment.defaults.set(compactRows, forKey: "compactRows") } }
     /// On the Mac: names beside the icons above a conversation (Done, Reply…), or icons only.
     public var buttonNames: Bool { didSet { environment.defaults.set(buttonNames, forKey: "buttonNames") } }
@@ -374,7 +528,12 @@ public final class MailModel {
     /// The Mac and iPad open the top conversation of a list straight away; an iPhone shows the
     /// list first, since opening one there covers the whole screen.
     public var opensFirstConversation = true
-    var firstConversation: MailThread.ID? { opensFirstConversation ? visibleThreads.first?.id : nil }
+    /// Home opens none, so the reading pane is Ask, ready to type into, until a conversation is
+    /// clicked (without the assistant there's nothing to ask, so it opens the top one).
+    var firstConversation: MailThread.ID? {
+        guard opensFirstConversation, !(place.isHome && isAssistantOn) else { return nil }
+        return visibleThreads.first?.id
+    }
     // Accessibility
     public var colorBlindSafe: Bool { didSet { environment.defaults.set(colorBlindSafe, forKey: "colorBlindSafe") } }
     public var increaseContrast: Bool { didSet { environment.defaults.set(increaseContrast, forKey: "increaseContrast") } }
@@ -469,6 +628,9 @@ public final class MailModel {
 
     var providers: [UUID: any MailProvider] = [:]
     var pendingChange: PendingChange?
+    /// Refreshes begun before a local move cannot replace its optimistic result.
+    @ObservationIgnored var mutationRevision = 0
+    @ObservationIgnored var committingChanges: [UUID: Int] = [:]
     let credentials: KeychainCredentials
 
     public init(environment: MailEnvironment) {
@@ -488,6 +650,7 @@ public final class MailModel {
         appIcon = AppIconChoice(rawValue: environment.defaults.string(forKey: "appIcon") ?? "") ?? .blue
         appIconDark = environment.defaults.bool(forKey: "appIconDark")
         compactRows = environment.defaults.bool(forKey: "compactRows")
+        density = Density(rawValue: environment.defaults.string(forKey: "density") ?? "") ?? .roomy
         buttonNames = environment.defaults.object(forKey: "buttonNames") as? Bool ?? true
         layout = ListLayout(rawValue: environment.defaults.string(forKey: "layout") ?? "") ?? .panels
         insetPanel = environment.defaults.bool(forKey: "insetPanel")
@@ -499,6 +662,8 @@ public final class MailModel {
         darkensMail = environment.defaults.object(forKey: "darkensMail") as? Bool ?? true
         offersTranslation = environment.defaults.object(forKey: "offersTranslation") as? Bool ?? true
         reduceMotion = environment.defaults.bool(forKey: "reduceMotion")
+        keepMail = KeepMail(rawValue: environment.defaults.string(forKey: "keepMail") ?? "") ?? .deviceDefault
+        keepText = KeepText(rawValue: environment.defaults.string(forKey: "keepText") ?? "") ?? .deviceDefault
         keyOverrides = environment.defaults.dictionary(forKey: "keyOverrides") as? [String: String] ?? [:]
         let scale = environment.defaults.double(forKey: "textScale")
         textScale = scale == 0 ? 1 : scale
@@ -508,6 +673,7 @@ public final class MailModel {
         let days = environment.defaults.object(forKey: "followUpDays") as? Int
         followUpDays = days ?? 3
         snoozes = JSONFile<[String: Date]>(url: environment.folder.appending(path: "snoozes.json")).load() ?? [:]
+        snoozedCopies = Self.loadSnoozedCopies(from: environment.folder)
         outbox = JSONFile<[ScheduledMessage]>(url: environment.folder.appending(path: "outbox.json")).load() ?? []
         templates = JSONFile<[MailTemplate]>(url: environment.folder.appending(path: "templates.json")).load() ?? MailTemplate.examples
         let saved = environment.defaults.data(forKey: "assistantSettings")
@@ -554,55 +720,6 @@ public final class MailModel {
         return nil
     }
 
-    public func inboxThreads(_ accountID: UUID?) -> [MailThread] {
-        if let accountID { return inboxes[accountID] ?? [] }
-        return accounts.flatMap { inboxes[$0.id] ?? [] }.sorted { $0.date > $1.date }
-    }
-
-    public var visibleThreads: [MailThread] {
-        var source: [MailThread] = switch place {
-        case .inbox(let account, let split): allInboxesThreads(account).filter { split == nil || $0.split == split }
-        case .starred(let account): allInboxesThreads(account).filter(\.isStarred)
-        case .snoozed(let account): allInboxesThreads(account).filter { isSnoozed($0) }
-        case .mailbox, .combined, .waiting, .search: folder
-        case .scheduled, .subscriptions, .calendar: []
-        case .vips(let account): vipThreads(account)
-        case .home(let group):
-            allInboxesThreads(nil).filter { thread in
-                group.map { name in labels(for: thread).contains { $0.caseInsensitiveCompare(name) == .orderedSame } } ?? true
-            }
-        }
-        if place.isInbox { source.removeAll { isSnoozed($0) } }
-        if quickFilters.contains(.unread) { source.removeAll { !$0.isUnread } }
-        if quickFilters.contains(.starred) { source.removeAll { !$0.isStarred } }
-        if quickFilters.contains(.attachments) { source.removeAll { !$0.hasAttachments } }
-        // Search results were already matched, operators included; filtering again by the
-        // words would drop server results whose bodies aren't downloaded yet.
-        if case .search = place { return source }
-        let query = SearchQuery(searchText)
-        let found = query.isEmpty ? source : source.filter(query.matches)
-        return place.isInbox ? pinnedFirst(found) : found
-    }
-
-    public var selectedThread: MailThread? {
-        guard let selectedThreadID else { return nil }
-        return visibleThreads.first { $0.id == selectedThreadID }
-            ?? (folder + inboxThreads(nil) + newsletterHistory).first { $0.id == selectedThreadID }
-    }
-
-    public func unreadCount(account: UUID?, split: InboxSplit? = nil) -> Int {
-        allInboxesThreads(account).filter { $0.isUnread && (split == nil || $0.split == split) }.count
-    }
-
-    /// One mailbox's inbox, or All Inboxes: every mailbox not left out of it.
-    func allInboxesThreads(_ accountID: UUID?) -> [MailThread] {
-        guard accountID == nil else { return inboxThreads(accountID) }
-        // Only the workspace in view, and not the mailboxes left out of All Inboxes.
-        let shown = Set(workspaceAccounts.filter { $0.inAllInboxes != false }.map(\.id))
-        guard shown.count != accounts.count else { return inboxThreads(nil) }
-        return inboxThreads(nil).filter { shown.contains($0.accountID ?? UUID()) }
-    }
-
     /// An account's folders other than its inbox, in a familiar order.
     public func folders(of accountID: UUID) -> [Mailbox] {
         let order: [MailboxRole] = [.drafts, .sent, .archive, .all, .junk, .trash, .other]
@@ -621,10 +738,20 @@ public final class MailModel {
     public func start() async {
         // Avatars everywhere ask this model for people's pictures.
         ContactPictures.shared.load = { [weak self] address in await self?.pictureData(for: address) }
+        // The first build with pictures noted "no picture" for people it simply failed to ask
+        // about (sign-in was being refused). Those notes are dropped once.
+        if !environment.defaults.bool(forKey: "pictureNotesReset") {
+            environment.defaults.set(true, forKey: "pictureNotesReset")
+            pictureStore.forgetMissing()
+        }
         if !hasOnboarded && !environment.isPreview { isShowingOnboarding = true }
         await forgetRemovedAccounts()
         pruneLearnedAliases()
         await loadSavedMail()
+        // The conversation that's open shows its saved text now. It used to wait for everything
+        // below (the sync, then every mailbox answering from its server), so the mail on screen
+        // sat at "Loading…" for as long as the slowest mailbox took, though it was on this device.
+        Task { await loadBodies() }
         // Your Sent mail, so Home knows what you've already answered (from any app).
         for account in accounts { await loadSavedSentMail(for: account) }
         fillPlaceholderNames()
@@ -641,47 +768,166 @@ public final class MailModel {
         await learnFromSentMailIfNew()
     }
 
-    /// Fetches every account's folders and inbox at once.
+    /// What one account's refresh came back with.
+    struct LoadedAccount: Sendable {
+        var id: UUID
+        var mutationRevision = 0
+        var mailboxes: [Mailbox] = []
+        var threads: [MailThread] = []
+        /// The inbox ready for the model, when it was built away from the main thread.
+        var shelf: InboxShelf?
+        /// The inbox came back exactly as the model already has it.
+        var isUnchanged = false
+        /// How many conversations were asked for, and whether the server had fewer: then
+        /// there's no older mail to scroll to.
+        var limit = MailModel.listPage
+        var isWhole = false
+        var error: String?
+        /// The failure was the network (no connection, a timeout), not the account.
+        var offline = false
+        /// The provider refused the sign-in.
+        var refused = false
+    }
+
+    /// One account's folders and the newest `limit` conversations of its inbox, or why they
+    /// couldn't be read. `previous` is what the model shows now: an answer that's the same
+    /// changes nothing, so nothing on screen is worked out again for it.
+    nonisolated static func load(_ id: UUID, from provider: any MailProvider, limit: Int = MailModel.listPage,
+                                 previous: [MailThread]? = nil, mutationRevision: Int = 0) async -> LoadedAccount {
+        do {
+            let boxes = try await provider.mailboxes()
+            guard let inbox = boxes.first(where: { $0.role == .inbox }) else {
+                return LoadedAccount(id: id, mutationRevision: mutationRevision, mailboxes: boxes, error: String(localized: "This account has no inbox."))
+            }
+            let threads = try await provider.threads(in: inbox, limit: limit)
+            let tagged = threads.map { tag($0, account: id) }
+            var loaded = LoadedAccount(id: id, mutationRevision: mutationRevision, mailboxes: boxes, threads: threads, limit: limit)
+            if tagged == previous { loaded.isUnchanged = true } else { loaded.shelf = InboxShelf(tagged) }
+            loaded.isWhole = threads.count < limit && threads.reduce(0, { $0 + $1.messages.count }) < limit
+            return loaded
+        } catch {
+            return LoadedAccount(id: id, mutationRevision: mutationRevision, error: error.localizedDescription, offline: isNetworkFailure(error), refused: isSignInRefusal(error))
+        }
+    }
+
+    /// Takes in one account's refresh. A failure keeps the saved mail on screen and touches no
+    /// other account.
+    func apply(_ result: LoadedAccount) async {
+        let taken = take(result)
+        if taken.changed { inboxesChanged(order: true) }
+        await save(result, taken)
+    }
+
+    /// Writes what a refresh brought to saved mail.
+    func save(_ result: LoadedAccount, _ taken: (changed: Bool, folders: Bool, mail: Bool)) async {
+        if taken.folders { await environment.cache.saveMailboxes(result.mailboxes, account: result.id) }
+        if taken.mail, let inbox = result.mailboxes.first(where: { $0.role == .inbox }) {
+            await environment.cache.saveThreads(result.threads, account: result.id, mailbox: inbox.id, limit: result.limit)
+        }
+    }
+
+    /// The part of `apply` that changes the model, without telling the views yet (the caller
+    /// does, once, with `inboxesChanged`, before anything else runs): several mailboxes'
+    /// answers can be taken in together and shown in one redraw. Says what changed and what
+    /// is to be saved.
+    func take(_ result: LoadedAccount) -> (changed: Bool, folders: Bool, mail: Bool) {
+        guard result.mutationRevision == mutationRevision,
+              committingChanges[result.id] == nil,
+              pendingChange?.threads.contains(where: { $0.accountID == result.id }) != true else {
+            return (false, false, false)
+        }
+        loadErrors[result.id] = result.error
+        if result.offline { unreachable.insert(result.id) } else { unreachable.remove(result.id) }
+        if result.refused { signInRefused.insert(result.id) } else { signInRefused.remove(result.id) }
+        if result.offline {
+            let failures = (retries[result.id]?.failures ?? 0) + 1
+            retries[result.id] = (failures, Date().addingTimeInterval(Self.retryDelay(after: failures)))
+        } else {
+            retries[result.id] = nil
+        }
+        // Offline or failing: keep showing saved mail instead of an empty inbox.
+        guard result.error == nil else { return (false, false, false) }
+        let folders = mailboxes[result.id] != result.mailboxes
+        if folders { mailboxes[result.id] = result.mailboxes }
+        let knewWhole = reachedOldest.contains(result.id)
+        if result.isWhole { reachedOldest.insert(result.id) } else { reachedOldest.remove(result.id) }
+        // The same mail as before: nothing to show again and nothing to save again.
+        guard !result.isUnchanged else { return (knewWhole != result.isWhole, folders, false) }
+        shelves[result.id] = result.shelf ?? InboxShelf(result.threads.map { Self.tag($0, account: result.id) })
+        return (true, folders, true)
+    }
+
+    /// How many conversations a mailbox's inbox is asked for right now.
+    func inboxLimit(_ id: UUID) -> Int { inboxLimits[id] ?? Self.listPage }
+
+    /// How long to wait before trying an unreachable account again: 20 seconds, then 40, 80,
+    /// and from there every three minutes with the regular refresh.
+    nonisolated static func retryDelay(after failures: Int) -> TimeInterval {
+        min(180, 20 * pow(2, Double(max(failures, 1) - 1)))
+    }
+
+    /// The account can't be reached right now (the network, a dropped connection, a slow
+    /// server), which passes by itself: said calmly, and tried again without being asked.
+    public func isUnreachable(_ id: UUID) -> Bool {
+        loadErrors[id] != nil && unreachable.contains(id)
+    }
+
+    /// Tries the accounts that couldn't be reached and are due, each by itself.
+    func retryUnreachable(now: Date = Date()) async {
+        guard !isLoading else { return }
+        for account in accounts {
+            guard unreachable.contains(account.id), let retry = retries[account.id], retry.next <= now else { continue }
+            await reload(only: account)
+        }
+    }
+
+    /// The network came back or changed, or the computer woke up: connections made before are
+    /// gone whether they know it or not. They're closed, and everything is fetched fresh.
+    public func reconnect() async {
+        // Waking up and the network changing often come together: once is enough.
+        if let last = lastReconnect, Date().timeIntervalSince(last) < 5 { return }
+        lastReconnect = Date()
+        for provider in providers.values { await provider.disconnect() }
+        retries = [:]
+        if clock != nil {
+            stopWatching()
+            startWatching()
+        }
+        if !isLoading { await reload() }
+    }
+
+    /// Refreshes one account by itself: for new mail that arrives while a refresh of everything
+    /// is still waiting on another, slower account.
+    func reload(only account: MailAccount) async {
+        guard let provider = try? provider(for: account) else { return }
+        await apply(await Self.load(account.id, from: provider, limit: inboxLimit(account.id), previous: shelves[account.id]?.threads, mutationRevision: mutationRevision))
+        lastUpdated = Date()
+        applyInboxRules()
+        notifyAboutNewMail()
+        // What just arrived is read ahead, so it opens at once.
+        Task { await readAhead() }
+        if selectedThread == nil { selectedThreadID = firstConversation }
+    }
+
+    /// Fetches every account's folders and inbox at once. Each account shows its mail as soon
+    /// as it answers: one that fails, or takes its time, never holds the others back.
     public func reload() async {
         isLoading = true
         defer { isLoading = false }
-        struct Loaded: Sendable {
-            var id: UUID
-            var mailboxes: [Mailbox] = []
-            var threads: [MailThread] = []
-            var error: String?
-        }
-        var jobs: [(UUID, any MailProvider)] = []
+        var jobs: [(UUID, any MailProvider, Int, [MailThread]?)] = []
         for account in accounts {
-            do { jobs.append((account.id, try provider(for: account))) } catch { loadErrors[account.id] = error.localizedDescription }
+            do {
+                jobs.append((account.id, try provider(for: account), inboxLimit(account.id), shelves[account.id]?.threads))
+            } catch { loadErrors[account.id] = error.localizedDescription }
         }
-        let results = await withTaskGroup(of: Loaded.self) { group in
-            for (id, provider) in jobs {
-                group.addTask {
-                    do {
-                        let boxes = try await provider.mailboxes()
-                        guard let inbox = boxes.first(where: { $0.role == .inbox }) else {
-                            return Loaded(id: id, mailboxes: boxes, error: String(localized: "This account has no inbox."))
-                        }
-                        return Loaded(id: id, mailboxes: boxes, threads: try await provider.threads(in: inbox, limit: 200))
-                    } catch {
-                        return Loaded(id: id, error: error.localizedDescription)
-                    }
-                }
+        let revision = mutationRevision
+        await withTaskGroup(of: LoadedAccount.self) { group in
+            for (id, provider, limit, previous) in jobs {
+                group.addTask { await Self.load(id, from: provider, limit: limit, previous: previous, mutationRevision: revision) }
             }
-            var all: [Loaded] = []
-            for await result in group { all.append(result) }
-            return all
-        }
-        for result in results {
-            loadErrors[result.id] = result.error
-            // Offline or failing: keep showing saved mail instead of an empty inbox.
-            guard result.error == nil else { continue }
-            mailboxes[result.id] = result.mailboxes
-            inboxes[result.id] = result.threads.map { Self.tag($0, account: result.id) }
-            await environment.cache.saveMailboxes(result.mailboxes, account: result.id)
-            if let inbox = result.mailboxes.first(where: { $0.role == .inbox }) {
-                await environment.cache.saveThreads(result.threads, account: result.id, mailbox: inbox.id)
+            for await result in group {
+                await apply(result)
+                lastUpdated = Date()
             }
         }
         lastUpdated = Date()
@@ -695,10 +941,17 @@ public final class MailModel {
         #endif
         if #available(iOS 18.0, macOS 15.0, *) {
             SiriBridge.model = self
-            Task { await SiriBridge.index(self) }
+            // Only when the conversations it lists have changed: handing the system 300 of them
+            // again after every refresh, with nothing new, was work for nothing.
+            let listed = newestInInboxes(300).map { "\($0.id)|\($0.isUnread)|\($0.messages.count)" }.hashValue
+            if listed != systemIndexed {
+                systemIndexed = listed
+                Task { await SiriBridge.index(self) }
+            }
         }
         if place.isFolder { await loadFolder(for: place) }
         if selectedThread == nil { selectedThreadID = firstConversation }
+        restoreSummariesIfNeeded()
         await loadBodies()
     }
 
@@ -711,6 +964,9 @@ public final class MailModel {
     }
 
     public func go(to place: Place) {
+        // Older mail that was scrolled to in the list being left isn't kept: every list starts
+        // from its newest page, so memory and the work per refresh follow where you are.
+        forgetOlderMail()
         self.place = place
         // A folder still loading for the place left behind doesn't count here.
         isLoadingFolder = false
@@ -732,12 +988,21 @@ public final class MailModel {
     }
 
     /// Fetches one account's folder, or the same kind of folder from every account at once.
-    private func loadFolder(for place: Place) async {
+    func loadFolder(for place: Place) async {
+        let revision = mutationRevision
+        func canReplaceFolder() -> Bool {
+            revision == mutationRevision && pendingChange == nil && committingChanges.isEmpty
+        }
+        guard canReplaceFolder() else { return }
         isLoadingFolder = true
         defer { if self.place == place { isLoadingFolder = false } }
         if case .waiting(let account) = place {
+            // What's saved here shows at once (and is kept for the next visit); then the
+            // server's Sent, when it wasn't checked in the last two minutes.
+            let saved = await waitingThreads(account, refresh: false)
+            if self.place == place, canReplaceFolder() { folder = saved; folderMemory[place] = saved }
             let waiting = await waitingThreads(account)
-            if self.place == place { folder = waiting }
+            if self.place == place, canReplaceFolder() { folder = waiting; folderMemory[place] = waiting }
             return
         }
         var jobs: [(UUID, any MailProvider, Mailbox)] = []
@@ -757,17 +1022,18 @@ public final class MailModel {
         // What was downloaded last time shows at once; the server's answer replaces it.
         var saved: [MailThread] = []
         for (accountID, _, mailbox) in jobs {
-            saved += await environment.cache.threads(account: accountID, mailbox: mailbox.id).map { Self.tag($0, account: accountID) }
+            saved += await environment.cache.threads(account: accountID, mailbox: mailbox.id, limit: folderLimit, bodies: false).map { Self.tag($0, account: accountID) }
         }
-        if !saved.isEmpty, self.place == place, folder.isEmpty {
+        if !saved.isEmpty, self.place == place, folder.isEmpty, canReplaceFolder() {
             folder = saved.sorted { $0.date > $1.date }
             folderMemory[place] = folder
         }
+        let limit = folderLimit
         let answers = await withTaskGroup(of: (UUID, Result<[MailThread], Error>).self) { group in
             for (accountID, provider, mailbox) in jobs {
                 group.addTask {
                     do {
-                        return (accountID, .success(try await provider.threads(in: mailbox, limit: 200).map { Self.tag($0, account: accountID) }))
+                        return (accountID, .success(try await provider.threads(in: mailbox, limit: limit).map { Self.tag($0, account: accountID) }))
                     } catch {
                         return (accountID, .failure(error))
                     }
@@ -778,7 +1044,13 @@ public final class MailModel {
             return all
         }
         let results = answers.map(\.1)
-        guard self.place == place else { return } // the person moved on while this loaded
+        guard self.place == place, canReplaceFolder() else { return } // the person moved on or changed mail while this loaded
+        // Every mailbox answered with fewer than asked for: there's no older mail in this folder.
+        let isWhole = results.allSatisfy { result in
+            guard let threads = try? result.get() else { return true }
+            return threads.count < limit && threads.reduce(0, { $0 + $1.messages.count }) < limit
+        }
+        if isWhole { reachedOldest.insert(nil) } else { reachedOldest.remove(nil) }
         // A mailbox that couldn't be reached keeps what was saved for it.
         let unreachable = Set(answers.compactMap { answer -> UUID? in if case .failure = answer.1 { answer.0 } else { nil } })
         let fresh = (results.flatMap { (try? $0.get()) ?? [] } + saved.filter { unreachable.contains($0.accountID ?? UUID()) })
@@ -791,7 +1063,7 @@ public final class MailModel {
         for (accountID, _, mailbox) in jobs {
             let fetched = folder.filter { $0.accountID == accountID && $0.messages.first?.mailboxID == mailbox.id }
             if !fetched.isEmpty {
-                await environment.cache.saveThreads(fetched.map { Self.untagged($0) }, account: accountID, mailbox: mailbox.id)
+                await environment.cache.saveThreads(fetched.map { Self.untagged($0) }, account: accountID, mailbox: mailbox.id, limit: limit)
             }
         }
         if case .failure(let error) = results.first(where: { if case .failure = $0 { true } else { false } }) {
@@ -825,11 +1097,20 @@ public final class MailModel {
         guard !threads.isEmpty else { return }
         let index = threads.firstIndex { $0.id == selectedThreadID } ?? -1
         select(threads[min(max(index + delta, 0), threads.count - 1)].id)
+        // Stepping down towards the last row brings the next ones in, as scrolling there does.
+        if delta > 0, index + delta >= threads.count - 5, canShowMore { listReachedEnd() }
     }
 
     /// Fetches bodies for the selected thread and marks it read once it's on screen.
     /// One message's text from the server, tried a second time after a moment: a dropped
     /// connection shouldn't leave the message blank until you open it again.
+    /// The opened message, tried once more after a moment if the first try fails.
+    private func openedBody(of message: MailMessage, from provider: any MailProvider) async -> (body: MessageBody, isComplete: Bool)? {
+        if let opened = try? await provider.openedBody(of: message) { return opened }
+        try? await Task.sleep(for: .milliseconds(800))
+        return try? await provider.openedBody(of: message)
+    }
+
     private func fetchBody(of message: MailMessage, from provider: any MailProvider) async -> MessageBody? {
         if let body = try? await provider.body(of: message) { return body }
         try? await Task.sleep(for: .milliseconds(800))
@@ -842,28 +1123,66 @@ public final class MailModel {
         noteNewsletterOpened(thread)
         // Your replies from Sent are stitched in from saved mail at once; the refresh from the
         // server runs alongside instead of holding up the message.
-        if sentMail[account.id] == nil {
-            await loadSavedSentMail(for: account)
-        }
         let shown = conversation(thread).messages.count
         Task {
+            // Neither holds up the message: saved Sent first (quick), then the server's.
+            if sentMail[account.id] == nil {
+                await loadSavedSentMail(for: account)
+                if selectedThreadID == thread.id, conversation(thread).messages.count != shown { await loadBodies() }
+            }
             await loadSentMail(for: account)
             // Replies that just came in from Sent need their text too.
             if selectedThreadID == thread.id, conversation(thread).messages.count != shown { await loadBodies() }
         }
-        // The newest message first: it's the one open on screen.
-        for message in conversation(thread).messages.reversed() {
+        // Resolve the newest message before looking through the rest of a long conversation.
+        // Even local cache reads can queue behind disk work; the open message comes first.
+        var wanted: [MailMessage] = []
+        for (index, message) in conversation(thread).messages.reversed().enumerated() {
+            guard selectedThreadID == thread.id, !Task.isCancelled else { return }
             let key = Self.bodyKey(thread.accountID, message.id)
-            guard bodies[key] == nil else { continue }
+            if let known = bodies[key] {
+                // Text that came ahead of its files: shown already, the files still to come.
+                if known.isPartial == true { wanted.append(message) }
+                continue
+            }
             if let body = message.body {
                 bodies[key] = body
             } else if let saved = await environment.cache.body(of: message.id, account: account.id) {
                 bodies[key] = saved
-            } else if let body = await fetchBody(of: message, from: provider) {
-                bodies[key] = body
-                await environment.cache.saveBody(body, of: message, account: account.id)
+                if saved.isPartial == true { wanted.append(message) }
+            } else if index == 0, let opened = await openedBody(of: message, from: provider) {
+                bodies[key] = opened.body
+                if opened.isComplete {
+                    await environment.cache.saveBody(opened.body, of: message, account: account.id)
+                } else {
+                    wanted.append(message)
+                }
+            } else {
+                wanted.append(message)
             }
         }
+        defer { forgetNote(of: thread.id) }
+        // Bounded batches show history progressively and stop obsolete work between batches
+        // when another conversation is selected.
+        for offset in stride(from: 0, to: wanted.count, by: 8) {
+            guard selectedThreadID == thread.id, !Task.isCancelled else { return }
+            let batch = Array(wanted[offset..<min(offset + 8, wanted.count)])
+            let fetched = (try? await provider.bodies(of: batch)) ?? [:]
+            for message in batch {
+                let key = Self.bodyKey(thread.accountID, message.id)
+                if let body = fetched[message.id] {
+                    bodies[key] = body
+                    await environment.cache.saveBody(body, of: message, account: account.id)
+                } else if selectedThreadID == thread.id, !Task.isCancelled,
+                          bodies[key]?.isPartial == true || bodies[key] == nil,
+                          let body = await fetchBody(of: message, from: provider) {
+                    bodies[key] = body
+                    await environment.cache.saveBody(body, of: message, account: account.id)
+                }
+            }
+        }
+        guard selectedThreadID == thread.id, !Task.isCancelled else { return }
+        readAhead(around: thread)
         noteInvites(in: thread)
         if thread.isUnread, selectedThreadID == thread.id {
             await apply(.markRead, to: [thread], announce: false)
@@ -884,6 +1203,7 @@ public final class MailModel {
             case .token: "token"
             }
             try environment.keychain.save(secret, account: account.id, kind: kind)
+            await credentials.forgetPauses(for: account.id)
         }
         do {
             let provider = try ProviderFactory.make(for: account, credentials: credentials)
@@ -898,9 +1218,10 @@ public final class MailModel {
             for sample in accounts where sample.connection == .sample {
                 providers[sample.id] = nil
                 mailboxes[sample.id] = nil
-                inboxes[sample.id] = nil
+                shelves[sample.id] = nil
                 loadErrors[sample.id] = nil
             }
+            inboxesChanged(order: true)
             accounts.removeAll { $0.connection == .sample }
         }
         accounts.append(account)
@@ -924,7 +1245,8 @@ public final class MailModel {
         pushingAccounts.remove(id)
         accounts.removeAll { $0.id == id }
         mailboxes[id] = nil
-        inboxes[id] = nil
+        shelves[id] = nil
+        inboxesChanged(order: true)
         loadErrors[id] = nil
         if accounts.isEmpty {
             accounts = [.sample, .samplePersonal]
@@ -1030,4 +1352,32 @@ public enum ListLayout: String, CaseIterable, Sendable {
 
     /// Spark and Minimal keep the list in a calm, centred column.
     public var isCalm: Bool { self == .spark || self == .minimal }
+}
+
+/// What the kept mailing lists were worked out from.
+struct MailingListsKey: Equatable {
+    var order: Int
+    var history: Int
+    var newest: String?
+}
+
+/// The model's kept lists (see `Derived`).
+@MainActor final class DerivedValues {
+    let merged = Derived<[MailThread]>()
+    let allInboxes = Derived<[MailThread]>()
+    let visible = Derived<MailModel.ListWindow>()
+    let placeIndex = Derived<MailModel.PlaceIndex>()
+    let selected = Derived<MailThread?>()
+    let needingYou = Derived<[MailModel.Needing]>()
+    let snoozed = Derived<[MailModel.Located]>()
+    let vips = Derived<[MailModel.Located]>()
+    let labelled = Derived<[(place: MailModel.Located, labels: [String])]>()
+    let unreadByLabel = Derived<[String: Int]>()
+    let homeGroups = Derived<[(group: EmailGroup, count: Int)]>()
+    let senderCounts = DerivedByKey<UUID, [String: Int]>()
+    let noteCandidates = Derived<[(id: String, date: Date)]>()
+    let newsletters = Derived<[NewsletterSender]>()
+    let homeSummary = Derived<String>()
+    var newsletterSave: Task<Void, Never>?
+    nonisolated init() {}
 }

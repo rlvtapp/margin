@@ -13,18 +13,41 @@ extension MailModel {
 
     /// Fills the window from mail kept on this device, before any server answers.
     func loadSavedMail() async {
-        for account in accounts {
-            guard let saved = await environment.cache.mailboxes(account: account.id),
-                  let inbox = saved.first(where: { $0.role == .inbox }) else { continue }
-            mailboxes[account.id] = saved
-            inboxes[account.id] = await environment.cache.threads(account: account.id, mailbox: inbox.id).map { Self.tag($0, account: account.id) }
+        // Every mailbox at once, each unpacked and put in order away from the main thread; the
+        // texts stay in the database until a mail is opened. However much is saved, this reads
+        // the newest page of each inbox through an index.
+        let cache = environment.cache
+        let saved = await withTaskGroup(of: (UUID, [Mailbox], InboxShelf)?.self) { group in
+            for id in accounts.map(\.id) {
+                group.addTask {
+                    guard let boxes = await cache.mailboxes(account: id), let inbox = boxes.first(where: { $0.role == .inbox }) else { return nil }
+                    let threads = await cache.threads(account: id, mailbox: inbox.id, limit: MailModel.listPage, bodies: false)
+                    return (id, boxes, InboxShelf(threads.map { Self.tag($0, account: id) }))
+                }
+            }
+            var all: [(UUID, [Mailbox], InboxShelf)] = []
+            for await one in group { if let one { all.append(one) } }
+            return all
         }
+        for (id, boxes, shelf) in saved {
+            mailboxes[id] = boxes
+            shelves[id] = shelf
+        }
+        if !saved.isEmpty { inboxesChanged(order: true) }
         if selectedThread == nil { selectedThreadID = firstConversation }
     }
 
     /// True when every account failed to refresh and saved mail is showing.
     public var isOffline: Bool {
         !accounts.isEmpty && accounts.allSatisfy { loadErrors[$0.id] != nil && !(inboxes[$0.id] ?? []).isEmpty }
+    }
+
+    /// When every account failed but the network was there: what the first of them said (a
+    /// sign-in that was refused, a server that said no). Nil when it really is the connection.
+    public var refusalNote: String? {
+        guard isOffline, let refused = accounts.first(where: { signInRefused.contains($0.id) })
+                ?? accounts.first(where: { !unreachable.contains($0.id) }) else { return nil }
+        return loadErrors[refused.id]
     }
 
     // MARK: Search
@@ -123,7 +146,8 @@ extension MailModel {
     /// Keeps a message that's being closed in Drafts, if anything was written.
     func saveToDrafts(_ state: ComposeState) {
         guard state.hasContent, let account = account(state.accountID), let provider = try? provider(for: account) else { return }
-        var draft = state.draft
+        // A forwarded email is kept with it, as it would be sent.
+        var draft = state.forwarded.map { $0.appended(to: state.draft) } ?? state.draft
         draft.to = EmailAddress.parseList(state.to) ?? []
         draft.cc = EmailAddress.parseList(state.cc) ?? []
         draft.bcc = EmailAddress.parseList(state.bcc) ?? []

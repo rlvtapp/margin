@@ -122,7 +122,8 @@ extension MailModel {
     }
 
     func pickGroup(for thread: MailThread, among groups: [EmailGroup]) async -> EmailGroup? {
-        if let intelligence {
+        // Its own assistant: Apple's model on this Mac by default, quick for a whole inbox.
+        if let intelligence = sortIntelligence {
             await loadAllBodies(of: thread)
             if let group = try? await intelligence.classify(thread, bodies: bodies(of: thread), groups: groups) { return group }
         }
@@ -155,21 +156,22 @@ extension MailModel {
 
     /// Mail that arrived today.
     public var todaysMailCount: Int {
-        allInboxesThreads(nil).filter { Calendar.current.isDateInToday($0.date) }.count
+        _ = inboxOrder
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: Date()).timeIntervalSinceReferenceDate
+        let end = (calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: Date())) ?? Date()).timeIntervalSinceReferenceDate
+        return allInboxesAccounts.reduce(0) { sum, id in
+            guard let shelf = shelves[id] else { return sum }
+            return sum + shelf.countNotOlder(than: start) - shelf.countNotOlder(than: end)
+        }
     }
 
     /// Bills that haven't been opened.
     public var unopenedBills: [MailThread] {
         guard let bills = emailGroups.first(where: { $0.name == EmailGroup.starters[3].name }) else { return [] }
-        return allInboxesThreads(nil).filter { $0.isUnread && labels(for: $0).contains { $0.caseInsensitiveCompare(bills.name) == .orderedSame } }
-    }
-
-    /// Groups with something in the inbox, with how many.
-    public var homeGroups: [(group: EmailGroup, count: Int)] {
-        let threads = allInboxesThreads(nil).filter { !isSnoozed($0) }
-        return emailGroups.compactMap { group in
-            let count = threads.filter { thread in labels(for: thread).contains { $0.caseInsensitiveCompare(group.name) == .orderedSame } }.count
-            return count > 0 ? (group, count) : nil
-        }
+        // Only ones that ask you to pay: invoices taken automatically and receipts ask nothing.
+        return inboxThreads(labelled: bills.name)
+            .filter { $0.isUnread && MailNotice.asksForPayment(subject: $0.latest.subject, text: latestText(of: $0)) }
+            .sorted { $0.date > $1.date }
     }
 }

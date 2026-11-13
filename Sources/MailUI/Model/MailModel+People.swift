@@ -43,7 +43,7 @@ extension MailModel {
     public func startCompose(to person: EmailAddress) {
         var state = ComposeState(account: account(selectedThread?.accountID) ?? currentAccount)
         state.to = person.headerValue
-        compose = state
+        compose = withSentFrom(state)
     }
 
     /// Everything with this person, as a search.

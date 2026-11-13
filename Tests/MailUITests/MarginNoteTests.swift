@@ -13,10 +13,15 @@ import Testing
         #expect(model.marginNote(for: kettle)?.kind == .code)
         let weekly = try #require(threads.first { $0.subject.contains("Issue 212") })
         #expect(model.marginNote(for: weekly) == nil)
-        // A bill gets "bill".
+        // A bill still to pay gets "bill"; a card payment already made, filed with the bills, doesn't.
+        let bills = model.emailGroups.first { $0.name == EmailGroup.starters[3].name }
+        let invoice = try #require(threads.first { $0.subject.contains("Invoice question") })
+        model.bodies[MailModel.bodyKey(invoice.accountID, invoice.latest.id)] = MessageBody(text: "Invoice 1042: please pay by Friday via the payment link.")
+        model.move(invoice, toGroup: bills)
+        #expect(model.marginNote(for: invoice)?.text == "bill")
         let bank = try #require(threads.first { $0.subject.contains("Card payment") })
-        model.move(bank, toGroup: model.emailGroups.first { $0.name == EmailGroup.starters[3].name })
-        #expect(model.marginNote(for: bank)?.text == "bill")
+        model.move(bank, toGroup: bills)
+        #expect(model.marginNote(for: bank) == nil)
         #expect(model.needYouCount >= 2)
         #expect(!model.homeDate.isEmpty)
     }

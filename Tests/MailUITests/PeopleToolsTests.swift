@@ -23,7 +23,9 @@ import Testing
     @Test func needsYouListsHomesNotesWithoutSignInCodes() async throws {
         let model = await model()
         let toolbox = MailToolbox(model: model)
-        let bank = try #require(model.inboxThreads(nil).first { $0.subject.contains("Card payment") })
+        // A bill still to pay (the sample's card payment is already made, so it isn't one).
+        let bank = try #require(model.inboxThreads(nil).first { $0.subject.contains("Invoice question") })
+        model.bodies[MailModel.bodyKey(bank.accountID, bank.latest.id)] = MessageBody(text: "Invoice 1042: please pay by Friday via the payment link.")
         model.move(bank, toGroup: model.emailGroups.first { $0.name == EmailGroup.starters[3].name })
 
         let text = try await toolbox.call("list_needs_you", arguments: [:])

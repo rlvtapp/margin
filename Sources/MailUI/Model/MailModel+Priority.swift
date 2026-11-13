@@ -66,12 +66,6 @@ extension MailModel {
         notice = Notice(text: isVIP(address) ? String(localized: "\(address.displayName) is a VIP") : String(localized: "\(address.displayName) is no longer a VIP"))
     }
 
-    /// Conversations in the inbox from a VIP.
-    func vipThreads(_ accountID: UUID?) -> [MailThread] {
-        let vips = vipAddresses
-        guard !vips.isEmpty else { return [] }
-        return allInboxesThreads(accountID).filter { thread in thread.messages.contains { vips.contains($0.from.address.lowercased()) } }
-    }
 }
 
 extension MailModel {

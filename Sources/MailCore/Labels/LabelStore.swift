@@ -4,7 +4,12 @@ import Foundation
 /// (IMAP keywords are patchy across servers), so Margin keeps its own.
 public struct LabelStore: Sendable {
     public let fileURL: URL
-    public private(set) var labelsByThread: [String: [String]]
+    public private(set) var labelsByThread: [String: [String]] {
+        didSet { revision &+= 1 }
+    }
+    /// Goes up with every change to the labels, so what depends on them can tell "changed" from
+    /// "the same" without walking through every labelled conversation.
+    public private(set) var revision = 0
 
     public init(fileURL: URL) {
         self.fileURL = fileURL

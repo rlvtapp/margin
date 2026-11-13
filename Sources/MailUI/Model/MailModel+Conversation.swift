@@ -30,7 +30,8 @@ extension MailModel {
     func loadSavedSentMail(for account: MailAccount) async {
         guard !environment.isPreview, sentMail[account.id] == nil,
               let sent = mailboxes[account.id]?.first(where: { $0.role == .sent }) else { return }
-        let saved = await environment.cache.threads(account: account.id, mailbox: sent.id).flatMap(\.messages)
+        // Without the saved texts: a reply's text is read when its conversation is opened.
+        let saved = await environment.cache.threads(account: account.id, mailbox: sent.id, bodies: false).flatMap(\.messages)
         if !saved.isEmpty { sentMail[account.id] = saved }
         learnSenderName(from: saved, account: account)
     }
@@ -48,7 +49,9 @@ extension MailModel {
                 && !fresh.contains { $0.subject == local.subject && abs($0.date.timeIntervalSince(local.date)) < 300 }
         }
         sentMail[account.id] = fresh + pending
-        await environment.cache.saveThreads(threads, account: account.id, mailbox: sent.id)
+        // The newest 200 only: older Sent mail saved here (scrolled to, or downloaded in the
+        // background) stays.
+        await environment.cache.saveThreads(threads, account: account.id, mailbox: sent.id, limit: 200)
         learnSenderName(from: fresh, account: account)
     }
 
@@ -144,7 +147,7 @@ extension MailModel {
     /// mailbox's own address, at least twice. Only suggested; nothing is added without a tap.
     public func aliasSuggestions(for account: MailAccount) async -> [EmailAddress] {
         guard let inbox = mailboxes[account.id]?.first(where: { $0.role == .inbox }) else { return [] }
-        let messages = await environment.cache.threads(account: account.id, mailbox: inbox.id, limit: 600).flatMap(\.messages)
+        let messages = await environment.cache.threads(account: account.id, mailbox: inbox.id, limit: 600, bodies: false).flatMap(\.messages)
         let mine = Set(([account.address] + (account.aliases ?? [])).map { $0.address.lowercased() })
         let otherMailboxes = Set(accounts.map { $0.address.address.lowercased() })
         let dismissed = Set(environment.defaults.stringArray(forKey: "aliasSuggestionsDismissed.\(account.id.uuidString)") ?? [])

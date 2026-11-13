@@ -34,6 +34,12 @@ struct ContactPictureStore: Sendable {
         return true
     }
 
+    /// Forgets every "has no picture" note (after a time when those notes couldn't be trusted).
+    func forgetMissing() {
+        let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        for file in files where file.pathExtension == "none" { try? FileManager.default.removeItem(at: file) }
+    }
+
     func markMissing(_ address: String) {
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try? Data().write(to: file(address, "none"))
@@ -73,12 +79,27 @@ public final class ContactPictures {
 
     public func image(for address: String) -> Image? { images[address.lowercased()] }
 
+    /// Addresses waiting their turn, and how many are being looked up now. A list full of
+    /// avatars asks for dozens at once; they go to the provider a couple at a time.
+    @ObservationIgnored private var waiting: [String] = []
+    @ObservationIgnored private var running = 0
+    private static let atOnce = 2
+
     public func want(_ address: String) {
         let key = address.lowercased()
-        guard let load, !key.isEmpty, images[key] == nil, asked.insert(key).inserted else { return }
+        guard load != nil, !key.isEmpty, images[key] == nil, asked.insert(key).inserted else { return }
+        waiting.append(key)
+        next()
+    }
+
+    private func next() {
+        guard running < Self.atOnce, let load, !waiting.isEmpty else { return }
+        let key = waiting.removeFirst()
+        running += 1
         Task {
-            guard let data = await load(key), let image = Self.image(from: data) else { return }
-            images[key] = image
+            if let data = await load(key), let image = Self.image(from: data) { images[key] = image }
+            running -= 1
+            next()
         }
     }
 
@@ -127,25 +148,36 @@ extension MailModel {
         else { return nil }
 
         var found: Data?
+        // Whether the address book actually answered. A sign-in or network problem isn't an
+        // answer, so it mustn't be remembered as "has no picture".
+        var answered = false
         switch picture {
         case .saved:
-            break
+            answered = true
         case .url(let address):
             // Straight from the address the provider gave, with no cookies or account attached.
-            if let url = URL(string: address), url.scheme == "https" {
-                found = try? await URLSession(configuration: .ephemeral).data(from: url).0
+            if let url = URL(string: address), url.scheme == "https",
+               let (data, response) = try? await URLSession(configuration: .ephemeral).data(from: url) {
+                answered = true
+                if (response as? HTTPURLResponse)?.statusCode == 200 { found = data }
             }
         case .microsoftContact, .microsoftUser:
             for account in accounts where apiAccess[account.id]?.contains(.contacts) == true && oauthProvider(of: account) == .microsoft {
-                guard let token = try? await credentials.apiToken(for: account) else { continue }
-                if let data = try? await MicrosoftGraphClient(accessToken: token).picture(picture) {
-                    found = data
-                    break
+                do {
+                    let token = try await credentials.apiToken(for: account)
+                    let data = try await MicrosoftGraphClient(accessToken: token).picture(picture)
+                    answered = true
+                    if let data {
+                        found = data
+                        break
+                    }
+                } catch {
+                    continue
                 }
             }
         }
         if let found, store.save(found, for: [key]) { return store.data(for: key) }
-        store.markMissing(key)
+        if answered { store.markMissing(key) }
         return nil
     }
 }

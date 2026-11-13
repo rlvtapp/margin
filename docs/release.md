@@ -105,7 +105,16 @@ Later deploys are just `fly deploy`.
 
 `scripts/build-share.sh` makes `.build/share/Margin-mac-<build>.dmg` and
 `Margin-mac-<build>.zip`: the Release build signed ad hoc. The disk image holds the app and a
-shortcut to Applications, so it's installed by dragging one onto the other. It isn't notarized:
+shortcut to Applications, so it's installed by dragging one onto the other. It opens as a
+laid-out window: both icons large (160 points) over a playful picture (message cards with
+reactions floating around the edges and a loopy arrow from the app to Applications), and the
+disk shows Margin's icon. The picture is `scripts/dmg/background.html`, rendered to
+`background.tiff` (with a Retina copy inside) by `scripts/dmg/render-background.sh`; render it
+again after changing it. It's light and has no words: Finder draws the names under the icons
+dark on a picture, in dark mode too, and an image can't be translated. Finder lays out the
+window while the image is writable; an older Margin disk image from `.build/share` that's still
+open is put away first, since Finder finds the disk by name. Where Finder can't be asked, the
+build goes on with a plain window and says so. It isn't notarized:
 the first time, they right-click the app and choose Open. Older files in the folder are removed,
 so only the newest build is there to send.
 

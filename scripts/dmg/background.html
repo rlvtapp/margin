@@ -1,0 +1,100 @@
+<!doctype html>
+<!--
+  The disk image's window background (scripts/build-share.sh). 720 × 420 points: Margin's icon
+  sits at (190, 215) and Applications at (530, 215), 160 points each, with Finder's own names
+  under them, so the middle band stays clear. Light, because Finder draws those names dark on a
+  picture, in dark mode too. No words, so it needs no translating: message cards float around
+  the edges with reactions on them, as on the website, and a loopy arrow shows where to drag.
+  Render it again with scripts/dmg/render-background.sh after changing it.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 720px; height: 420px; overflow: hidden; }
+  body {
+    position: relative;
+    background:
+      /* A soft light behind the icons and their names, so they read on the colour. */
+      radial-gradient(330px 170px at 50% 54%, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0) 75%),
+      radial-gradient(420px 320px at -2% -6%, #9cc3ff 0%, rgba(156, 195, 255, 0) 70%),
+      radial-gradient(380px 300px at 104% -4%, #d6c2ff 0%, rgba(214, 194, 255, 0) 70%),
+      radial-gradient(420px 300px at 104% 108%, #ffc9a8 0%, rgba(255, 201, 168, 0) 70%),
+      radial-gradient(380px 280px at -4% 106%, #b3ecd2 0%, rgba(179, 236, 210, 0) 70%),
+      linear-gradient(160deg, #e6efff 0%, #f6efff 50%, #fff1e6 100%);
+  }
+  /* A message card: a picture, a bold line for the sender, a quieter one for the subject. */
+  .card {
+    position: absolute; width: 150px; height: 46px; padding: 9px 11px; box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.92); border-radius: 13px;
+    box-shadow: 0 10px 24px -10px rgba(30, 41, 80, 0.30), 0 0 0 1px rgba(30, 41, 80, 0.05);
+    display: flex; gap: 9px; align-items: center;
+  }
+  .face { width: 28px; height: 28px; border-radius: 50%; flex: none; }
+  .lines { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .lines i { display: block; height: 6px; border-radius: 3px; background: #d9dee8; }
+  .lines i:first-child { background: #9aa3b5; width: 62%; }
+  .lines i:last-child { width: 88%; }
+  /* A reaction popped onto a card. */
+  .pop {
+    position: absolute; width: 30px; height: 30px; border-radius: 50%;
+    background: #fff; box-shadow: 0 6px 14px -6px rgba(30, 41, 80, 0.35), 0 0 0 1px rgba(30, 41, 80, 0.05);
+    display: grid; place-items: center; font-size: 16px;
+    font-family: "Apple Color Emoji", sans-serif;
+  }
+  .spark { position: absolute; font-size: 14px; font-family: "Apple Color Emoji", sans-serif; }
+  svg { position: absolute; left: 0; top: 0; }
+  /* Big soft rings, like ripples, behind everything. */
+  .ring { position: absolute; border-radius: 50%; border: 1.5px solid rgba(255, 255, 255, 0.55); }
+</style>
+</head>
+<body>
+  <div class="ring" style="left: -120px; top: -150px; width: 360px; height: 360px"></div>
+  <div class="ring" style="left: -60px; top: -90px; width: 240px; height: 240px"></div>
+  <div class="ring" style="left: 520px; top: 250px; width: 340px; height: 340px"></div>
+  <div class="ring" style="left: 580px; top: 310px; width: 220px; height: 220px"></div>
+  <!-- Top left, top right, bottom left, bottom right, and one peeking in at the top. -->
+  <div class="card" style="left: -26px; top: 22px; transform: rotate(-8deg)">
+    <div class="face" style="background: linear-gradient(135deg, #ffb36b, #ff7a59)"></div>
+    <div class="lines"><i></i><i></i></div>
+  </div>
+  <div class="pop" style="left: 108px; top: 8px; transform: rotate(10deg)">👍</div>
+
+  <div class="card" style="left: 590px; top: 30px; transform: rotate(9deg)">
+    <div class="face" style="background: linear-gradient(135deg, #8fb8ff, #2f78f5)"></div>
+    <div class="lines"><i></i><i></i></div>
+  </div>
+  <div class="pop" style="left: 574px; top: 16px; transform: rotate(-12deg)">❤️</div>
+
+  <div class="card" style="left: 270px; top: -22px; transform: rotate(3deg)">
+    <div class="face" style="background: linear-gradient(135deg, #c3a6ff, #8a5cf6)"></div>
+    <div class="lines"><i></i><i></i></div>
+  </div>
+
+  <div class="card" style="left: -20px; top: 362px; transform: rotate(7deg)">
+    <div class="face" style="background: linear-gradient(135deg, #8ee6b8, #22b07d)"></div>
+    <div class="lines"><i></i><i></i></div>
+  </div>
+  <div class="pop" style="left: 118px; top: 352px; transform: rotate(-8deg)">🎉</div>
+
+  <div class="card" style="left: 596px; top: 356px; transform: rotate(-7deg)">
+    <div class="face" style="background: linear-gradient(135deg, #ffd56b, #f5a524)"></div>
+    <div class="lines"><i></i><i></i></div>
+  </div>
+  <div class="pop" style="left: 578px; top: 380px; transform: rotate(8deg)">😂</div>
+
+  <div class="spark" style="left: 300px; top: 96px">✨</div>
+  <div class="spark" style="left: 655px; top: 186px; font-size: 12px">✨</div>
+  <div class="spark" style="left: 46px; top: 196px; font-size: 11px">✨</div>
+
+  <svg width="720" height="420" viewBox="0 0 720 420">
+    <!-- From the app to Applications, with a loop on the way, as if drawn with a marker. -->
+    <path d="M 292 188 C 312 156, 344 136, 362 146 C 384 158, 372 188, 352 182 C 334 176, 344 144, 376 140
+             C 404 137, 420 156, 434 166"
+          fill="none" stroke="#2f78f5" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- The head follows the line's last stretch, down and to the right, into Applications. -->
+    <path d="M 428 149 L 434 166 L 416 166" fill="none" stroke="#2f78f5" stroke-width="4.5"
+          stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</body>
+</html>

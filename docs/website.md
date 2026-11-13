@@ -87,7 +87,9 @@ pnpm types:check
   /tmp/mac-home-dark.png -appearance dark -snapshot-size 1520x940 -snapshot-place home
   -snapshot-no-next-up -snapshot-glass`. The hero is `-snapshot-select "Lisbon"`, the others
   `-snapshot-place home`, `calendar` and `subscription`. Then
-  `sips -s format jpeg -s formatOptions 80 -Z 2600`. The window isn't the active one, so its
+  `sips -s format jpeg -s formatOptions 80 -Z 2600`, and a smaller copy next to each with
+  `-Z 1600` named `…-1600.jpg` (the pages offer both through `srcset`; the hero's light picture
+  is the one loaded first, the dark one only when it's shown). The window isn't the active one, so its
   buttons at the top left are grey. The pictures have square corners; the page rounds them to
   the window's own corners (`.showcase-window`).
   `share.jpg` is the 1200×630 preview card for links, and `apple-touch-icon.png` the home-screen
@@ -112,9 +114,14 @@ change. The relay's own list of what it stores is in `relay/README.md`.
 
 - Each page's `head` calls `seo()` from `src/seo.ts`: title, description (keep it under about
   160 characters), canonical address, robots, Open Graph and X cards with `images/share.jpg`.
-  The 404 page passes `hidden: true` so it isn't indexed.
+  The 404 page passes `hidden: true` so it isn't indexed. The X card names `@rlvtapp` as the site.
+- Headings in two halves ("Fast." and a dimmed second line) keep a `{" "}` between the halves, so
+  search engines and screen readers read two sentences rather than "Fast.Made…".
 - The root route adds theme colours, the web manifest (`public/site.webmanifest`), PNG icons
   next to `icon.svg`, and the structured data from `structuredData` in `src/seo.ts` (Relevate as
-  the organization, the site, and Margin as a free app). Keep that to facts the site states.
+  the organization, the site, Margin as a free app under the Apache 2.0 licence, and its source on
+  GitHub). Keep that to facts the site states.
+- `public/_headers` sets caching: built files in `/assets` for a year (their names change with
+  each build), pictures and icons for a day.
 - `public/robots.txt` points to `public/sitemap.xml`. Add new pages to the sitemap and update
   each `lastmod` when a page changes.

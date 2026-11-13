@@ -67,9 +67,16 @@ saying why it matters now (`MailModel.marginNote(for:)`, first match wins):
 
 - **code**: it holds a sign-in code;
 - **at 15:00** / **Thu 10:00** / **now**: a meeting from its invitation;
-- **bill**: it's in Bills to Pay;
+- **bill**: it's in Bills to Pay and asks you to pay: a pay link or "pay now", bank transfer
+  details (IBAN, overmaken), a payment reminder, overdue, or a charge that failed
+  (`MailNotice.asksForPayment`, read on the device from its words). An invoice that only says
+  it's there (amount, due date, PDF) is taken automatically as a rule, and a receipt is paid, so
+  neither gets a note. Ask's "bills not opened yet" leaves the same ones out;
 - **reply owed** / **owed 3d**: the last word is from someone you know, in the last three weeks,
-  and you haven't answered.
+  and you haven't answered, and it isn't a reminder, confirmation, receipt or system message
+  (`MailNotice.expectsNoReply`: an appointment reminder from your dentist asks nothing). Addresses
+  like `service@`, `invoice@` or `reminders@` count as automated in the inbox split too. Ask's
+  "what needs a reply" uses the same check.
 
 Under the date, one sentence sums it up ("Two replies to write and a bill to open. Planning at
 10:00."), from `MailModel.homeSummary`. AI apps connected to Margin get the same list and sentence

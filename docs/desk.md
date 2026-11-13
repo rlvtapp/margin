@@ -46,9 +46,10 @@ A short welcome: what Margin is with **Add Your Mailbox…** or **Look Around Fi
 mail); layout, appearance, the color-blind-safe palette and app icon, each one short row of
 the Settings picture tiles so the step fits without scrolling (the window style stays in
 Settings); alerts, Contacts suggestions, iCloud sync and copying
-sign-in codes; on iPhone and iPad (when the build has a push relay) **Instant notifications**,
+sign-in codes; **AI, or just mail**, the same switch as Settings → Assistant → Use AI (`usesAI`),
+which says what AI brings on this device; on iPhone and iPad (when the build has a push relay) **Instant notifications**,
 which says why the relay exists, what it learns and never sees, and has the same switch as
-Settings → Notifications (`usesPushRelay`, docs/push.md); then **You're all set** with a summary.
+Settings → Notifications (`usesPushRelay`, docs/push.md); then **You're all set** with a summary (AI on or off among it).
 
 Each step has a small moving picture: rows of people, drawn like Margin's avatars (initials on
 their colour) with the odd VIP star and assistant sparkle, sliding past the app icon on the
@@ -75,8 +76,9 @@ and the first match opens as you type.
 Graphite, each on a light tile or, with **Dark** on, a dark one; plus Pixel (Relevate's pixel grays)
 and Space. Each is an Icon Composer file, `Apps/Shared/AppIcon-<Name>[-Dark].icon`, listed in `ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES` for the
 Mac and iOS targets. iPhone and iPad switch the Home Screen icon (the system confirms once); the
-Mac shows it in the Dock while Margin is open, since macOS has no way to change an installed app's
-icon. Code: `MailUI/Model/AppIconChoice.swift`.
+Mac shows it in the Dock, also after Margin quits (a Dock tile plug-in keeps it there; macOS has no
+way to change an installed app's icon, so Finder keeps the main one). Code:
+`MailUI/Model/AppIconChoice.swift`; the Dock part is in [app-icon.md](app-icon.md).
 
 **Code:** `MailUI/Model/MailModel+Workspaces.swift`, `+Priority.swift`, `+Reminders.swift`,
 `+Desk.swift`, `+Writing.swift`; `MailUI/Views/WorkspaceViews.swift`, `SettingsPages.swift`.

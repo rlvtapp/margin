@@ -38,6 +38,26 @@ Settings → **Rules**.
 
 - **Rules:** "When From / To / Subject contains … then Archive, Move to Trash, Mark as read, Star,
   Label … or Move to folder …", for every mailbox or one.
+  - **Create Rule…** (right-click a conversation): starts a rule from its sender, anyone at their
+    domain, or its subject (without "Re:"/"Fwd:"), in its mailbox.
+  - **Describe a rule** (with the assistant on): "always star mail from my bank" fills in the form,
+    using your real folders, labels, Home groups, mailboxes and the people you write to
+    (`MailIntelligence.writeRule`; on-device it's guided generation, hosted models answer JSON).
+    Nothing is saved until you press Add Rule.
+  - While a rule is filled in, anything missing or that wouldn't work (no text, no label or folder
+    name, a folder that isn't in that mailbox) is marked in orange, and the form shows how many inbox
+    conversations it would catch now, with the first three.
+  - More actions: **Forward to…** an address (with the email's formatting, never back to its
+    sender), **Answer with…** a text (each sender at most once every 4 days per rule, never mailing
+    lists, no-reply or mailer-daemon addresses, never your own mail), and **Keep quiet** (it arrives
+    without an alert or sound). At most 20 automatic sends per check. Over MCP, rules that forward or
+    answer also need "Allow sending".
+  - **Edit** changes a saved rule in the same form (describing it again in words changes that rule).
+    **Start From** offers starter rules. Moving one sender's mail into the same folder three times
+    offers a ready rule at the top of the form (`RuleSuggestions.swift`).
+  - When rules move new mail (archive, Trash, a folder), one notice says how many, with Undo for
+    the usual few seconds; nothing reaches the server until then. Settings → Rules → **Recent
+    activity** lists what rules did (last 100), marking what was undone.
 - **Block** (a conversation's … menu): what's in the inbox from them goes to Trash, and so does new
   mail. Unblock in Settings → Rules.
 - **Mute** (a conversation's … menu): it's archived now; replies to it are archived and marked read.
@@ -50,4 +70,4 @@ AI apps connected to Margin can make the same rules from a plain request ("alway
 bank as important"), when the connection is allowed to change things: `list_rules`, `preview_rule`,
 `create_rule`, `update_rule`, `delete_rule` (see [intelligence.md](intelligence.md#connections-mcp)).
 They show in Settings → Rules like any other, with a notice when one is added, changed or removed.
-Code: `MailToolbox+Rules.swift`. Tests: `RuleToolsTests`.
+Code: `MailToolbox+Rules.swift`, `RuleForm.swift`, `RuleEditor.swift`, `RuleWriting.swift`. Tests: `RuleToolsTests`, `RuleUpgradeTests`.

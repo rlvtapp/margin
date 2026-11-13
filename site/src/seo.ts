@@ -19,7 +19,7 @@ export function seo({ path, title, description, hidden }: Page) {
 	const url = `${site.url}${path}`;
 	const fullTitle = path === "/" ? title : `${title} · ${site.name}`;
 	const image = `${site.url}/images/share.jpg`;
-	const imageAlt = "Margin on a Mac: every inbox in one list, with a conversation open";
+	const imageAlt = "Margin, the open-source mail app for Mac: all your mail in one place, beside the app with its inbox open";
 	return {
 		meta: [
 			{ title: fullTitle },
@@ -36,6 +36,7 @@ export function seo({ path, title, description, hidden }: Page) {
 			{ property: "og:image:height", content: "630" },
 			{ property: "og:image:alt", content: imageAlt },
 			{ name: "twitter:card", content: "summary_large_image" },
+			{ name: "twitter:site", content: `@${site.x[0].handle}` },
 			{ name: "twitter:title", content: fullTitle },
 			{ name: "twitter:description", content: description },
 			{ name: "twitter:image", content: image },
@@ -57,6 +58,7 @@ export const structuredData = {
 			"@id": `${site.publisherURL}/#organization`,
 			name: site.publisher,
 			url: site.publisherURL,
+			sameAs: [`https://x.com/${site.x[0].handle}`],
 		},
 		{
 			"@type": "WebSite",
@@ -71,14 +73,27 @@ export const structuredData = {
 			"@id": `${site.url}/#app`,
 			name: site.name,
 			description:
-				"A free mail app for Mac that connects straight to your mail provider, so your mail never passes through anyone else.",
+				"A free, open-source mail app for Mac that connects straight to your mail provider, so your mail never passes through anyone else.",
 			url: site.url,
 			applicationCategory: "CommunicationApplication",
 			operatingSystem: "macOS",
 			image: `${site.url}/images/share.jpg`,
 			screenshot: [`${site.url}/images/mac-hero-light.jpg`],
 			offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+			isAccessibleForFree: true,
+			license: "https://www.apache.org/licenses/LICENSE-2.0",
+			softwareHelp: { "@type": "WebPage", url: `${site.url}/support` },
+			sameAs: [site.source],
 			publisher: { "@id": `${site.publisherURL}/#organization` },
+		},
+		{
+			"@type": "SoftwareSourceCode",
+			"@id": `${site.url}/#source`,
+			name: site.name,
+			codeRepository: site.source,
+			license: "https://www.apache.org/licenses/LICENSE-2.0",
+			programmingLanguage: "Swift",
+			targetProduct: { "@id": `${site.url}/#app` },
 		},
 	],
 };

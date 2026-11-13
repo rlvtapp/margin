@@ -9,7 +9,8 @@ export const Route = createFileRoute("/terms")({
 		seo({
 			path: "/terms",
 			title: "Terms of use",
-			description: "The terms for using Margin, the free mail app for Mac.",
+			description:
+				"The terms for using Margin, the free, open-source mail app for Mac: it stays free, your accounts stay yours, and what we can and can't promise.",
 		}),
 });
 

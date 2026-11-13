@@ -14,9 +14,9 @@ export const Route = createFileRoute("/")({
 	head: () =>
 		seo({
 			path: "/",
-			title: "Margin: a free mail app for Mac",
+			title: "Margin: a free, open-source mail app for Mac",
 			description:
-				"All your mail in one place, nothing in between. Margin connects straight to Gmail, Outlook, iCloud and any IMAP server. Free, with no account to make.",
+				"Margin is a free, open-source mail app for Mac. It connects straight to Gmail, Outlook, iCloud and any IMAP or JMAP account, so nobody else handles your mail.",
 		}),
 });
 
@@ -99,7 +99,7 @@ function Home() {
 					<span>New</span> Your calendar, next to your mail
 				</a>
 				<h1>
-					All your mail in one place.
+					All your mail in one place.{" "}
 					<br />
 					<span className="dim">Nothing in between.</span>
 				</h1>
@@ -128,7 +128,7 @@ function Home() {
 
 			<section className="block" id="features">
 				<h2>
-					Fast.
+					Fast.{" "}
 					<span className="dim">Made for getting through it.</span>
 				</h2>
 				<p className="lead">
@@ -140,7 +140,7 @@ function Home() {
 
 			<section className="block" id="look">
 				<h2>
-					The real thing.
+					The real thing.{" "}
 					<span className="dim">Have a look around.</span>
 				</h2>
 				<p className="lead">
@@ -151,7 +151,7 @@ function Home() {
 
 			<section className="block" id="privacy">
 				<h2>
-					Private.
+					Private.{" "}
 					<span className="dim">We never see your mail.</span>
 				</h2>
 				<div>
@@ -169,7 +169,7 @@ function Home() {
 
 			<section className="block" id="agents">
 				<h2>
-					Connected.
+					Connected.{" "}
 					<span className="dim">Your mail in your AI apps.</span>
 				</h2>
 				<p className="lead">
@@ -208,7 +208,7 @@ function Home() {
 
 			<section className="block" id="bring-your-own">
 				<h2>
-					Bring your own.
+					Bring your own.{" "}
 					<span className="dim">Your apps, your model, your subscription.</span>
 				</h2>
 				<p className="lead">
@@ -220,7 +220,7 @@ function Home() {
 
 			<section className="block" id="more">
 				<h2>
-					And the rest.
+					And the rest.{" "}
 					<span className="dim">The things you'd miss.</span>
 				</h2>
 			</section>
@@ -235,7 +235,7 @@ function Home() {
 
 			<section className="block" id="languages">
 				<h2>
-					Your language.
+					Your language.{" "}
 					<span className="dim">{languages.length} of them, everywhere in the app.</span>
 				</h2>
 				<p className="lead">
@@ -253,7 +253,7 @@ function Home() {
 
 			<section className="block" id="faq">
 				<h2>
-					Questions.
+					Questions.{" "}
 					<span className="dim">Straight answers.</span>
 				</h2>
 			</section>
@@ -273,7 +273,7 @@ function Home() {
 
 			<section className="block" id="contact">
 				<h2>
-					Say hello.
+					Say hello.{" "}
 					<span className="dim">Or tell us what broke.</span>
 				</h2>
 				<p className="lead">

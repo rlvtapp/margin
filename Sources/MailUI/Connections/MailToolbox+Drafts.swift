@@ -80,14 +80,16 @@ extension MailModel {
             var account = arguments["from"]?.string.flatMap(matchAccount) ?? currentAccount
             var recipient = arguments["to"]?.string.flatMap { EmailAddress.parseList($0)?.first }
             var language = arguments["language"]?.string?.lowercased()
+            var theirText: String?
             if let id = arguments["reply_to_id"]?.string {
                 let thread = try await toolThread(id)
                 await loadAllBodies(of: thread)
                 if let owner = self.account(thread.accountID) { account = owner }
                 recipient = recipient ?? thread.messages.last { !isMine($0) }?.from
                 language = language ?? languageOf(thread)
+                theirText = theirLatestText(in: thread)
             }
-            return writingStyle(for: recipient, account: account, language: language)
+            return writingStyle(for: recipient, account: account, language: language, theirText: theirText)
                 ?? "Nothing learned yet. Write plainly and briefly, and match the language of the conversation."
         default:
             return nil

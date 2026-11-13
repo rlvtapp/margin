@@ -9,7 +9,7 @@ Roughly in order. Each item keeps the same rule: the device talks to the mail se
 - **Smart folders** (saved searches with rules that also ask the server) and **nested labels** (Work/Clients).
 - **Open at login.**
 - **Reading:** a slim header that stays while scrolling.
-- **Writing:** Send Again. The block editor is in Settings → Experimental ([block-editor.md](block-editor.md)).
+- **Writing:** Send Again. Formatting on iPhone and iPad (the editor there is plain text).
 
 ## Next
 

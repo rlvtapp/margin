@@ -158,7 +158,7 @@ struct RecipientField: View {
                 return true
             }
         }
-        .frame(height: 24)
+        .frame(height: Look.gap(24))
     }
 
     private func move(_ step: Int) -> Bool {
@@ -396,7 +396,7 @@ private struct RecipientBadge: View {
                 .truncationMode(.middle)
             Button(action: remove) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 7.5, weight: .bold))
+                    .font(.system(size: Look.size(7.5), weight: .bold))
                     .foregroundStyle(isSelected ? Paper.panel : Ink.tertiary)
                     .frame(width: 14, height: 14)
                     .contentShape(Rectangle())
@@ -410,7 +410,7 @@ private struct RecipientBadge: View {
         }
         .padding(.leading, 4)
         .padding(.trailing, 4)
-        .frame(height: 24)
+        .frame(height: Look.gap(24))
         .frame(maxWidth: 260)
         .background(isSelected ? Ink.primary : Fill.one, in: Capsule())
         .contentShape(Capsule())
@@ -442,7 +442,7 @@ struct RecipientMatches: View {
                         }
                         .lineLimit(1)
                         .padding(.horizontal, Space.s)
-                        .frame(height: 34)
+                        .frame(height: Look.gap(34))
                         .background(index == input.highlighted ? Fill.one : .clear, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
                         .contentShape(Rectangle())
                     }

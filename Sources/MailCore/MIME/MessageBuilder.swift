@@ -23,7 +23,8 @@ public enum MessageBuilder {
             "Content-Type: text/plain; charset=utf-8",
             "Content-Transfer-Encoding: quoted-printable",
             "",
-            QuotedPrintable.encode(draft.text),
+            // A picture in the text is a placeholder character there; the HTML part shows it.
+            QuotedPrintable.encode(draft.text.replacingOccurrences(of: "\u{FFFC}", with: "")),
         ]
         // An invitation reply: the text, plus the iCalendar part calendar apps act on.
         if let calendar = draft.calendar {

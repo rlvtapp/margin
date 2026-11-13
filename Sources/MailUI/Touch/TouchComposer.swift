@@ -62,15 +62,15 @@ struct TouchComposer: View {
                         RecipientMatches(model: model, input: bccInput).padding(.horizontal, Space.l).padding(.vertical, 4)
                     }
                     line("Subject") { TextField("", text: $state.draft.subject).focused($field, equals: .subject) }
-                    if model.usesBlockComposer {
-                        BlockComposer(state: $state)
-                            .frame(minHeight: 320)
-                    } else {
-                        RichTextEditor(text: $state.draft.text, html: $state.draft.html, controller: richText)
-                            .focused($field, equals: .body)
-                            .frame(minHeight: 220)
+                    RichTextEditor(text: $state.draft.text, html: $state.draft.html, controller: richText)
+                        .focused($field, equals: .body)
+                        .frame(minHeight: 220)
+                        .padding(.horizontal, Space.l)
+                        .padding(.vertical, Space.m)
+                    if let forwarded = state.forwarded {
+                        ForwardedPreview(forwarded: forwarded) { state.forwardAsText() }
                             .padding(.horizontal, Space.l)
-                            .padding(.vertical, Space.m)
+                            .padding(.bottom, Space.s)
                     }
                     if isReply {
                         ReplyAssistantBar(model: model, hasText: !state.draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -102,10 +102,7 @@ struct TouchComposer: View {
                     Button { send() } label: { Label("Send", systemImage: "arrow.up") }
                         .disabled([state.to, state.cc, state.bcc].allSatisfy { $0.trimmingCharacters(in: .whitespaces).isEmpty })
                 }
-                // The block editor has its own bar above the keyboard; Margin's tools stay at the foot.
-                if !model.usesBlockComposer {
-                    ToolbarItemGroup(placement: .keyboard) { tools }
-                }
+                ToolbarItemGroup(placement: .keyboard) { tools }
                 ToolbarItemGroup(placement: .bottomBar) { tools }
             }
         }
@@ -156,7 +153,7 @@ struct TouchComposer: View {
             Button { withAnimation(Motion.quick) { showsQuoted.toggle() } } label: {
                 HStack(spacing: Space.s) {
                     Image(systemName: showsQuoted ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: Look.size(11), weight: .semibold))
                     Text("\(message.from.displayName) wrote \(RowDate.long(message.date))")
                     Spacer()
                 }
@@ -193,7 +190,7 @@ struct TouchComposer: View {
     }
 
     private func send() {
-        if state.forgotAttachment { warnsAboutAttachment = true } else { model.queueSend(state, isReply: isReply) }
+        if model.remindsAboutAttachments && state.forgotAttachment { warnsAboutAttachment = true } else { model.queueSend(state, isReply: isReply) }
     }
 }
 #endif

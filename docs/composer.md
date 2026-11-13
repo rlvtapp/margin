@@ -36,6 +36,64 @@ Automated addresses (no-reply, notifications, calendars, postmaster) are never a
 to guess aliases from Sent mail; those guesses were removed once (`aliasesFromProvidersOnly`).
 Aliases also count as you: replies owed, conversations with yourself, reactions and meeting answers.
 
+Add an address straight from the From menu (**Add an Address…**): it's added to the mailbox's
+Send as list and used for the message at once. Each send-as address can have **its own signature**
+(the signature button on its row in Settings → Mailboxes); mail sent as it starts with that one,
+switching From swaps it, and an alias without one uses the mailbox's
+(`MailAccount.aliasSignatures`, `signature(sendingAs:forReply:)`). The mailbox itself can be
+renamed there too (**Mailbox name**, like Work or Personal), apart from the sender name, and a
+picture can be dropped onto its picture.
+
+**Sent from Margin.** A new message, reply or forward starts with "Sent from Margin" as its last
+line, under the signature, in the text you write, with "Margin" already a link to
+https://margin.relevate.app in the editor (`ComposeState.sentFrom`, `RichTextEditor.linkLastLine`;
+the whole line when your words don't say "Margin"). What you see is what's sent: nothing is added
+or changed when you press Send, so deleting or editing the line is all it takes. Switching
+mailbox swaps the signature and keeps it last, an AI draft keeps it under what's written, and a
+formatted signature still replaces the plain one with the line kept after it. On by default;
+Settings → Writing turns it off or changes its words for new messages. Reactions, invitation
+answers, quick replies from an alert and mail a rule sends don't get it. On iPhone and iPad the
+editor is plain text, so the line is there without the link. The writing profile doesn't learn
+from it.
+
+## Forwarding with formatting
+
+Forwarding an HTML email carries it underneath what you write, as it came: colours, tables, links
+and pictures. The composer shows it folded under the message ("Forwarded email · Goes out with its
+own formatting"); **Edit as Text** turns it into quoted text in the message instead, to trim it.
+Plain-text mail is quoted as text, as before. The original's `<head>`, scripts and `cid:` pictures
+(which don't travel with a forward) are left out, its styles kept (`ForwardedOriginal`). It goes out
+in the HTML part, with a quoted copy in the plain part, also from saved drafts and Send later.
+Replies still quote nothing: the conversation is on the page. A message's own Reply opens the
+reply box right under that message when it isn't the last one; the toolbar's Reply keeps it at the
+bottom (`ComposeState.answersOneMessage`).
+
+## Formatting
+
+The formatting bar (`FormattingBar`, `RichTextController`) sits on top, right above the text, in
+the Mac's composer (under Subject) and in the reply. **Aa** hides or shows it, and the choice is
+remembered for the next message (`showsFormattingBar`, on by default). It has undo and redo; font (the normal one, seven that look the same on most devices, and Show
+Fonts… for any font on the Mac) and size (10 to 36 points); bold, italic, underline,
+strikethrough; text colour and highlight in Relevate's nine named colours (gray, brown, orange,
+yellow, green, blue, purple, pink, red, the set its web editor uses); alignment, bulleted and
+numbered lists, indent and outdent, line spacing (single, 1.15, 1.5, double); a link, a picture
+inside the text (shown at most 480 points wide), the emoji picker; and clear formatting, which
+keeps links and pictures. Mail stays plain until something is formatted.
+
+What's sent is written by Margin's own `EmailHTMLWriter`, not the system's HTML writer: every style
+sits on its element (mail apps drop `<style>` blocks, which the system's writer relies on), line
+spacing and indents are kept (the system's writer drops line spacing), and a picture goes out as
+an inline part (`cid:`, `multipart/related`) named by its bytes, so writing the HTML again never
+adds a copy; deleting it from the text takes it out of the draft. The plain-text part leaves the
+picture's placeholder character out. The editor's normal text colour follows dark mode, so it's
+left out of the HTML: white text never reaches someone reading on white. On iPhone and iPad the
+editor is plain text.
+
+The block editor that used to be in Settings → Experimental is gone: Margin has no dependency on
+Relevate's native editor, and the composer above is the one editor.
+
+The forgotten-attachment reminder can be turned off in Settings → Writing.
+
 ## Recipients
 
 To, Cc and Bcc are badge fields (`RecipientField` in `Sources/MailUI/Views/RecipientField.swift`),

@@ -14,6 +14,11 @@ struct RichTextEditor: NSViewRepresentable {
     /// Esc while typing. A text view would otherwise keep the key for word completion, so the
     /// composer around it never hears it.
     var onEscape: (() -> Void)?
+    /// "Sent from Margin" at the end of the text: its "Margin" is shown as the link it'll be
+    /// sent as.
+    var linkedLastLine: String?
+    /// The draft's attachments: pictures put in the text are kept there as inline parts.
+    var attachments: Binding<[OutgoingAttachment]>?
 
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = NSTextView.scrollableTextView()
@@ -35,8 +40,9 @@ struct RichTextEditor: NSViewRepresentable {
         view.string = text
         controller.textView = view
         context.coordinator.onChange = { view in
-            controller.changed(view, text: $text, html: $html)
+            controller.changed(view, text: $text, html: $html, attachments: attachments)
         }
+        if Self.linkLastLine(linkedLastLine, in: view) { controller.changed(view, text: $text, html: $html, attachments: attachments) }
         context.coordinator.onEscape = onEscape
         return scroll
     }
@@ -48,7 +54,20 @@ struct RichTextEditor: NSViewRepresentable {
         if view.string != text {
             view.textStorage?.setAttributedString(NSAttributedString(string: text, attributes: view.typingAttributes))
             html = nil
+            if Self.linkLastLine(linkedLastLine, in: view) { controller.changed(view, text: $text, html: $html, attachments: attachments) }
         }
+    }
+
+    /// Links "Margin" in the last line when the text ends with `line`. True when it did.
+    static func linkLastLine(_ line: String?, in view: NSTextView) -> Bool {
+        guard let line, !line.isEmpty, let storage = view.textStorage, let url = URL(string: MailModel.marginSite),
+              view.string.hasSuffix(line) else { return false }
+        let start = view.string.index(view.string.endIndex, offsetBy: -line.count)
+        let words = MailModel.linkRange(in: line)
+        let lower = view.string.index(start, offsetBy: line.distance(from: line.startIndex, to: words.lowerBound))
+        let upper = view.string.index(start, offsetBy: line.distance(from: line.startIndex, to: words.upperBound))
+        storage.addAttribute(.link, value: url, range: NSRange(lower..<upper, in: view.string))
+        return true
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -73,7 +92,7 @@ final class RichTextController {
     weak var textView: NSTextView?
     private var pending: Task<Void, Never>?
 
-    func changed(_ view: NSTextView, text: Binding<String>, html: Binding<String?>) {
+    func changed(_ view: NSTextView, text: Binding<String>, html: Binding<String?>, attachments: Binding<[OutgoingAttachment]>? = nil) {
         text.wrappedValue = view.string
         // Turning text into HTML takes a moment; do it once typing pauses.
         pending?.cancel()
@@ -81,8 +100,116 @@ final class RichTextController {
         pending = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled, self != nil else { return }
-            html.wrappedValue = Self.isFormatted(storage) ? Self.html(from: storage) : nil
+            let written = Self.isFormatted(storage) ? EmailHTMLWriter.write(storage) : nil
+            html.wrappedValue = written?.html
+            // Pictures in the text are the draft's inline parts: added when put in, gone when deleted.
+            if let attachments {
+                let others = attachments.wrappedValue.filter { !($0.contentID ?? "").hasSuffix(EmailHTMLWriter.inlineSuffix) }
+                let updated = others + (written?.images ?? [])
+                if updated != attachments.wrappedValue { attachments.wrappedValue = updated }
+            }
         }
+    }
+
+    // MARK: More tools
+
+    func undo() { textView?.undoManager?.undo() }
+    func redo() { textView?.undoManager?.redo() }
+
+    /// A font family by name; nil for the editor's normal one.
+    func setFont(_ name: String?) {
+        changeFonts { font in
+            let manager = NSFontManager.shared
+            let traits = manager.traits(of: font)
+            var base = name.flatMap { NSFont(name: $0, size: font.pointSize) ?? manager.font(withFamily: $0, traits: [], weight: 5, size: font.pointSize) }
+                ?? .systemFont(ofSize: font.pointSize)
+            if traits.contains(.boldFontMask) { base = manager.convert(base, toHaveTrait: .boldFontMask) }
+            if traits.contains(.italicFontMask) { base = manager.convert(base, toHaveTrait: .italicFontMask) }
+            return base
+        }
+    }
+
+    /// The system's font window, for any font on this Mac.
+    func showFonts() {
+        guard let view = textView else { return }
+        view.window?.makeFirstResponder(view)
+        NSFontManager.shared.orderFrontFontPanel(nil)
+    }
+
+    /// Changes the paragraphs the selection touches, or what's typed next.
+    private func changeParagraphs(_ change: (NSMutableParagraphStyle) -> Void) {
+        guard let view = textView, let storage = view.textStorage else { return }
+        let range = (storage.string as NSString).paragraphRange(for: view.selectedRange())
+        func changed(_ style: NSParagraphStyle?) -> NSParagraphStyle {
+            let copy = (style?.mutableCopy() as? NSMutableParagraphStyle) ?? NSMutableParagraphStyle()
+            change(copy)
+            return copy
+        }
+        view.typingAttributes[.paragraphStyle] = changed(view.typingAttributes[.paragraphStyle] as? NSParagraphStyle)
+        guard range.length > 0 else { return }
+        storage.beginEditing()
+        storage.enumerateAttribute(.paragraphStyle, in: range) { value, part, _ in
+            storage.addAttribute(.paragraphStyle, value: changed(value as? NSParagraphStyle), range: part)
+        }
+        storage.endEditing()
+        view.didChangeText()
+    }
+
+    /// Moves the paragraphs in or out by one step (28 points).
+    func indent(_ steps: Int) {
+        changeParagraphs { style in
+            let indent = max(0, style.headIndent + CGFloat(steps) * 28)
+            style.headIndent = indent
+            style.firstLineHeadIndent = indent
+        }
+    }
+
+    func setLineSpacing(_ multiple: CGFloat) {
+        changeParagraphs { $0.lineHeightMultiple = multiple }
+    }
+
+    /// Puts pictures in the text where the cursor is, shown at most 480 points wide.
+    func insertPictures(_ urls: [URL]) {
+        guard let view = textView, let storage = view.textStorage else { return }
+        var at = view.selectedRange().location
+        storage.beginEditing()
+        for url in urls {
+            guard let image = NSImage(contentsOf: url) else { continue }
+            let attachment = NSTextAttachment()
+            attachment.image = image
+            let scale = min(1, 480 / max(image.size.width, 1))
+            attachment.bounds = CGRect(x: 0, y: 0, width: image.size.width * scale, height: image.size.height * scale)
+            let piece = NSMutableAttributedString(attachment: attachment)
+            piece.append(NSAttributedString(string: "\n", attributes: view.typingAttributes))
+            storage.insert(piece, at: at)
+            at += piece.length
+        }
+        storage.endEditing()
+        view.setSelectedRange(NSRange(location: at, length: 0))
+        view.didChangeText()
+    }
+
+    /// The system's emoji and symbols picker, typing into the message.
+    func showEmoji() {
+        guard let view = textView else { return }
+        view.window?.makeFirstResponder(view)
+        NSApp.orderFrontCharacterPalette(nil)
+    }
+
+    /// Back to normal text: links and pictures stay.
+    func clearFormatting() {
+        guard let view = textView, let storage = view.textStorage else { return }
+        let normal: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: EmailHTMLWriter.baseSize), .foregroundColor: NSColor.labelColor]
+        view.typingAttributes = normal
+        let range = view.selectedRange()
+        guard range.length > 0 else { return }
+        storage.beginEditing()
+        for key in [NSAttributedString.Key.backgroundColor, .underlineStyle, .strikethroughStyle, .paragraphStyle] {
+            storage.removeAttribute(key, range: range)
+        }
+        storage.addAttributes(normal, range: range)
+        storage.endEditing()
+        view.didChangeText()
     }
 
     func toggle(_ trait: NSFontTraitMask) {
@@ -147,11 +274,115 @@ final class RichTextController {
         view.didChangeText()
     }
 
+    /// Applies an attribute to the selection, or to what's typed next when nothing is selected.
+    private func apply(_ key: NSAttributedString.Key, _ value: Any?) {
+        guard let view = textView, let storage = view.textStorage else { return }
+        let range = view.selectedRange()
+        if range.length == 0 {
+            view.typingAttributes[key] = value
+            return
+        }
+        storage.beginEditing()
+        if let value { storage.addAttribute(key, value: value, range: range) } else { storage.removeAttribute(key, range: range) }
+        storage.endEditing()
+        view.didChangeText()
+    }
+
+    /// The text colour; nil for the normal one.
+    func setColor(_ color: NSColor?) { apply(.foregroundColor, color ?? NSColor.labelColor) }
+
+    /// A highlight behind the text; nil for none.
+    func setHighlight(_ color: NSColor?) { apply(.backgroundColor, color) }
+
+    func toggleStrikethrough() {
+        guard let view = textView, let storage = view.textStorage else { return }
+        let range = view.selectedRange()
+        let at = range.length > 0 ? (storage.attribute(.strikethroughStyle, at: range.location, effectiveRange: nil) as? Int ?? 0)
+            : (view.typingAttributes[.strikethroughStyle] as? Int ?? 0)
+        apply(.strikethroughStyle, at != 0 ? nil : NSUnderlineStyle.single.rawValue)
+    }
+
+    /// Changes the font's size or family, keeping bold and italic.
+    private func changeFonts(_ change: (NSFont) -> NSFont) {
+        guard let view = textView, let storage = view.textStorage else { return }
+        let range = view.selectedRange()
+        if range.length == 0 {
+            view.typingAttributes[.font] = change((view.typingAttributes[.font] as? NSFont) ?? .systemFont(ofSize: 14))
+            return
+        }
+        storage.beginEditing()
+        storage.enumerateAttribute(.font, in: range) { value, part, _ in
+            storage.addAttribute(.font, value: change((value as? NSFont) ?? .systemFont(ofSize: 14)), range: part)
+        }
+        storage.endEditing()
+        view.didChangeText()
+    }
+
+    func setSize(_ size: CGFloat) {
+        changeFonts { NSFontManager.shared.convert($0, toSize: size) }
+    }
+
+    enum Family: CaseIterable { case sans, serif, mono }
+
+    func setFamily(_ family: Family) {
+        changeFonts { font in
+            let manager = NSFontManager.shared
+            let traits = manager.traits(of: font)
+            var base: NSFont = switch family {
+            case .sans: .systemFont(ofSize: font.pointSize)
+            case .serif: NSFont(name: "Georgia", size: font.pointSize) ?? .systemFont(ofSize: font.pointSize)
+            case .mono: .monospacedSystemFont(ofSize: font.pointSize, weight: .regular)
+            }
+            if traits.contains(.boldFontMask) { base = manager.convert(base, toHaveTrait: .boldFontMask) }
+            if traits.contains(.italicFontMask) { base = manager.convert(base, toHaveTrait: .italicFontMask) }
+            return base
+        }
+    }
+
+    /// Aligns the paragraphs the selection touches.
+    func setAlignment(_ alignment: NSTextAlignment) {
+        changeParagraphs { $0.alignment = alignment }
+    }
+
+    /// Numbers each selected line ("1. ", "2. "…), or removes the numbers.
+    func toggleNumbers() {
+        guard let view = textView, let storage = view.textStorage else { return }
+        let text = storage.string as NSString
+        let lines = text.lineRange(for: view.selectedRange())
+        var starts: [Int] = []
+        text.enumerateSubstrings(in: lines, options: [.byLines, .substringNotRequired]) { _, range, _, _ in starts.append(range.location) }
+        func number(at start: Int) -> NSRange? {
+            let rest = text.substring(from: start) as NSString
+            let match = rest.range(of: "^[0-9]+\\. ", options: .regularExpression)
+            return match.location == NSNotFound ? nil : NSRange(location: start, length: match.length)
+        }
+        let removing = !starts.isEmpty && starts.allSatisfy { number(at: $0) != nil }
+        storage.beginEditing()
+        for (index, start) in starts.enumerated().reversed() {
+            if removing, let existing = number(at: start) {
+                storage.deleteCharacters(in: existing)
+            } else if !removing {
+                storage.insert(NSAttributedString(string: "\(index + 1). ", attributes: view.typingAttributes), at: start)
+            }
+        }
+        storage.endEditing()
+        view.didChangeText()
+    }
+
     static func isFormatted(_ text: NSAttributedString) -> Bool {
         var formatted = false
         text.enumerateAttributes(in: NSRange(location: 0, length: text.length)) { attributes, _, stop in
-            let traits = (attributes[.font] as? NSFont).map { NSFontManager.shared.traits(of: $0) } ?? []
-            if attributes[.link] != nil || (attributes[.underlineStyle] as? Int ?? 0) != 0
+            let font = attributes[.font] as? NSFont
+            let traits = font.map { NSFontManager.shared.traits(of: $0) } ?? []
+            let color = attributes[.foregroundColor] as? NSColor
+            let paragraph = attributes[.paragraphStyle] as? NSParagraphStyle
+            let alignment = paragraph?.alignment
+            if attributes[.link] != nil || attributes[.attachment] != nil
+                || (paragraph.map { $0.headIndent > 0 || ($0.lineHeightMultiple > 0 && abs($0.lineHeightMultiple - 1) > 0.01) } ?? false) || (attributes[.underlineStyle] as? Int ?? 0) != 0
+                || (attributes[.strikethroughStyle] as? Int ?? 0) != 0 || attributes[.backgroundColor] != nil
+                || (color != nil && color != NSColor.labelColor)
+                || (alignment != nil && alignment != .natural && alignment != .left)
+                || (font.map { abs($0.pointSize - 14) > 0.5 || !($0.familyName ?? "").hasPrefix(".") } ?? false)
                 || traits.contains(.boldFontMask) || traits.contains(.italicFontMask) {
                 formatted = true
                 stop.pointee = true
@@ -160,30 +391,125 @@ final class RichTextController {
         return formatted
     }
 
-    /// HTML for the formatted part, with the system font named in a way other devices understand.
+    /// HTML for the formatted part (`EmailHTMLWriter`).
     static func html(from text: NSAttributedString) -> String? {
-        guard let data = try? text.data(from: NSRange(location: 0, length: text.length),
-                                        documentAttributes: [.documentType: NSAttributedString.DocumentType.html]),
-              var html = String(data: data, encoding: .utf8) else { return nil }
-        html = html.replacingOccurrences(of: "'.AppleSystemUIFont'", with: "-apple-system, 'Helvetica Neue', Helvetica, Arial, sans-serif")
-            .replacingOccurrences(of: ".AppleSystemUIFont", with: "Helvetica")
-        return html
+        EmailHTMLWriter.write(text).html
     }
 }
 
-/// Bold, italic, underline, bullets, link.
+/// Undo and redo; font, size; bold, italic, underline, strikethrough; colour and highlight;
+/// alignment, lists, indents, line spacing; link, picture, emoji; clear formatting.
 struct FormattingBar: View {
     let controller: RichTextController
     @State private var asksForLink = false
+    @State private var picksPicture = false
     @State private var link = "https://"
+
+    /// Relevate's named colours (the same set as its web editor), in shades that read on white
+    /// and on dark: what most people open mail on.
+    static var colors: [(name: String, value: NSColor)] {
+        [(String(localized: "Gray"), NSColor(srgbRed: 0.45, green: 0.45, blue: 0.48, alpha: 1)),
+         (String(localized: "Brown"), NSColor(srgbRed: 0.55, green: 0.36, blue: 0.22, alpha: 1)),
+         (String(localized: "Orange"), NSColor(srgbRed: 0.85, green: 0.45, blue: 0.0, alpha: 1)),
+         (String(localized: "Yellow"), NSColor(srgbRed: 0.72, green: 0.56, blue: 0.0, alpha: 1)),
+         (String(localized: "Green"), NSColor(srgbRed: 0.10, green: 0.55, blue: 0.25, alpha: 1)),
+         (String(localized: "Blue"), NSColor(srgbRed: 0.10, green: 0.35, blue: 0.85, alpha: 1)),
+         (String(localized: "Purple"), NSColor(srgbRed: 0.45, green: 0.25, blue: 0.80, alpha: 1)),
+         (String(localized: "Pink"), NSColor(srgbRed: 0.85, green: 0.20, blue: 0.55, alpha: 1)),
+         (String(localized: "Red"), NSColor(srgbRed: 0.80, green: 0.15, blue: 0.15, alpha: 1))]
+    }
+
+    static var highlights: [(name: String, value: NSColor)] {
+        [(String(localized: "Gray"), NSColor(srgbRed: 0.90, green: 0.90, blue: 0.91, alpha: 1)),
+         (String(localized: "Brown"), NSColor(srgbRed: 0.93, green: 0.87, blue: 0.80, alpha: 1)),
+         (String(localized: "Orange"), NSColor(srgbRed: 1.0, green: 0.86, blue: 0.70, alpha: 1)),
+         (String(localized: "Yellow"), NSColor(srgbRed: 1.0, green: 0.93, blue: 0.45, alpha: 1)),
+         (String(localized: "Green"), NSColor(srgbRed: 0.75, green: 0.95, blue: 0.70, alpha: 1)),
+         (String(localized: "Blue"), NSColor(srgbRed: 0.75, green: 0.87, blue: 1.0, alpha: 1)),
+         (String(localized: "Purple"), NSColor(srgbRed: 0.87, green: 0.80, blue: 1.0, alpha: 1)),
+         (String(localized: "Pink"), NSColor(srgbRed: 1.0, green: 0.80, blue: 0.88, alpha: 1)),
+         (String(localized: "Red"), NSColor(srgbRed: 1.0, green: 0.80, blue: 0.78, alpha: 1))]
+    }
+
+    /// Fonts that look the same on the reader's device, most of them on every one.
+    static let fonts = ["Helvetica", "Arial", "Verdana", "Trebuchet MS", "Georgia", "Times New Roman", "Courier New"]
+    static let sizes: [CGFloat] = [10, 11, 12, 13, 14, 16, 18, 20, 24, 28, 32, 36]
+
+    private func menu<Items: View>(_ symbol: String, help: LocalizedStringKey, @ViewBuilder items: () -> Items) -> some View {
+        Menu { items() } label: {
+            Image(systemName: symbol).font(.system(size: Look.size(13))).foregroundStyle(Ink.secondary)
+                .frame(width: 28, height: 28).contentShape(Rectangle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(Text(help))
+    }
+
+    private var divider: some View {
+        Rectangle().fill(Line.hairline).frame(width: 1, height: 16).padding(.horizontal, 4)
+    }
 
     var body: some View {
         HStack(spacing: 0) {
+            IconButton("arrow.uturn.backward", help: "Undo  ⌘Z") { controller.undo() }
+            IconButton("arrow.uturn.forward", help: "Redo  ⇧⌘Z") { controller.redo() }
+            divider
+            menu("textformat", help: "Font") {
+                Button("Normal") { controller.setFont(nil) }
+                Divider()
+                ForEach(Self.fonts, id: \.self) { name in
+                    Button { controller.setFont(name) } label: { Text(verbatim: name).font(.custom(name, size: 13)) }
+                }
+                Divider()
+                Button("Show Fonts…") { controller.showFonts() }
+            }
+            menu("textformat.size", help: "Text size") {
+                ForEach(Self.sizes, id: \.self) { size in
+                    Button { controller.setSize(size) } label: {
+                        size == EmailHTMLWriter.baseSize ? Text("\(Int(size)) (Normal)") : Text(verbatim: "\(Int(size))")
+                    }
+                }
+            }
+            divider
             IconButton("bold", help: "Bold  ⌘B") { controller.toggle(.boldFontMask) }
             IconButton("italic", help: "Italic  ⌘I") { controller.toggle(.italicFontMask) }
             IconButton("underline", help: "Underline  ⌘U") { controller.toggleUnderline() }
+            IconButton("strikethrough", help: "Strikethrough") { controller.toggleStrikethrough() }
+            menu("paintpalette", help: "Text color") {
+                Button("Default") { controller.setColor(nil) }
+                ForEach(Self.colors, id: \.name) { color in
+                    Button(color.name) { controller.setColor(color.value) }
+                }
+            }
+            menu("highlighter", help: "Highlight") {
+                Button("None") { controller.setHighlight(nil) }
+                ForEach(Self.highlights, id: \.name) { color in
+                    Button(color.name) { controller.setHighlight(color.value) }
+                }
+            }
+            divider
+            menu("text.alignleft", help: "Alignment") {
+                Button { controller.setAlignment(.left) } label: { Label("Align Left", systemImage: "text.alignleft") }
+                Button { controller.setAlignment(.center) } label: { Label("Center", systemImage: "text.aligncenter") }
+                Button { controller.setAlignment(.right) } label: { Label("Align Right", systemImage: "text.alignright") }
+            }
             IconButton("list.bullet", help: "Bulleted list") { controller.toggleBullets() }
+            IconButton("list.number", help: "Numbered list") { controller.toggleNumbers() }
+            IconButton("decrease.indent", help: "Decrease indent") { controller.indent(-1) }
+            IconButton("increase.indent", help: "Increase indent") { controller.indent(1) }
+            menu("arrow.up.and.down.text.horizontal", help: "Line spacing") {
+                Button("Single") { controller.setLineSpacing(1) }
+                Button { controller.setLineSpacing(1.15) } label: { Text(verbatim: "1.15") }
+                Button { controller.setLineSpacing(1.5) } label: { Text(verbatim: "1.5") }
+                Button("Double") { controller.setLineSpacing(2) }
+            }
+            divider
             IconButton("link", help: "Add a link") { asksForLink = true }
+            IconButton("photo", help: "Insert picture") { picksPicture = true }
+            IconButton("face.smiling", help: "Emoji") { controller.showEmoji() }
+            IconButton("eraser", help: "Clear formatting") { controller.clearFormatting() }
         }
         .alert("Add a link", isPresented: $asksForLink) {
             TextField("https://", text: $link)
@@ -192,6 +518,9 @@ struct FormattingBar: View {
                 if let url = URL(string: link), url.scheme != nil { controller.addLink(url) }
                 link = "https://"
             }
+        }
+        .fileImporter(isPresented: $picksPicture, allowedContentTypes: [.image], allowsMultipleSelection: true) { result in
+            if case .success(let urls) = result { controller.insertPictures(urls) }
         }
     }
 }
@@ -203,6 +532,8 @@ struct RichTextEditor: View {
     var fontSize: CGFloat = 14
     var controller: RichTextController
     var onEscape: (() -> Void)?
+    var linkedLastLine: String?
+    var attachments: Binding<[OutgoingAttachment]>?
 
     var body: some View {
         TextEditor(text: $text).font(.system(size: fontSize)).scrollContentBackground(.hidden)

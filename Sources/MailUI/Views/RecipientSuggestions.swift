@@ -31,7 +31,7 @@ struct RecipientSuggestions: View {
                         }
                         .lineLimit(1)
                         .padding(.horizontal, Space.s)
-                        .frame(height: 34)
+                        .frame(height: Look.gap(34))
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)

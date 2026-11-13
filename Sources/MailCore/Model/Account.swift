@@ -72,6 +72,8 @@ public struct MailAccount: Identifiable, Hashable, Codable, Sendable {
     public var inAllInboxes: Bool?
     /// The mailbox's picture (PNG, at most 256 pixels), shown instead of its letter.
     public var picture: Data?
+    /// Signatures of send-as addresses that have their own, by lowercased address.
+    public var aliasSignatures: [String: String]?
 
     /// The main address first, then the aliases.
     public var sendAddresses: [EmailAddress] { [address] + (aliases ?? []) }
@@ -87,6 +89,12 @@ public struct MailAccount: Identifiable, Hashable, Codable, Sendable {
         guard forReply, let choice = replySignature else { return signature }
         if choice.isEmpty { return nil }
         return moreSignatures?.first { $0.name == choice }?.text ?? signature
+    }
+
+    /// The signature for mail sent as `address`: an alias's own, else the mailbox's.
+    public func signature(sendingAs address: EmailAddress, forReply: Bool) -> String? {
+        if let own = aliasSignatures?[address.address.lowercased()], !own.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return own }
+        return signatureText(forReply: forReply)
     }
 
     /// The address to answer from: the alias the mail was sent to, or the main address.

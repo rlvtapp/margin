@@ -18,7 +18,7 @@ struct ReplyPrompt: View {
                 Spacer()
             }
             .padding(.horizontal, 12)
-            .frame(height: 42)
+            .frame(height: Look.gap(42))
             .background(Paper.sheet, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(isHovered ? Line.edge.opacity(1.6) : Line.edge))
             .contentShape(Rectangle())
@@ -37,6 +37,32 @@ struct ReplyPrompt: View {
 }
 
 /// The open reply, inline under the conversation so the thread stays readable.
+/// The reply being written, in the conversation. This small view is the only one that reads the
+/// reply's text, so typing redraws the editor and nothing around it: the conversation above
+/// (every message, every formatted mail) used to be worked out again on each keystroke, which
+/// made writing stutter in long conversations.
+struct ReplyEditorHost: View {
+    @Bindable var model: MailModel
+
+    var body: some View {
+        if let reply = Binding(keepingLast: $model.reply) {
+            ReplyEditor(model: model, state: reply)
+        }
+    }
+}
+
+/// The new message being written, in the reading pane or a sheet; see `ReplyEditorHost`.
+struct ComposeHost: View {
+    @Bindable var model: MailModel
+    var inPane = false
+
+    var body: some View {
+        if let compose = Binding(keepingLast: $model.compose) {
+            ComposeSheet(model: model, state: compose, inPane: inPane)
+        }
+    }
+}
+
 struct ReplyEditor: View {
     let model: MailModel
     @Binding var state: ComposeState
@@ -78,15 +104,17 @@ struct ReplyEditor: View {
                 RecipientMatches(model: model, input: bccInput)
             }
             Rectangle().fill(Line.hairline).frame(height: 1)
-            // Replies use the block editor too when it's turned on (Settings → Experimental).
-            if model.usesBlockComposer {
-                BlockComposer(state: $state)
-                    .frame(minHeight: 160)
-            } else {
-                RichTextEditor(text: $state.draft.text, html: $state.draft.html, controller: richText, onEscape: close)
-                    .frame(minHeight: 120)
-                    .focused($focused)
+            #if os(macOS)
+            if model.showsFormattingBar {
+                ScrollView(.horizontal, showsIndicators: false) { FormattingBar(controller: richText) }
+                    .transition(.opacity)
             }
+            #endif
+            RichTextEditor(text: $state.draft.text, html: $state.draft.html, controller: richText, onEscape: close,
+                           linkedLastLine: state.sentFrom?.trimmingCharacters(in: .whitespacesAndNewlines),
+                           attachments: $state.draft.attachments)
+                .frame(minHeight: 120)
+                .focused($focused)
             ComposeAttachments(state: $state)
             ReplyAssistantBar(model: model, hasText: !state.draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             #if os(iOS)
@@ -101,9 +129,13 @@ struct ReplyEditor: View {
                 ReplyReminderMenu(state: $state)
             }
             #else
-            HStack(spacing: Space.s) {
-                tools
-                Spacer(minLength: 0)
+            // In a narrow pane the tools slide sideways instead of pushing the reader wider.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Space.s) {
+                    tools
+                    Spacer(minLength: 0)
+                }
+                ScrollView(.horizontal, showsIndicators: false) { tools }
             }
             #endif
         }
@@ -127,7 +159,7 @@ struct ReplyEditor: View {
         HStack(spacing: Space.s) {
             SendControls(model: model, state: $state, isReply: true)
             Button("Discard") { model.reply = nil; model.focusRequest += 1 }.fixedSize()
-            if !model.usesBlockComposer { FormattingBar(controller: richText) }
+            FormattingToggle(model: model)
             TemplatesMenu(model: model, state: $state)
             SignatureMenu(model: model, state: $state)
             ReplyReminderMenu(state: $state)
@@ -155,7 +187,6 @@ struct ComposeSheet: View {
     @Binding var state: ComposeState
     @FocusState private var field: Field?
     @State private var richText = RichTextController()
-    @State private var showsFormatting = false
     @State private var toInput = RecipientInput()
     @State private var ccInput = RecipientInput()
     @State private var bccInput = RecipientInput()
@@ -182,7 +213,7 @@ struct ComposeSheet: View {
                     withAnimation(Motion.quick) { model.isComposePutAway = true }
                 } label: {
                     Image(systemName: "chevron.up")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: Look.size(12), weight: .medium))
                         .foregroundStyle(Ink.tertiary)
                         .frame(width: 28, height: 28)
                         .contentShape(Rectangle())
@@ -224,47 +255,41 @@ struct ComposeSheet: View {
                 label("Subject")
                 TextField("", text: $state.draft.subject).textFieldStyle(.plain).font(TypeScale.rowStrong).focused($field, equals: .subject)
             }
+            // The formatting tools on top, over the text they change; Aa below hides or shows them.
+            if model.showsFormattingBar {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    FormattingBar(controller: richText).padding(.horizontal, inset - 6)
+                }
+                .padding(.top, Space.s)
+                .transition(.opacity)
+                Rectangle().fill(Line.hairline).frame(height: 1).padding(.horizontal, inset)
+            }
 
             Group {
-                if model.usesBlockComposer {
-                    BlockComposer(state: $state)
-                } else {
-                    RichTextEditor(text: $state.draft.text, html: $state.draft.html, controller: richText) {
-                        model.closeComposer(state, isReply: false)
-                    }
-                    .focused($field, equals: .body)
-                    .padding(.horizontal, inset - 4)
-                    .padding(.top, Space.l)
-                    .padding(.bottom, Space.s)
-                }
+                RichTextEditor(text: $state.draft.text, html: $state.draft.html, controller: richText,
+                               onEscape: { model.closeComposer(state, isReply: false) },
+                               linkedLastLine: state.sentFrom?.trimmingCharacters(in: .whitespacesAndNewlines),
+                               attachments: $state.draft.attachments)
+                .focused($field, equals: .body)
+                .padding(.horizontal, inset - 4)
+                .padding(.top, Space.l)
+                .padding(.bottom, Space.s)
             }
             .frame(maxHeight: .infinity)
 
+            if let forwarded = state.forwarded {
+                ForwardedPreview(forwarded: forwarded) { state.forwardAsText() }
+                    .padding(.horizontal, inset)
+                    .padding(.bottom, Space.s)
+            }
             ComposeAttachments(state: $state)
                 .padding(.horizontal, inset)
                 .padding(.bottom, Space.s)
-            if showsFormatting && !model.usesBlockComposer {
-                FormattingBar(controller: richText)
-                    .padding(.horizontal, inset - 6)
-                    .transition(.opacity)
-            }
 
             // Send first, the tools as quiet icons, Discard out of the way on the right.
             HStack(spacing: Space.xs) {
                 SendControls(model: model, state: $state, isReply: false)
-                if !model.usesBlockComposer {
-                    Button { withAnimation(Motion.quick) { showsFormatting.toggle() } } label: {
-                        Text(verbatim: "Aa")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(showsFormatting ? Ink.primary : Ink.tertiary)
-                            .frame(width: 28, height: 28)
-                            .background(showsFormatting ? Fill.two : .clear, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .tip(Text("Formatting"))
-                    .accessibilityLabel(Text("Formatting"))
-                }
+                FormattingToggle(model: model)
                 Group {
                     TemplatesMenu(model: model, state: $state)
                     SignatureMenu(model: model, state: $state)
@@ -297,7 +322,7 @@ struct ComposeSheet: View {
         HStack(spacing: Space.s) { content() }
             .padding(.leading, inset)
             .padding(.trailing, Space.m)
-            .frame(minHeight: 44)
+            .frame(minHeight: Look.gap(44))
             .overlay(alignment: .bottom) {
                 Rectangle().fill(Line.hairline).frame(height: 1).padding(.leading, inset).padding(.trailing, inset)
             }
@@ -359,6 +384,8 @@ struct FromPicker: View {
     @Binding var state: ComposeState
     /// Off where the line already says "From" in its own column.
     var showsLabel = true
+    @State private var addsAddress = false
+    @State private var newAddress = ""
 
     var body: some View {
         let current = model.account(state.accountID)
@@ -381,6 +408,8 @@ struct FromPicker: View {
                     }
                 }
             }
+            Divider()
+            Button("Add an Address…") { newAddress = ""; addsAddress = true }
         } label: {
             HStack(spacing: 6) {
                 if showsLabel { Text("From").foregroundStyle(Ink.tertiary) }
@@ -388,8 +417,8 @@ struct FromPicker: View {
                     .fill(Palette.account(current?.colorIndex ?? 0))
                     .frame(width: 8, height: 8)
                 Text(state.draft.from.address).foregroundStyle(Ink.secondary)
-                if choices.count > 1 {
-                    Image(systemName: "chevron.up.chevron.down").font(.system(size: 8, weight: .semibold)).foregroundStyle(Ink.tertiary)
+                if choices.count > 0 {
+                    Image(systemName: "chevron.up.chevron.down").font(.system(size: Look.size(8), weight: .semibold)).foregroundStyle(Ink.tertiary)
                 }
             }
             .font(TypeScale.label)
@@ -399,7 +428,26 @@ struct FromPicker: View {
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
-        .disabled(choices.count < 2)
+        // Another address this mailbox may send as (sales@, one at your own domain): it's added
+        // to the mailbox's Send as list and used for this message.
+        .alert("Add an address to send from", isPresented: $addsAddress) {
+            TextField("name@example.com", text: $newAddress)
+            Button("Cancel", role: .cancel) {}
+            Button("Add") { addAddress() }
+        } message: {
+            Text("Your provider has to allow sending from it. It's added to this mailbox's Send as list.")
+        }
+    }
+
+    private func addAddress() {
+        let typed = newAddress.trimmingCharacters(in: .whitespaces)
+        guard EmailAddress.isValid(typed), var account = model.account(state.accountID) else { return }
+        let address = EmailAddress(address: typed)
+        if !account.sendAddresses.contains(where: { $0.address.caseInsensitiveCompare(typed) == .orderedSame }) {
+            account.aliases = (account.aliases ?? []) + [address]
+            model.update(account)
+        }
+        state.send(from: account, previous: model.account(state.accountID), as: address)
     }
 }
 
@@ -415,7 +463,7 @@ struct SendControls: View {
     var body: some View {
         HStack(spacing: Space.s) {
             Button {
-                if state.forgotAttachment { warnsAboutAttachment = true } else { model.queueSend(state, isReply: isReply) }
+                if model.remindsAboutAttachments && state.forgotAttachment { warnsAboutAttachment = true } else { model.queueSend(state, isReply: isReply) }
             } label: {
                 HStack(spacing: 6) {
                     Text("Send")
@@ -439,7 +487,7 @@ struct SendControls: View {
                 Divider()
                 Button("Pick a date…") { picksDate = true }
             } label: {
-                Image(systemName: "clock").font(.system(size: 12)).foregroundStyle(Ink.secondary).frame(width: 26, height: 28)
+                Image(systemName: "clock").font(.system(size: Look.size(12))).foregroundStyle(Ink.secondary).frame(width: 26, height: 28)
             }
             .menuStyle(.button)
             .buttonStyle(.plain)
@@ -475,17 +523,17 @@ struct ComposeAttachments: View {
             FlowRow(spacing: 6) {
                 ForEach(files) { file in
                     HStack(spacing: 6) {
-                        Image(systemName: AttachmentChip.symbol(file.mimeType)).font(.system(size: 11)).foregroundStyle(Ink.tertiary)
+                        Image(systemName: AttachmentChip.symbol(file.mimeType)).font(.system(size: Look.size(11))).foregroundStyle(Ink.tertiary)
                         Text(file.filename).font(TypeScale.label).foregroundStyle(Ink.secondary).lineLimit(1)
                         Text(file.data.count.formatted(.byteCount(style: .file))).font(TypeScale.label).foregroundStyle(Ink.tertiary)
                         Button { state.draft.attachments.removeAll { $0.id == file.id } } label: {
-                            Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).foregroundStyle(Ink.tertiary)
+                            Image(systemName: "xmark").font(.system(size: Look.size(8), weight: .bold)).foregroundStyle(Ink.tertiary)
                         }
                         .buttonStyle(.plain)
                         .tip("Remove")
                     }
                     .padding(.horizontal, 8)
-                    .frame(height: 26)
+                    .frame(height: Look.gap(26))
                     .background(Fill.one, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
                 }
             }
@@ -524,12 +572,69 @@ struct TemplatesMenu: View {
             Divider()
             Button("Save as template") { model.saveTemplate(from: state) }
         } label: {
-            Image(systemName: "doc.on.doc").font(.system(size: 12.5)).foregroundStyle(Ink.tertiary).frame(width: 28, height: 28)
+            Image(systemName: "doc.on.doc").font(.system(size: Look.size(12.5))).foregroundStyle(Ink.tertiary).frame(width: 28, height: 28)
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
         .tip("Templates")
+    }
+}
+
+/// The email being forwarded, under the message as it'll be sent: its own colours, tables and
+/// pictures. Edit as Text makes it quoted text in the message instead, to trim it.
+struct ForwardedPreview: View {
+    let forwarded: ForwardedOriginal
+    let editAsText: () -> Void
+    @State private var isOpen = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.s) {
+            HStack(spacing: Space.s) {
+                Button { withAnimation(Motion.quick) { isOpen.toggle() } } label: {
+                    Label("Forwarded email", systemImage: isOpen ? "chevron.down" : "chevron.right")
+                        .font(TypeScale.label.weight(.medium))
+                        .foregroundStyle(Ink.secondary)
+                }
+                .buttonStyle(.plain)
+                Text("Goes out with its own formatting")
+                    .font(TypeScale.caption).foregroundStyle(Ink.tertiary)
+                Spacer(minLength: 0)
+                Button("Edit as Text", action: editAsText)
+                    .buttonStyle(.borderless)
+                    .font(TypeScale.label)
+                    .help(Text("Put the forwarded email in the message as text, to trim it"))
+            }
+            if isOpen {
+                ScrollView {
+                    HTMLMessageView(html: HTMLSanitizer.sanitize(forwarded.html, blockTrackers: true), allowsRemote: false)
+                }
+                .frame(maxHeight: 260)
+                .background(Paper.panel, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Line.edge))
+            }
+        }
+    }
+}
+
+/// Aa: shows or hides the formatting tools above the text, remembered for the next message.
+struct FormattingToggle: View {
+    @Bindable var model: MailModel
+
+    var body: some View {
+        let on = model.showsFormattingBar
+        Button { withAnimation(Motion.quick) { model.showsFormattingBar.toggle() } } label: {
+            Text(verbatim: "Aa")
+                .font(.system(size: Look.size(13), weight: .semibold))
+                .foregroundStyle(on ? Ink.primary : Ink.tertiary)
+                .frame(width: 28, height: 28)
+                .background(on ? Fill.two : .clear, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .tip(Text(on ? "Hide formatting" : "Show formatting"))
+        .accessibilityLabel(Text("Formatting"))
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
 }

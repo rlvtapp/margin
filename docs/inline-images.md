@@ -7,8 +7,7 @@ the body (up to 10 MB each). `data:` pictures aren't blocked by "load pictures f
 
 **Sending.** An `OutgoingAttachment` with a `contentID` goes into `multipart/related` next to the
 HTML, with `Content-ID` and `Content-Disposition: inline`; others stay in `multipart/mixed`. The
-block composer (Settings → Experimental) is what adds them today; see
-[block-editor.md](block-editor.md).
+composer's picture button adds them (`EmailHTMLWriter`, [composer.md](composer.md#formatting)).
 
 **Code:** `MailCore/Model/Mail.swift`, `MIME/MIMEParser.swift`, `MIME/MessageBuilder.swift`,
 `JMAP/JMAPProvider.swift`. Tests: `InlinePictureTests`.

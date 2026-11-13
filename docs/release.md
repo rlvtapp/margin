@@ -61,6 +61,12 @@ Store all need the company's paid Apple Developer Program membership ($99 a year
 - Register the bundle id with Push Notifications and iCloud (container `iCloud.<bundle id>`).
 - Create an APNs key for the relay (Keys → Apple Push Notifications service).
 - Mac builds shared outside the App Store need a Developer ID certificate and notarisation.
+- The Mac app isn't sandboxed (so it can run Claude Code and Codex), which means it can't go on the
+  Mac App Store as it is: it ships as a direct download, signed with Developer ID and notarised, with
+  its own updater. iCloud sync and push work there with a Developer ID provisioning profile that
+  includes them. Switching the signing certificate (Apple Development → Developer ID) makes macOS
+  ask once whether Margin may read the passwords it saved in the login keychain; choose Always Allow.
+  iPhone and iPad stay on the App Store, sandboxed as before.
 
 ## Website (margin.relevate.app)
 
@@ -97,7 +103,36 @@ Later deploys are just `fly deploy`.
 
 ## A build to hand to someone
 
-`scripts/build-share.sh` makes `.build/share/Margin-mac.dmg` and `Margin-mac.zip`: the Release
-build signed ad hoc. The disk image holds the app and a shortcut to Applications, so it's
-installed by dragging one onto the other. It isn't notarized: the first time, they right-click
-the app and choose Open.
+`scripts/build-share.sh` makes `.build/share/Margin-mac-<build>.dmg` and
+`Margin-mac-<build>.zip`: the Release build signed ad hoc. The disk image holds the app and a
+shortcut to Applications, so it's installed by dragging one onto the other. It isn't notarized:
+the first time, they right-click the app and choose Open. Older files in the folder are removed,
+so only the newest build is there to send.
+
+### Telling builds apart
+
+The version (`MARKETING_VERSION`, 0.1.0) changes with a release. The build number is what tells
+two builds apart: both scripts set `CURRENT_PROJECT_VERSION` to the date and time the build was
+made, as `YYYYMMDD.HHMM` (`20261112.1742`). Settings → About shows it next to the version, as
+"0.1.0 (20261112.1742)", it's in the shared files' names, and it's in crash reports. A build made
+straight from Xcode keeps the project's number, 1.
+
+`scripts/install-mac.sh` is the same for your own Mac: it builds with your development
+certificate (`DEVELOPMENT_TEAM=… scripts/install-mac.sh`), replaces `/Applications/Margin.app`
+and opens it.
+
+To give a build another number, or keep it in a folder of its own:
+
+```sh
+MARGIN_BUILD_NUMBER=1112.1 MARGIN_SHARE_OUT="$PWD/.build/share/network-test-1112.1" scripts/build-share.sh
+```
+
+`build.log` is saved in the output folder, and a failed build stops packaging rather than
+reusing an older app.
+The shared Mac build is for Apple silicon.
+
+The Dock tile plug-in that keeps a chosen icon colour in the Dock while Margin is closed
+([app-icon.md](app-icon.md)) needs no app group or entitlement, so this build carries it like any
+other. Before sending a build to the App Store, check that review accepts the plug-in; if it
+doesn't, taking out the `NSDockTilePlugIn` key and the embed step leaves the icon as it was
+before (chosen colour while open, main icon when closed).

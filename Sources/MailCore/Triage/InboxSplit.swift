@@ -18,10 +18,20 @@ public enum InboxSplit: String, CaseIterable, Codable, Sendable {
         }
     }
 
+    /// The inbox tab it's shown under: Important for people, Other for the rest.
+    public var tabTitle: String {
+        self == .people ? String(localized: "Important") : String(localized: "Other")
+    }
+
+    /// The two inbox tabs beside All, by the part each opens with.
+    public static let tabs: [InboxSplit] = [.people, .updates]
+
     private static let automatedLocalParts = [
         "noreply", "no-reply", "no_reply", "donotreply", "do-not-reply", "notifications", "notification",
         "notify", "alerts", "alert", "mailer-daemon", "postmaster", "bounce", "bounces", "receipts",
-        "billing", "security", "updates", "accounts",
+        "billing", "security", "updates", "accounts", "service", "services", "receipt", "invoice", "invoices",
+        "payments", "orders", "order", "reminders", "reminder", "bookings", "reservations", "facturen", "factuur",
+        "betalingen", "herinnering", "automated", "system",
         // Not "hello@", "team@" or "support@": people answer from those.
     ]
 

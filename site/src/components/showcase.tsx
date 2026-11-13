@@ -5,8 +5,8 @@ const views = [
 		id: "inbox",
 		label: "Inbox",
 		image: "hero",
-		text: "Every mailbox in one list, the conversation beside it, and what's next at the side.",
-		alt: "Margin's inbox: every mailbox in one list, a conversation open, and the next meeting at the side",
+		text: "Every mailbox in one list, with the conversation right beside it.",
+		alt: "Margin's inbox: every mailbox in one list, with a conversation open",
 	},
 	{
 		id: "home",
@@ -56,8 +56,19 @@ export function Showcase() {
 			<div className="showcase-window" role="tabpanel">
 				{views.map((view, i) => (
 					<div key={view.id} className={i === index ? "showcase-shot on" : "showcase-shot"} aria-hidden={i !== index}>
-						<img className="for-light" src={`/images/mac-${view.image}-light.jpg`} alt={view.alt} width={2600} height={1608} loading="lazy" />
-						<img className="for-dark" src={`/images/mac-${view.image}-dark.jpg`} alt={view.alt} width={2600} height={1608} loading="lazy" />
+						{(["light", "dark"] as const).map((theme) => (
+							<img
+								key={theme}
+								className={`for-${theme}`}
+								src={`/images/mac-${view.image}-${theme}.jpg`}
+								srcSet={`/images/mac-${view.image}-${theme}-1600.jpg 1600w, /images/mac-${view.image}-${theme}.jpg 2600w`}
+								sizes="(max-width: 1240px) 95vw, 1180px"
+								alt={view.alt}
+								width={2600}
+								height={1608}
+								loading="lazy"
+							/>
+						))}
 					</div>
 				))}
 			</div>

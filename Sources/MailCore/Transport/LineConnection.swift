@@ -11,6 +11,7 @@ actor LineConnection {
     private let timeout: TimeInterval
     private var buffer: [UInt8] = []
     private var isClosed = false
+    private var invalidated = false
 
     init(endpoint: ServerEndpoint, timeout: TimeInterval = 30) throws {
         guard endpoint.isAllowed else { throw MailError.insecureConnection }
@@ -22,6 +23,13 @@ actor LineConnection {
         task = session.streamTask(withHostName: endpoint.host, port: endpoint.port)
         if endpoint.security == .tls { task.startSecureConnection() }
         task.resume()
+    }
+
+    deinit {
+        if !invalidated {
+            task.cancel()
+            session.finishTasksAndInvalidate()
+        }
     }
 
     /// Upgrades to TLS after a STARTTLS exchange. Anything already buffered was sent in
@@ -38,7 +46,15 @@ actor LineConnection {
     func write(_ bytes: [UInt8]) async throws {
         guard !isClosed else { throw MailError.connectionClosed }
         do {
-            try await task.write(Data(bytes), timeout: timeout)
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                let completion = StreamCompletion(continuation)
+                task.write(Data(bytes), timeout: timeout) { @Sendable [session, task] error in
+                    withExtendedLifetime((session, task)) {
+                        if let error { completion.resume(.failure(error)) }
+                        else { completion.resume(.success(())) }
+                    }
+                }
+            }
         } catch {
             throw Self.map(error)
         }
@@ -67,24 +83,36 @@ actor LineConnection {
     }
 
     func close() {
-        guard !isClosed else { return }
         isClosed = true
+        guard !invalidated else { return }
+        invalidated = true
         task.cancel()
-        session.invalidateAndCancel()
+        // Let pending callbacks drain before the session is torn down. A disconnect can
+        // otherwise race connection establishment, especially just after waking the Mac.
+        session.finishTasksAndInvalidate()
     }
 
     private func fill() async throws {
         guard !isClosed else { throw MailError.connectionClosed }
         let result: (Data?, Bool)
         do {
-            result = try await task.readData(ofMinLength: 1, maxLength: 256 * 1024, timeout: timeout)
+            result = try await withCheckedThrowingContinuation { continuation in
+                let completion = StreamCompletion(continuation)
+                task.readData(ofMinLength: 1, maxLength: 256 * 1024, timeout: timeout) { @Sendable [session, task] data, ended, error in
+                    withExtendedLifetime((session, task)) {
+                        if let error { completion.resume(.failure(error)) }
+                        else { completion.resume(.success((data, ended))) }
+                    }
+                }
+            }
         } catch {
             throw Self.map(error)
         }
+        guard !isClosed else { throw MailError.connectionClosed }
         if let data = result.0, !data.isEmpty {
             buffer.append(contentsOf: data)
         } else if result.1 {
-            isClosed = true
+            close()
             throw MailError.connectionClosed
         }
     }
@@ -94,5 +122,22 @@ actor LineConnection {
         let nsError = error as NSError
         if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorTimedOut { return .timedOut }
         return .connectionFailed(nsError.localizedDescription)
+    }
+}
+
+/// Stream callbacks can race cancellation. Own the continuation instead of relying on the
+/// Foundation async overlay, and accept only the first completion, including error replies.
+final class StreamCompletion<Value: Sendable>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuation: CheckedContinuation<Value, Error>?
+
+    init(_ continuation: CheckedContinuation<Value, Error>) { self.continuation = continuation }
+
+    func resume(_ result: Result<Value, Error>) {
+        let next = lock.withLock {
+            defer { continuation = nil }
+            return continuation
+        }
+        next?.resume(with: result)
     }
 }

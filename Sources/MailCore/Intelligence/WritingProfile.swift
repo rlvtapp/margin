@@ -27,33 +27,152 @@ public struct WritingProfile: Codable, Hashable, Sendable {
         /// Messages with an em or en dash used as punctuation (— or –).
         public var dashes = 0
         public var lastWritten: Date?
+        /// Words per sentence, the middle of each message, newest last, at most 50 kept.
+        public var sentenceLengths: [Int] = []
+        /// Paragraphs per message, newest last, at most 50 kept.
+        public var paragraphCounts: [Int] = []
+        /// Messages that address the reader formally (u, Sie, vous, usted) or informally (je, du, tu, tú).
+        public var formal = 0
+        public var informal = 0
+        /// Messages written in lower case.
+        public var lowercase = 0
+        /// Phrases of three or four words, by how many messages used them. Kept for everyone and
+        /// per language, not per person.
+        public var phrases: [String: Int] = [:]
+        /// How the first sentence after the greeting starts ("Thanks for …"), by how often.
+        public var openers: [String: Int] = [:]
+        /// The last sentence before the sign-off ("Let me know if you have questions."), by how often.
+        public var closers: [String: Int] = [:]
+        /// The name under the sign-off ("Kaan"), by how often: what to sign with, which can
+        /// differ from a mailbox's display name.
+        public var signedNames: [String: Int] = [:]
 
         public init() {}
 
         public var usualGreeting: String? { greetings.max { $0.value == $1.value ? $0.key > $1.key : $0.value < $1.value }?.key }
         public var usualSignOff: String? { signOffs.max { $0.value == $1.value ? $0.key > $1.key : $0.value < $1.value }?.key }
-        /// The middle length of recent messages, in words.
-        public var typicalLength: Int? {
-            guard !lengths.isEmpty else { return nil }
-            return lengths.sorted()[lengths.count / 2]
+        public var usualSignedName: String? {
+            signedNames.filter { $0.value >= 2 }.max { $0.value == $1.value ? $0.key > $1.key : $0.value < $1.value }?.key
         }
+        /// The middle length of recent messages, in words.
+        public var typicalLength: Int? { Self.middle(lengths) }
+        /// The middle sentence length of recent messages, in words.
+        public var typicalSentence: Int? { Self.middle(sentenceLengths) }
+        /// The usual number of paragraphs.
+        public var typicalParagraphs: Int? { Self.middle(paragraphCounts) }
         public var isCasual: Bool { messages > 0 && Double(contractions) / Double(messages) >= 0.4 }
         public var usesExclamations: Bool { messages > 0 && Double(exclamations) / Double(messages) >= 0.3 }
         public var usesEmoji: Bool { messages > 0 && Double(emoji) / Double(messages) >= 0.2 }
         /// Writes dashes as punctuation; most people typing email never do, and models overuse them.
         public var usesDashes: Bool { messages > 0 && Double(dashes) / Double(messages) >= 0.1 }
+        /// True for formal address, false for informal, nil when it's not clear (or the language has no such choice).
+        public var addressesFormally: Bool? {
+            let total = formal + informal
+            guard total >= 2 else { return nil }
+            if Double(formal) / Double(total) >= 0.7 { return true }
+            if Double(informal) / Double(total) >= 0.7 { return false }
+            return nil
+        }
+        public var writesLowercase: Bool { messages >= 3 && Double(lowercase) / Double(messages) >= 0.6 }
 
-        mutating func add(_ sample: Sample, date: Date) {
+        /// The phrases used in enough messages to be a habit, most used first, without ones that
+        /// are only part of a longer habit.
+        public var habitualPhrases: [String] {
+            let junk = ["outlook", "iphone", "ipad", "android", "ios", "sent from", "verzonden", "verstuurd", "gesendet",
+                        "vriendelijke groet", "kind regards", "best regards"]
+            return Self.habitual(phrases.filter { entry in !junk.contains { entry.key.contains($0) } }, messages: messages, limit: 8, dropsParts: true)
+        }
+        public var habitualOpeners: [String] { Self.habitual(openers, messages: messages, limit: 3) }
+        public var habitualClosers: [String] { Self.habitual(closers, messages: messages, limit: 3) }
+
+        static func middle(_ values: [Int]) -> Int? {
+            values.isEmpty ? nil : values.sorted()[values.count / 2]
+        }
+
+        /// Used in at least 3 messages and one in ten.
+        static func habitual(_ counts: [String: Int], messages: Int, limit: Int, dropsParts: Bool = false) -> [String] {
+            let needed = max(3, Int((Double(messages) * 0.1).rounded(.up)))
+            var picked = counts.filter { $0.value >= needed }
+                .sorted { $0.value == $1.value ? $0.key.count > $1.key.count : $0.value > $1.value }
+                .map(\.key)
+            if dropsParts {
+                picked = picked.filter { phrase in
+                    !picked.contains { $0 != phrase && $0.contains(phrase) && (counts[$0] ?? 0) * 10 >= (counts[phrase] ?? 0) * 7 }
+                }
+            }
+            return Array(picked.prefix(limit))
+        }
+
+        mutating func add(_ sample: Sample, date: Date, detailed: Bool) {
             messages += 1
             if let greeting = sample.greeting { greetings[greeting, default: 0] += 1 }
             if let signOff = sample.signOff { signOffs[signOff, default: 0] += 1 }
-            lengths.append(sample.words)
-            if lengths.count > 50 { lengths.removeFirst(lengths.count - 50) }
+            Self.keep(sample.words, in: &lengths)
+            if let sentence = sample.sentenceLength { Self.keep(sentence, in: &sentenceLengths) }
+            Self.keep(sample.paragraphs, in: &paragraphCounts)
             if sample.contractions { contractions += 1 }
             if sample.exclamation { exclamations += 1 }
             if sample.emoji { emoji += 1 }
             if sample.dash { dashes += 1 }
+            if sample.formal == true { formal += 1 }
+            if sample.formal == false { informal += 1 }
+            if sample.lowercase { lowercase += 1 }
+            if let opener = sample.opener { openers[opener, default: 0] += 1 }
+            if let closer = sample.closer { closers[closer, default: 0] += 1 }
+            if let name = sample.signedName { signedNames[name, default: 0] += 1 }
+            if detailed {
+                for phrase in sample.phrases { phrases[phrase, default: 0] += 1 }
+                // Phrases used once fall away once there are many, so the profile stays small.
+                if phrases.count > 4_000 { phrases = phrases.filter { $0.value > 1 } }
+            }
+            if openers.count > 400 { openers = openers.filter { $0.value > 1 } }
+            if closers.count > 400 { closers = closers.filter { $0.value > 1 } }
             lastWritten = max(lastWritten ?? date, date)
+        }
+
+        private static func keep(_ value: Int, in list: inout [Int]) {
+            list.append(value)
+            if list.count > 50 { list.removeFirst(list.count - 50) }
+        }
+
+        // Profiles saved before a field existed still load.
+        public init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            greetings = try c.decodeIfPresent([String: Int].self, forKey: .greetings) ?? [:]
+            signOffs = try c.decodeIfPresent([String: Int].self, forKey: .signOffs) ?? [:]
+            lengths = try c.decodeIfPresent([Int].self, forKey: .lengths) ?? []
+            messages = try c.decodeIfPresent(Int.self, forKey: .messages) ?? 0
+            contractions = try c.decodeIfPresent(Int.self, forKey: .contractions) ?? 0
+            exclamations = try c.decodeIfPresent(Int.self, forKey: .exclamations) ?? 0
+            emoji = try c.decodeIfPresent(Int.self, forKey: .emoji) ?? 0
+            dashes = try c.decodeIfPresent(Int.self, forKey: .dashes) ?? 0
+            lastWritten = try c.decodeIfPresent(Date.self, forKey: .lastWritten)
+            sentenceLengths = try c.decodeIfPresent([Int].self, forKey: .sentenceLengths) ?? []
+            paragraphCounts = try c.decodeIfPresent([Int].self, forKey: .paragraphCounts) ?? []
+            formal = try c.decodeIfPresent(Int.self, forKey: .formal) ?? 0
+            informal = try c.decodeIfPresent(Int.self, forKey: .informal) ?? 0
+            lowercase = try c.decodeIfPresent(Int.self, forKey: .lowercase) ?? 0
+            phrases = try c.decodeIfPresent([String: Int].self, forKey: .phrases) ?? [:]
+            openers = try c.decodeIfPresent([String: Int].self, forKey: .openers) ?? [:]
+            closers = try c.decodeIfPresent([String: Int].self, forKey: .closers) ?? [:]
+            signedNames = try c.decodeIfPresent([String: Int].self, forKey: .signedNames) ?? [:]
+        }
+    }
+
+    /// How someone writes, in a model's words: written once from a sample of their sent mail,
+    /// with what it was written by, so drafts can follow more than what counting finds.
+    public struct Voice: Codable, Hashable, Sendable {
+        public var text: String
+        /// "Claude Code · Sonnet".
+        public var by: String
+        public var emails: Int
+        public var date: Date
+
+        public init(text: String, by: String, emails: Int, date: Date = Date()) {
+            self.text = text
+            self.by = by
+            self.emails = emails
+            self.date = date
         }
     }
 
@@ -68,8 +187,44 @@ public struct WritingProfile: Codable, Hashable, Sendable {
     public var names: [String: String] = [:]
     /// Message ids already learned from, so nothing counts twice.
     public var learned: Set<String> = []
+    /// People forgotten on purpose: not learned about again.
+    public var forgotten: Set<String> = []
+    /// Studied voices by language code ("nl"; "" when the language isn't known).
+    public var voices: [String: Voice] = [:]
+    /// What this profile's learning knows how to read. Older ones are learned again from sent
+    /// mail, so they gain what's been added since (sentence length, phrases, address).
+    public var version = 0
+    public static let currentVersion = 3
 
-    public init() {}
+    public init() { version = Self.currentVersion }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        overall = try c.decodeIfPresent(Habits.self, forKey: .overall) ?? Habits()
+        languages = try c.decodeIfPresent([String: Habits].self, forKey: .languages) ?? [:]
+        people = try c.decodeIfPresent([String: Habits].self, forKey: .people) ?? [:]
+        peopleByLanguage = try c.decodeIfPresent([String: Habits].self, forKey: .peopleByLanguage) ?? [:]
+        names = try c.decodeIfPresent([String: String].self, forKey: .names) ?? [:]
+        learned = try c.decodeIfPresent(Set<String>.self, forKey: .learned) ?? []
+        forgotten = try c.decodeIfPresent(Set<String>.self, forKey: .forgotten) ?? []
+        voices = try c.decodeIfPresent([String: Voice].self, forKey: .voices) ?? [:]
+        version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 0
+    }
+
+    /// The same profile with everything counted taken out, to learn again: who was forgotten
+    /// and the studied voices stay.
+    public var startedAgain: WritingProfile {
+        var fresh = WritingProfile()
+        fresh.forgotten = forgotten
+        fresh.voices = voices
+        return fresh
+    }
+
+    /// The studied voice for a language, else the one studied without a language, else any.
+    public func voice(for language: String?) -> Voice? {
+        if let language, let voice = voices[language] { return voice }
+        return voices[""] ?? (language == nil ? voices.values.max { $0.emails < $1.emails } : nil)
+    }
 
     public var isEmpty: Bool { overall.messages == 0 }
 
@@ -81,15 +236,15 @@ public struct WritingProfile: Codable, Hashable, Sendable {
         if let id, learned.contains(id) { return false }
         let own = Self.ownWriting(text, signature: signature)
         guard !own.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
-        let sample = Sample(own, recipient: recipients.first)
         let language = Self.language(of: own)
-        overall.add(sample, date: date)
-        if let language { languages[language, default: Habits()].add(sample, date: date) }
+        let sample = Sample(own, recipient: recipients.first, language: language)
+        overall.add(sample, date: date, detailed: true)
+        if let language { languages[language, default: Habits()].add(sample, date: date, detailed: true) }
         // Per person only for one-to-one mail: a group message says less about one reader.
-        if recipients.count == 1, let person = recipients.first {
+        if recipients.count == 1, let person = recipients.first, !forgotten.contains(person.address.lowercased()) {
             let key = person.address.lowercased()
-            people[key, default: Habits()].add(sample, date: date)
-            if let language { peopleByLanguage["\(language)|\(key)", default: Habits()].add(sample, date: date) }
+            people[key, default: Habits()].add(sample, date: date, detailed: false)
+            if let language { peopleByLanguage["\(language)|\(key)", default: Habits()].add(sample, date: date, detailed: false) }
             names[key] = person.displayName
         }
         if let id { learned.insert(id) }
@@ -97,6 +252,7 @@ public struct WritingProfile: Codable, Hashable, Sendable {
     }
 
     public mutating func forget(_ address: String) {
+        forgotten.insert(address.lowercased())
         people[address.lowercased()] = nil
         names[address.lowercased()] = nil
         peopleByLanguage = peopleByLanguage.filter { !$0.key.hasSuffix("|" + address.lowercased()) }
@@ -134,8 +290,12 @@ public struct WritingProfile: Codable, Hashable, Sendable {
     /// used with that person. Habits come from that language: the person's in it (two messages
     /// or more), else everyone's in it (three or more). A language with too little to go on gets
     /// only the general traits, never another language's greeting.
-    public func styleGuide(for recipient: EmailAddress?, myName: String, language: String? = nil) -> String? {
+    /// `theirs` is how the other person addresses you in the conversation (true formally, false
+    /// informally), from `formality(_:language:)` on their latest message.
+    public func styleGuide(for recipient: EmailAddress?, myName: String, language: String? = nil, theirs: Bool? = nil) -> String? {
         guard overall.messages >= 3 else { return nil }
+        // The name they sign with ("Kaan"), not a mailbox's display name.
+        let myName = overall.usualSignedName ?? myName
         let key = recipient?.address.lowercased()
         let first = recipient.map { EmailAddress.firstName(of: $0) } ?? ""
         let lang = language ?? usualLanguage(with: recipient)
@@ -163,19 +323,85 @@ public struct WritingProfile: Codable, Hashable, Sendable {
             }
             if let signOff = wording.usualSignOff { lines.append("Sign off with \"\(signOff)\" and then \(myName).") }
         }
+        // A ceiling, never a target: a model told "about 200 words" pads a two-line answer.
         if let length = tone.typicalLength {
-            lines.append("Keep it about \(max(length, 8)) words, as \(myName) usually does.")
+            lines.append("As long as the reply needs and no longer: \(myName)'s emails are usually under \(max(length, 30)) words, and a short message gets a short answer.")
         }
+        if let sentence = tone.typicalSentence {
+            lines.append(sentence <= 12 ? "Sentences are short and plain." : sentence <= 20 ? "Sentences are of medium length." : "Longer sentences are fine.")
+        }
+        if let lang, let forms = Self.addressForms[lang] {
+            lines.append(Self.addressLine(forms, reader: first.isEmpty ? "the reader" : first,
+                                          mine: key.flatMap { addressUsed(with: $0, language: lang) }, theirs: theirs))
+        }
+        if tone.writesLowercase { lines.append("Write in lower case, as \(myName) does.") }
         // Contractions are how casual English reads; other languages show it differently.
         if lang == nil || lang == "en" || languages.isEmpty {
             lines.append(tone.isCasual ? "Sound casual: use contractions like I'm and don't." : "Sound polished: avoid slang.")
         }
-        if tone.usesExclamations { lines.append("An exclamation mark now and then is fine.") }
+        // Never using them is only clear from enough mail, everyone's in the language.
+        let broad = known ?? overall
+        if tone.usesExclamations { lines.append("An exclamation mark now and then is fine.") } else if broad.messages >= 5 && !broad.usesExclamations {
+            lines.append("Don't use exclamation marks.")
+        }
         if tone.usesEmoji { lines.append("An emoji is fine if it fits.") }
         if !tone.usesDashes { lines.append("Never use an em dash (—) or en dash (–). Use a comma or a full stop instead.") }
+        // Wording carries over within a language only; per person there's too little, so the
+        // language's (or everyone's) habits. A study already says this better.
+        let voice = voice(for: lang)
+        let words = voice != nil ? nil : known ?? (lang == nil || languages.isEmpty ? overall : nil)
+        if let words {
+            let openers = words.habitualOpeners
+            if !openers.isEmpty { lines.append("\(myName) often starts the first sentence like: " + Self.quoted(openers.map { $0 + " …" }) + ".") }
+            let closers = words.habitualClosers
+            if !closers.isEmpty { lines.append("\(myName) often ends with: " + Self.quoted(closers) + ".") }
+            let phrases = words.habitualPhrases
+            if !phrases.isEmpty { lines.append("Phrases \(myName) often uses, only where they fit: " + Self.quoted(phrases) + ".") }
+        }
+        lines.append("Don't add pleasantries \(myName) doesn't use, like hoping the email finds them well.")
+        lines.append("Say each thing once: no repeated thanks or enthusiasm, no filler sentences.")
         let who = personal != nil ? " to \(recipient?.displayName ?? "")" : ""
         // Rules only, no sample emails: small models copy a sample's content into unrelated replies.
-        return "Write the way \(myName) writes\(who):\n- " + lines.joined(separator: "\n- ")
+        let rules = "Write the way \(myName) writes\(who):\n- " + lines.joined(separator: "\n- ")
+        // The study comes first: it heard how they sound, which counting can't.
+        guard let voice else { return rules }
+        return "How \(myName) writes, studied from their sent mail (style only; never reuse its examples as content):\n"
+            + voice.text + "\n\n" + rules
+            + "\n\nWhere these rules and the description above differ, follow the description."
+    }
+
+    /// How to say "you" to this reader. Per person, never from habits with others: what you've
+    /// used with them before; else what they use with you; else the formal form, as is usual
+    /// with someone you haven't written to.
+    static func addressLine(_ forms: (informal: String, formal: String), reader: String, mine: Bool?, theirs: Bool?) -> String {
+        if let mine {
+            return mine ? "You address \(reader) formally (\(forms.formal)); keep doing so, never \(forms.informal)."
+                        : "You address \(reader) informally (\(forms.informal)); keep doing so, never \(forms.formal)."
+        }
+        if let theirs {
+            return theirs ? "\(reader) addresses you formally, so reply formally (\(forms.formal)), not \(forms.informal)."
+                          : "\(reader) addresses you informally, so reply informally (\(forms.informal)) too."
+        }
+        return "Address \(reader) formally (\(forms.formal)), as is usual with someone you haven't written to before; only use \(forms.informal) once they do."
+    }
+
+    /// Formal (true) or informal (false) address in what you've sent this person, in the language
+    /// when known; nil when it never showed or was evenly split.
+    func addressUsed(with key: String, language: String?) -> Bool? {
+        let habits = language.flatMap { peopleByLanguage["\($0)|\(key)"] } ?? people[key]
+        guard let habits else { return nil }
+        if habits.formal > habits.informal { return true }
+        if habits.informal > habits.formal { return false }
+        return nil
+    }
+
+    /// The informal and formal ways to say "you", where a language makes the choice.
+    static let addressForms: [String: (informal: String, formal: String)] = [
+        "nl": ("je/jij", "u"), "de": ("du", "Sie"), "fr": ("tu", "vous"), "es": ("tú", "usted"),
+    ]
+
+    static func quoted(_ items: [String]) -> String {
+        items.map { "\"\($0)\"" }.joined(separator: ", ")
     }
 
     /// "Hi {name}," with the name filled in, or without it ("Hi,") when there's no name.
@@ -211,20 +437,147 @@ public struct WritingProfile: Codable, Hashable, Sendable {
         var exclamation: Bool
         var emoji: Bool
         var dash: Bool
+        /// The middle sentence length, in words.
+        var sentenceLength: Int?
+        var paragraphs: Int
+        /// True formal, false informal, nil when it doesn't say.
+        var formal: Bool?
+        var lowercase: Bool
+        var opener: String?
+        var closer: String?
+        var signedName: String?
+        /// Three- and four-word phrases in it, each once.
+        var phrases: Set<String>
 
-        init(_ text: String, recipient: EmailAddress?) {
-            let lines = text.components(separatedBy: .newlines)
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .filter { !$0.isEmpty }
+        init(_ text: String, recipient: EmailAddress?, language: String? = nil) {
+            let allLines = text.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespaces) }
+            let lines = allLines.filter { !$0.isEmpty }
             greeting = lines.first.flatMap { WritingProfile.greeting(in: $0, recipient: recipient) }
             signOff = WritingProfile.signOff(in: lines)
+            signedName = WritingProfile.signedName(in: lines, after: signOff)
             words = text.split { $0.isWhitespace || $0.isNewline }.count
             contractions = text.range(of: #"\b\w+'(m|re|s|ve|ll|d|t)\b"#, options: [.regularExpression, .caseInsensitive]) != nil
                 || text.contains("’")
             exclamation = text.contains("!")
             emoji = text.unicodeScalars.contains { $0.properties.isEmojiPresentation }
             dash = text.contains("—") || text.contains(" – ")
+
+            // The body: without the greeting line, and without the sign-off and what follows it.
+            var body = allLines
+            if greeting != nil, let first = body.firstIndex(where: { !$0.isEmpty }) { body.remove(at: first) }
+            if let signOff, let index = body.lastIndex(where: { $0.trimmingCharacters(in: CharacterSet(charactersIn: ", ")) == signOff }) {
+                body = Array(body[..<index])
+            }
+            let bodyText = body.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            paragraphs = max(1, bodyText.components(separatedBy: "\n\n").filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.count)
+            let sentences = WritingProfile.sentences(in: bodyText)
+            // Real sentences only: a line like "Thanks!" or a list item isn't one.
+            let counts = sentences.filter { $0.last.map { ".!?".contains($0) } ?? false }
+                .map { $0.split(whereSeparator: \.isWhitespace).count }.filter { $0 >= 3 }
+            sentenceLength = counts.isEmpty ? nil : counts.sorted()[counts.count / 2]
+            let starts = sentences.compactMap { $0.first(where: \.isLetter) }
+            lowercase = starts.count >= 2 && starts.filter(\.isLowercase).count * 10 >= starts.count * 8
+            formal = WritingProfile.formality(bodyText, language: language)
+            opener = sentences.first.flatMap { WritingProfile.opening(of: $0) }
+            closer = sentences.count >= 2 ? sentences.last.flatMap { WritingProfile.closing($0) } : nil
+            phrases = WritingProfile.phrases(in: sentences)
         }
+    }
+
+    /// The name on the line under the sign-off: one or two words, letters only.
+    static func signedName(in lines: [String], after signOff: String?) -> String? {
+        guard let signOff, let index = lines.lastIndex(where: { $0.trimmingCharacters(in: CharacterSet(charactersIn: ", ")) == signOff }),
+              index + 1 < lines.count else { return nil }
+        let name = lines[index + 1].trimmingCharacters(in: .whitespaces.union(.punctuationCharacters))
+        let parts = name.split(separator: " ")
+        guard (1...2).contains(parts.count), name.count <= 30, name.allSatisfy({ $0.isLetter || $0 == " " || $0 == "-" }),
+              name.first?.isUppercase == true else { return nil }
+        return String(parts[0])
+    }
+
+    /// The sentences of a text: a sentence ends at . ! ? or a line break.
+    static func sentences(in text: String) -> [String] {
+        var result: [String] = []
+        for line in text.components(separatedBy: .newlines) {
+            let tokenizer = NLTokenizer(unit: .sentence)
+            tokenizer.string = line
+            tokenizer.enumerateTokens(in: line.startIndex..<line.endIndex) { range, _ in
+                let sentence = line[range].trimmingCharacters(in: .whitespacesAndNewlines)
+                if !sentence.isEmpty { result.append(sentence) }
+                return true
+            }
+        }
+        return result
+    }
+
+    /// Words of a sentence, lower case, with punctuation taken off the ends; nil for a word
+    /// that's a name (a capital inside the sentence) or has digits, which say nothing about style.
+    static func styleWords(_ sentence: String) -> [String?] {
+        sentence.split(whereSeparator: \.isWhitespace).enumerated().map { index, raw in
+            let word = raw.trimmingCharacters(in: .punctuationCharacters.union(.symbols))
+            guard !word.isEmpty, !word.contains(where: \.isNumber), !word.contains("@") else { return nil }
+            if index > 0, word.first?.isUppercase == true, word.lowercased() != "i" { return nil }
+            return word.lowercased()
+        }
+    }
+
+    static func phrases(in sentences: [String]) -> Set<String> {
+        var found: Set<String> = []
+        for sentence in sentences {
+            let words = styleWords(sentence)
+            for size in 3...4 where words.count >= size {
+                for start in 0...(words.count - size) {
+                    let run = words[start..<(start + size)]
+                    guard run.allSatisfy({ $0 != nil }) else { continue }
+                    found.insert(run.compactMap { $0 }.joined(separator: " "))
+                }
+            }
+        }
+        return found
+    }
+
+    /// The first three words of the first sentence ("thanks for the"), when none is a name.
+    static func opening(of sentence: String) -> String? {
+        let words = styleWords(sentence)
+        guard words.count >= 4, words.prefix(3).allSatisfy({ $0 != nil }) else { return nil }
+        let raw = sentence.split(whereSeparator: \.isWhitespace).prefix(3).joined(separator: " ")
+        return raw.trimmingCharacters(in: CharacterSet(charactersIn: ",;:"))
+    }
+
+    /// A closing sentence short enough to be a habit, without names or numbers.
+    static func closing(_ sentence: String) -> String? {
+        let words = styleWords(sentence)
+        guard (2...10).contains(words.count), words.allSatisfy({ $0 != nil }) else { return nil }
+        return sentence
+    }
+
+    /// Formal or informal address, in languages that make the choice. German's formal Sie is
+    /// told from sie (she, they) by its capital inside a sentence.
+    public static func formality(_ text: String, language: String?) -> Bool? {
+        let lists: (informal: Set<String>, formal: Set<String>)
+        switch language {
+        case "nl": lists = (["je", "jij", "jou", "jouw", "jullie"], ["u", "uw"])
+        case "fr": lists = (["tu", "te", "toi", "ton", "ta", "tes", "t'"], ["vous", "votre", "vos"])
+        case "es": lists = (["tú", "te", "ti", "contigo"], ["usted", "ustedes"])
+        case "de": lists = (["du", "dich", "dir", "dein", "deine", "deinen", "deinem", "deiner"], ["Sie", "Ihnen", "Ihr", "Ihre", "Ihren", "Ihrem", "Ihrer"])
+        default: return nil
+        }
+        var informal = 0, formal = 0
+        for sentence in sentences(in: text) {
+            for (index, raw) in sentence.split(whereSeparator: \.isWhitespace).enumerated() {
+                let word = raw.trimmingCharacters(in: .punctuationCharacters)
+                if language == "de" {
+                    if index > 0, lists.formal.contains(word) { formal += 1 }
+                    if lists.informal.contains(word.lowercased()) { informal += 1 }
+                } else {
+                    let lower = word.lowercased()
+                    if lists.formal.contains(lower) { formal += 1 }
+                    if lists.informal.contains(lower) { informal += 1 }
+                }
+            }
+        }
+        if formal == 0 && informal == 0 { return nil }
+        return formal > informal
     }
 
     /// Words that start a greeting line, in the languages Margin speaks.
@@ -262,12 +615,27 @@ public struct WritingProfile: Codable, Hashable, Sendable {
     /// block, without their signature.
     public static func ownWriting(_ text: String, signature: String?) -> String {
         var kept: [String] = []
-        for line in text.components(separatedBy: .newlines) {
+        let lines = text.components(separatedBy: .newlines)
+        for (index, line) in lines.enumerated() {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
+            let lower = trimmed.lowercased()
             if trimmed.hasPrefix(">") || trimmed.hasPrefix("---------- Forwarded") || trimmed == "-- " || trimmed == "--" { break }
-            if trimmed.hasPrefix("On "), trimmed.hasSuffix("wrote:") { break }
-            if trimmed.hasPrefix("Op "), trimmed.hasSuffix("schreef:") { break }
-            if trimmed.hasPrefix("Le "), trimmed.hasSuffix("a écrit :") || trimmed.hasSuffix("a écrit:") { break }
+            // "On Tue, Noor wrote:", also when the mail app wrapped it onto two lines.
+            if quoteIntro.contains(where: { lower.hasSuffix($0) }) {
+                if let last = kept.last?.trimmingCharacters(in: .whitespaces), quoteIntroStart.contains(where: { last.hasPrefix($0) }),
+                   !quoteIntroStart.contains(where: { trimmed.hasPrefix($0) }) {
+                    kept.removeLast()
+                }
+                break
+            }
+            // Outlook's quote: "From: …" with "Sent:" or "Date:" under it (and the same in Dutch,
+            // German and French), or its line of underscores.
+            if quoteHeader.contains(where: { lower.hasPrefix($0) }),
+               lines.dropFirst(index + 1).prefix(3).contains(where: { next in quoteHeaderNext.contains { next.lowercased().trimmingCharacters(in: .whitespaces).hasPrefix($0) } }) { break }
+            if trimmed.count >= 10, trimmed.allSatisfy({ $0 == "_" }) { break }
+            if lower.hasPrefix("-----original message") || lower.hasPrefix("-----oorspronkelijk bericht") || lower.hasPrefix("-----ursprüngliche nachricht") { break }
+            // "Sent from Outlook for iOS", "Verstuurd vanaf mijn iPhone": the phone's, not theirs.
+            if phoneSignatures.contains(where: { lower.hasPrefix($0) }) { break }
             kept.append(line)
         }
         var own = kept.joined(separator: "\n")
@@ -276,6 +644,15 @@ public struct WritingProfile: Codable, Hashable, Sendable {
         }
         return own.trimmingCharacters(in: .whitespacesAndNewlines)
     }
+}
+
+extension WritingProfile {
+    static let quoteIntro = ["wrote:", "schreef:", "schrieb:", "a écrit :", "a écrit:", "escribió:", "ha scritto:"]
+    static let quoteIntroStart = ["On ", "Op ", "Am ", "Le ", "El ", "Il "]
+    static let quoteHeader = ["from:", "van:", "von:", "de :", "de:", "da:"]
+    static let quoteHeaderNext = ["sent:", "date:", "verzonden:", "datum:", "gesendet:", "envoyé :", "envoyé:", "to:", "aan:", "an:"]
+    static let phoneSignatures = ["sent from margin", "sent from my", "sent from outlook", "get outlook for", "verzonden vanaf", "verstuurd vanaf",
+                                  "verzonden met", "von meinem iphone", "envoyé de mon"]
 }
 
 extension EmailAddress {

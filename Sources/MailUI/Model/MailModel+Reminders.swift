@@ -134,7 +134,7 @@ struct ReplyReminderMenu: View {
         } label: {
             // A quiet icon like the other writing tools; filled while a reminder is set.
             Image(systemName: state.remindAfterDays == nil ? "alarm" : "alarm.fill")
-                .font(.system(size: 12.5))
+                .font(.system(size: Look.size(12.5)))
                 .foregroundStyle(state.remindAfterDays == nil ? Ink.tertiary : Ink.primary)
                 .frame(width: 28, height: 28)
                 .accessibilityLabel(Text("Remind me"))

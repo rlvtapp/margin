@@ -56,12 +56,12 @@ extension MailModel {
     /// Settings that travel with a backup.
     static let backedUpSettings = [
         "assistantSettings", "connectionSettings", "prefersPlainText", "textScale", "newMailAlerts", "undoSendDelay",
-        "followUpDays", "appearance", "accentIndex", "appIcon", "appIconDark", "compactRows", "layout", "singleKeyShortcuts", "keyOverrides",
+        "followUpDays", "appearance", "accentIndex", "appIcon", "appIconDark", "compactRows", "density", "layout", "singleKeyShortcuts", "keyOverrides",
         "insetPanel", "showsNextUp", "labelColors", "colorBlindSafe", "increaseContrast", "underlineLinks", "darkensMail", "reduceMotion",
         "learnsWriting", "suggestsReplies", "swipeLeading", "swipeTrailing", "backupSchedule",
-        "writingInstructions", "usesBlockComposer", "vipAddresses", "blocksTrackers", "hidesFromScreenSharing", "alertSound", "dropDownAlerts",
-        "showsMenuBarItem", "accountAlerts", "eventReminderMinutes", "emailGroups", "sortsNewMail", "showsAsChat",
-        "offersTranslation",
+        "writingInstructions", "holdSpaceDictates", "vipAddresses", "blocksTrackers", "hidesFromScreenSharing", "alertSound", "dropDownAlerts",
+        "showsMenuBarItem", "showsDockBadge", "showsHoverActions", "showsAccountRail", "askPreferences", "remindsAboutAttachments", "reminderSound", "accountAlerts", "eventReminderMinutes", "emailGroups", "sortsNewMail", "showsAsChat",
+        "offersTranslation", "aiOff", "quickProvider", "sortProvider", "sentFromMargin", "sentFromMarginText", "showsFormattingBar",
     ]
 
     /// A backup file. Secrets (mail passwords, sign-ins, assistant keys) are included only
@@ -112,8 +112,10 @@ extension MailModel {
         let defaults = environment.defaults
         if let data = defaults.data(forKey: "assistantSettings"), let value = try? JSONDecoder().decode(AssistantSettings.self, from: data) {
             assistantSettings = value
-            rebuildIntelligence()
         }
+        // Also follows the AI switch, which may have come back off.
+        rebuildIntelligence()
+        actionSettingsRevision += 1
         if let data = defaults.data(forKey: "connectionSettings"), let value = try? JSONDecoder().decode(ConnectionSettings.self, from: data) {
             connectionSettings = value
         }
@@ -127,6 +129,7 @@ extension MailModel {
         appIcon = AppIconChoice(rawValue: defaults.string(forKey: "appIcon") ?? "") ?? .blue
         appIconDark = defaults.bool(forKey: "appIconDark")
         compactRows = defaults.bool(forKey: "compactRows")
+        density = Density(rawValue: defaults.string(forKey: "density") ?? "") ?? .roomy
         layout = ListLayout(rawValue: defaults.string(forKey: "layout") ?? "") ?? .panels
         insetPanel = defaults.bool(forKey: "insetPanel")
         showsNextUp = defaults.object(forKey: "showsNextUp") as? Bool ?? true

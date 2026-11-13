@@ -105,7 +105,11 @@ extension MailModel {
         case .token: "token"
         }
         let previous = environment.keychain.read(key: "\(changed.id.uuidString).\(kind)")
-        if let secret, !secret.isEmpty { try environment.keychain.save(secret, account: changed.id, kind: kind) }
+        if let secret, !secret.isEmpty {
+            try environment.keychain.save(secret, account: changed.id, kind: kind)
+            // A fresh sign-in: whatever made the last one pause no longer applies.
+            await credentials.forgetPauses(for: changed.id)
+        }
         do {
             let provider = try ProviderFactory.make(for: changed, credentials: credentials)
             _ = try await provider.mailboxes()
@@ -144,8 +148,11 @@ extension MailModel {
     }
 
     /// Puts the formatted signature into an outgoing message, in place of the plain one.
-    static func withFormattedSignature(_ draft: Draft, plain: String?, html signatureHTML: String?) -> Draft {
-        guard let signatureHTML, !signatureHTML.isEmpty, let plain, !plain.isEmpty, draft.text.hasSuffix(plain) else { return draft }
+    /// `after` is a last line that may follow the signature ("Sent from Margin"), kept after it.
+    static func withFormattedSignature(_ draft: Draft, plain: String?, html signatureHTML: String?, after: String? = nil) -> Draft {
+        guard let signatureHTML, !signatureHTML.isEmpty, let plain, !plain.isEmpty else { return draft }
+        let tail = after.flatMap { draft.text.hasSuffix(plain + $0) ? $0 : nil } ?? ""
+        guard draft.text.hasSuffix(plain + tail) else { return draft }
         var draft = draft
         func escape(_ s: String) -> String {
             s.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;")
@@ -161,8 +168,9 @@ extension MailModel {
             }
             draft.html = html
         } else {
-            let body = String(draft.text.dropLast(plain.count))
-            draft.html = "<div>\(escape(body))</div>" + block
+            let body = String(draft.text.dropLast(plain.count + tail.count))
+            let trailing = tail.trimmingCharacters(in: .whitespacesAndNewlines)
+            draft.html = "<div>\(escape(body))</div>" + block + (trailing.isEmpty ? "" : "<div><br>\(escape(trailing))</div>")
         }
         return draft
     }

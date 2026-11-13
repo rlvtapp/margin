@@ -74,6 +74,10 @@ import Testing
         try await waitFor { !model.folder.isEmpty }
         #expect(Set(model.visibleThreads.map(\.subject)) == ["Contract renewal", "Flat keys"])
         #expect(model.waitingCount == 2)
+        // Back again later: there at once, from the last visit, while it's checked again.
+        model.go(to: .allInboxes)
+        model.go(to: .waiting(account: nil))
+        #expect(Set(model.visibleThreads.map(\.subject)) == ["Contract renewal", "Flat keys"])
     }
 
     /// They answered with a meeting invitation instead of a reply (Outlook then moves it to
@@ -114,9 +118,10 @@ import Testing
         model.go(to: .inbox(account: account.id, split: nil))
         model.startCompose()
         var state = try #require(model.compose)
-        #expect(state.draft.text == "\n\nAlex\nNorthwind")
+        // The signature, then "Sent from Margin" last.
+        #expect(state.draft.text == "\n\nAlex\nNorthwind\n\nSent from Margin")
         state.send(from: model.accounts[1], previous: model.account(account.id))
-        #expect(state.draft.text.isEmpty)
+        #expect(state.draft.text == "\n\nSent from Margin")
 
         state.draft.text = "Attached is the plan."
         #expect(state.forgotAttachment)

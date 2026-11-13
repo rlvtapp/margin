@@ -38,10 +38,13 @@ extension MailModel {
 
     public var currentWorkspace: Workspace? { workspaces.first { $0.id == currentWorkspaceID } }
 
-    /// The mailboxes in view: the chosen workspace's, or all of them.
+    /// The mailboxes in view: the chosen workspace's, or all of them. A mailbox that's in no
+    /// workspace at all (just added, or its workspace was deleted) shows in every one: nobody
+    /// chose to hide it, and a mailbox must never drop out of the account column by itself.
     public var workspaceAccounts: [MailAccount] {
         guard let workspace = currentWorkspace else { return accounts }
-        return accounts.filter { workspace.accounts.contains($0.id) }
+        let grouped = Set(workspaces.flatMap(\.accounts))
+        return accounts.filter { workspace.accounts.contains($0.id) || !grouped.contains($0.id) }
     }
 
     /// Puts mailboxes in the order you want: the account column, sidebar, All inboxes and the
@@ -95,13 +98,14 @@ extension MailModel {
 
     /// Whether a conversation belongs to a workspace that isn't the one in view.
     func isInOtherWorkspace(_ thread: MailThread) -> Bool {
-        guard let workspace = currentWorkspace, let account = thread.accountID else { return false }
-        return !workspace.accounts.contains(account)
+        guard currentWorkspace != nil, let account = thread.accountID else { return false }
+        return !workspaceAccounts.contains { $0.id == account }
     }
 
     /// Unread mail waiting in a workspace, for the dot beside it.
     public func unreadCount(in workspace: Workspace) -> Int {
-        workspace.accounts.reduce(0) { $0 + inboxThreads($1).filter(\.isUnread).count }
+        _ = inboxRevision
+        return workspace.accounts.reduce(0) { $0 + (shelves[$1]?.unreadCount(split: nil) ?? 0) }
     }
 
     public func addWorkspace(named name: String) {

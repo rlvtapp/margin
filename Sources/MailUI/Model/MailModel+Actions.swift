@@ -6,9 +6,15 @@ struct PendingChange {
     var action: MailAction
     var threads: [MailThread]
     var task: Task<Void, Never>
-    var inboxes: [UUID: [MailThread]]
+    /// The conversations it took out of the inboxes; Undo puts these back where they were.
+    var removed: [MailThread]
     var folder: [MailThread]
     var selection: MailThread.ID?
+    /// Several changes at once (what rules did to new mail), each sent with its own action;
+    /// empty for one `action` on all of `threads`.
+    var batches: [(action: MailAction, threads: [MailThread])] = []
+    /// The rules run these came from, so Undo can mark them undone in Recent activity.
+    var ruleBatch: UUID?
 }
 
 extension MailModel {
@@ -50,9 +56,11 @@ extension MailModel {
         guard let pending = pendingChange else { return }
         pending.task.cancel()
         pendingChange = nil
-        inboxes = pending.inboxes
+        mutationRevision += 1
+        restoreToInboxes(pending.removed)
         folder = pending.folder
         selectedThreadID = pending.selection
+        if let batch = pending.ruleBatch { markRuleActivityUndone(batch) }
         notice = nil
         focusRequest += 1
     }
@@ -60,33 +68,40 @@ extension MailModel {
     /// Changes local state first so the list answers instantly, then tells the server.
     func apply(_ action: MailAction, to threads: [MailThread], announce: Bool) async {
         let ids = Set(threads.map(\.id))
+        // Filing by hand, for the rule Settings → Rules offers once it's a habit.
+        if announce, case .move(let target) = action { noteFiling(threads, into: target) }
         let leaves: Bool = switch action {
         case .done, .trash: true
         case .move(let target): target != "INBOX"
         default: false
         }
         guard leaves else {
-            inboxes = inboxes.mapValues { $0.map { ids.contains($0.id) ? Self.changed($0, by: action) : $0 } }
-            folder = folder.map { ids.contains($0.id) ? Self.changed($0, by: action) : $0 }
+            // Only these conversations are touched: a read mark costs the same in a mailbox of
+            // two hundred and of two hundred thousand.
+            changeInInboxes(threads) { Self.changed($0, by: action) }
+            if folder.contains(where: { ids.contains($0.id) }) {
+                folder = folder.map { ids.contains($0.id) ? Self.changed($0, by: action) : $0 }
+            }
             if announce, action == .markUnread { notice = Notice(text: String(localized: "Marked unread")) }
             await commit(action, threads)
             return
         }
         await flushPendingChange()
-        let snapshot = (inboxes, folder, selectedThreadID)
+        let snapshot = (folder, selectedThreadID)
         let visible = visibleThreads
         if let index = visible.firstIndex(where: { ids.contains($0.id) }), ids.contains(selectedThreadID ?? "") {
             let remaining = visible.filter { !ids.contains($0.id) }
             selectedThreadID = remaining.isEmpty ? nil : remaining[min(index, remaining.count - 1)].id
         }
-        inboxes = inboxes.mapValues { $0.filter { !ids.contains($0.id) } }
-        folder.removeAll { ids.contains($0.id) }
+        mutationRevision += 1
+        let removed = removeFromInboxes(threads)
+        if folder.contains(where: { ids.contains($0.id) }) { folder.removeAll { ids.contains($0.id) } }
         let task = Task { [weak self] in
             try? await Task.sleep(for: Self.undoWindow)
             guard !Task.isCancelled else { return }
             await self?.commitPending()
         }
-        pendingChange = PendingChange(action: action, threads: threads, task: task, inboxes: snapshot.0, folder: snapshot.1, selection: snapshot.2)
+        pendingChange = PendingChange(action: action, threads: threads, task: task, removed: removed, folder: snapshot.0, selection: snapshot.1)
         let count = threads.count
         let text = switch (action == .trash, count == 1) {
         case (true, true): String(localized: "Conversation moved to Trash")
@@ -102,7 +117,27 @@ extension MailModel {
         guard let pending = pendingChange else { return }
         pendingChange = nil
         if notice?.canUndo == true { notice = nil }
-        await commit(pending.action, pending.threads)
+        if pending.batches.isEmpty {
+            await commit(pending.action, pending.threads)
+        } else {
+            for batch in pending.batches { await commit(batch.action, batch.threads) }
+        }
+    }
+
+    /// Holds several moves for the undo window, like `apply` does for one: what rules did to new
+    /// mail. The conversations are already out of the inboxes; `removed` is what Undo puts back.
+    func holdForUndo(_ batches: [(action: MailAction, threads: [MailThread])], removed: [MailThread],
+                     notice text: String, ruleBatch: UUID?) async {
+        guard let first = batches.first else { return }
+        await flushPendingChange()
+        let task = Task { [weak self] in
+            try? await Task.sleep(for: Self.undoWindow)
+            guard !Task.isCancelled else { return }
+            await self?.commitPending()
+        }
+        pendingChange = PendingChange(action: first.action, threads: batches.flatMap(\.threads), task: task, removed: removed,
+                                      folder: folder, selection: selectedThreadID, batches: batches, ruleBatch: ruleBatch)
+        notice = Notice(text: text, undo: .change)
     }
 
     /// Sends a waiting Done or Trash now, before another change or when the app quits.
@@ -116,16 +151,25 @@ extension MailModel {
     private func commit(_ action: MailAction, _ threads: [MailThread]) async {
         for (accountID, group) in Dictionary(grouping: threads, by: \.accountID) {
             guard let account = account(accountID) else { continue }
+            committingChanges[account.id, default: 0] += 1
+            mutationRevision += 1
+            var failure: Error?
             do {
                 try await provider(for: account).perform(action, on: group)
             } catch {
-                show(error)
-                await reload()
+                failure = error
+            }
+            committingChanges[account.id, default: 1] -= 1
+            if committingChanges[account.id] == 0 { committingChanges[account.id] = nil }
+            mutationRevision += 1
+            if let failure {
+                show(failure)
+                await reload(only: account)
             }
         }
     }
 
-    static func changed(_ thread: MailThread, by action: MailAction) -> MailThread {
+    nonisolated static func changed(_ thread: MailThread, by action: MailAction) -> MailThread {
         var copy = thread
         for index in copy.messages.indices {
             switch action {
@@ -142,7 +186,7 @@ extension MailModel {
     // MARK: Writing
 
     public func startCompose() {
-        compose = ComposeState(account: currentAccount)
+        compose = withSentFrom(ComposeState(account: currentAccount))
     }
 
     /// A mailto: link clicked inside a mail: compose from the account that mail came in on.
@@ -162,34 +206,45 @@ extension MailModel {
             default: break
             }
         }
-        compose = state
+        compose = withSentFrom(state)
     }
 
     /// Replies go out from the account the conversation arrived in.
     public func startReply(all: Bool = false) {
         guard let thread = selectedThread, let account = account(thread.accountID) else { return }
         // Mail sent to an alias is answered from that alias.
-        reply = ComposeState(account: account, draft: Draft.reply(to: withoutReactions(thread), from: account.replyAddress(for: thread), all: all),
-                             isReply: true)
+        reply = withSentFrom(ComposeState(account: account, draft: Draft.reply(to: withoutReactions(thread), from: account.replyAddress(for: thread), all: all),
+                                          isReply: true))
     }
 
     /// A reply to one message of the open conversation, not necessarily the latest.
     public func startReply(to message: MailMessage, all: Bool = false) {
         guard let thread = selectedThread, let account = account(thread.accountID) else { return }
-        reply = ComposeState(account: account,
-                             draft: Draft.reply(to: message, in: thread, from: account.replyAddress(for: thread), all: all),
-                             isReply: true)
+        var state = ComposeState(account: account,
+                                 draft: Draft.reply(to: message, in: thread, from: account.replyAddress(for: thread), all: all),
+                                 isReply: true)
+        state.answersOneMessage = true
+        reply = withSentFrom(state)
     }
 
     /// Forwards the latest message, or the one given.
     public func startForward(_ message: MailMessage? = nil) {
         guard let thread = selectedThread, let account = account(thread.accountID) else { return }
         let last = message ?? thread.latest
-        let text = body(of: last, in: thread)?.text ?? last.snippet
-        let quoted = text.split(separator: "\n", omittingEmptySubsequences: false).map { "> \($0)" }.joined(separator: "\n")
-        let header = "\n\n---------- Forwarded message ----------\nFrom: \(last.from.headerValue)\nDate: \(last.date.formatted())\nSubject: \(last.subject)\n\n"
+        let original = ForwardedOriginal(message: last, body: body(of: last, in: thread))
         let subject = "Fwd: " + (Subject.isReply(thread.subject) ? String(thread.subject.dropFirst(4)) : thread.subject)
-        compose = ComposeState(account: account, draft: Draft(from: account.address, subject: subject, text: header + quoted))
+        if original.html.isEmpty {
+            // Plain mail is quoted as text in the message, as before.
+            // The line goes above the quoted original, where the message ends.
+            var state = withSentFrom(ComposeState(account: account, draft: Draft(from: account.address, subject: subject)))
+            state.draft.text += original.quotedText
+            compose = state
+        } else {
+            // HTML mail goes along underneath with its formatting; the cursor starts above it.
+            var state = ComposeState(account: account, draft: Draft(from: account.address, subject: subject))
+            state.forwarded = original
+            compose = withSentFrom(state)
+        }
     }
 
     /// Sends from the draft's account; on failure the draft stays open with the error.
@@ -204,7 +259,7 @@ extension MailModel {
     /// Sends, and on failure returns why instead of showing it.
     func attemptSend(_ state: ComposeState) async -> Error? {
         do {
-            var draft = try state.validated()
+            var draft = try state.validated(includingForward: false)
             // Very large photos are made smaller first, as most mail apps do.
             draft.attachments = draft.attachments.map { attachment in
                 let sized = ImageResizer.forSending(attachment.data, mimeType: attachment.mimeType)
@@ -219,8 +274,9 @@ extension MailModel {
             guard let account = account(state.accountID) else { throw MailError.missingCredentials }
             // The formatted signature replaces the plain one when the mailbox has one.
             if state.signature != nil, state.signature == ComposeState.signatureBlock(account) {
-                draft = Self.withFormattedSignature(draft, plain: state.signature, html: account.signatureHTML)
+                draft = Self.withFormattedSignature(draft, plain: state.signature, html: account.signatureHTML, after: state.sentFrom)
             }
+            if let forwarded = state.forwarded { draft = forwarded.appended(to: draft) }
             try await provider(for: account).send(withSenderName(draft, account: account))
             noteSent(draft, account: account)
             learnWriting(from: draft, account: account)
@@ -240,6 +296,8 @@ public struct ComposeState: Equatable {
     public var editedDraft: MailThread?
     /// The signature block added at the start, so it can be told apart from what was written.
     var signature: String?
+    /// "Sent from Margin" under the signature ("\n\n" and the line), when it was added.
+    var sentFrom: String?
     public var draft: Draft
     public var to: String
     public var cc: String
@@ -249,6 +307,17 @@ public struct ComposeState: Equatable {
     public var showsBcc: Bool = false
     /// Days after which to remind if nobody has replied; nil for no reminder.
     public var remindAfterDays: Int?
+    /// A forwarded email carried underneath with its formatting; nil once it's made text.
+    public var forwarded: ForwardedOriginal?
+    /// Started from one message's own Reply: the reply box opens under that message.
+    public var answersOneMessage = false
+
+    /// Edit as Text: the forwarded email becomes quoted text in the message, to trim it.
+    public mutating func forwardAsText() {
+        guard let forwarded else { return }
+        draft.text += forwarded.quotedText
+        self.forwarded = nil
+    }
 
     public init(account: MailAccount, draft: Draft? = nil, isReply: Bool = false) {
         accountID = account.id
@@ -258,7 +327,7 @@ public struct ComposeState: Equatable {
         showsCc = !self.draft.cc.isEmpty
         bcc = self.draft.bcc.map(\.headerValue).joined(separator: ", ")
         showsBcc = !self.draft.bcc.isEmpty
-        signature = Self.block(account.signatureText(forReply: isReply))
+        signature = Self.block(account.signature(sendingAs: self.draft.from, forReply: isReply))
         if self.draft.text.isEmpty, let signature {
             self.draft.text = signature
         }
@@ -267,16 +336,34 @@ public struct ComposeState: Equatable {
     /// Switches the sending account, keeping what was written and swapping the signature.
     /// `address` picks one of the account's aliases; the main address when nil.
     public mutating func send(from account: MailAccount, previous: MailAccount? = nil, as address: EmailAddress? = nil) {
-        if previous?.id != account.id { use(signature: account.signature) }
+        let newAddress = address ?? account.address
+        // A send-as address with its own signature brings it along; leaving one puts the
+        // mailbox's back.
+        let leavingOwn = previous?.aliasSignatures?[draft.from.address.lowercased()] != nil
+        let ownSignature = account.aliasSignatures?[newAddress.address.lowercased()]
+        if previous?.id != account.id || leavingOwn || ownSignature != nil {
+            use(signature: ownSignature ?? account.signature)
+        }
         accountID = account.id
-        draft.from = address ?? account.address
+        draft.from = newAddress
     }
 
     /// Swaps the signature at the end of the message, keeping what was written; nil for none.
     public mutating func use(signature text: String?) {
+        // "Sent from Margin" stays last.
+        let keepsSentFrom = sentFrom.map { draft.text.hasSuffix($0) } ?? false
+        if keepsSentFrom, let sentFrom { draft.text.removeLast(sentFrom.count) }
         if let old = signature, draft.text.hasSuffix(old) { draft.text.removeLast(old.count) }
         signature = Self.block(text)
         draft.text += signature ?? ""
+        if keepsSentFrom, let sentFrom { draft.text += sentFrom }
+    }
+
+    /// Adds "Sent from Margin" under what's there, once.
+    mutating func addSentFrom(_ line: String) {
+        guard sentFrom == nil, let block = Self.block(line) else { return }
+        sentFrom = block
+        draft.text += block
     }
 
     static func signatureBlock(_ account: MailAccount) -> String? { block(account.signature) }
@@ -291,6 +378,7 @@ public struct ComposeState: Equatable {
     /// new message. A reply with nothing typed isn't.
     public var hasContent: Bool {
         var text = draft.text
+        if let sentFrom, text.hasSuffix(sentFrom) { text.removeLast(sentFrom.count) }
         if let signature, text.hasSuffix(signature) { text.removeLast(signature.count) }
         if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !draft.attachments.isEmpty { return true }
         return draft.inReplyTo == nil && !draft.subject.trimmingCharacters(in: .whitespaces).isEmpty
@@ -309,8 +397,11 @@ public struct ComposeState: Equatable {
         return Self.attachmentWords.contains { written.contains($0) }
     }
 
-    func validated() throws -> Draft {
+    /// The message as it goes out. `includingForward` false leaves the forwarded email off, for
+    /// sending, which adds it after the formatted signature is in place.
+    func validated(includingForward: Bool = true) throws -> Draft {
         var draft = self.draft
+        if includingForward, let forwarded { draft = forwarded.appended(to: draft) }
         guard let to = EmailAddress.parseList(to) else { throw MailError.invalidAddress(self.to) }
         guard let cc = EmailAddress.parseList(cc) else { throw MailError.invalidAddress(self.cc) }
         guard let bcc = EmailAddress.parseList(bcc) else { throw MailError.invalidAddress(self.bcc) }
@@ -323,32 +414,16 @@ public struct ComposeState: Equatable {
 }
 
 extension MailModel {
-    /// Experimental: the full composers use Relevate's block editor, with `/` for blocks and
-    /// handles to drag them. Off by default.
-    public var usesBlockComposer: Bool {
-        get { _ = contactSettingsRevision; return environment.defaults.bool(forKey: "usesBlockComposer") }
-        set { environment.defaults.set(newValue, forKey: "usesBlockComposer"); contactSettingsRevision += 1 }
+    /// The formatting tools above the text in the composer and the reply: on until hidden with Aa.
+    public var showsFormattingBar: Bool {
+        get { _ = contactSettingsRevision; return environment.defaults.object(forKey: "showsFormattingBar") as? Bool ?? true }
+        set { environment.defaults.set(newValue, forKey: "showsFormattingBar"); contactSettingsRevision += 1 }
     }
 
-    /// The draft with `document` as its body and `signature` after it: HTML and a plain-text part
-    /// that keeps the structure, or just `plain` text when the document has no structure.
-    nonisolated static func applying(_ document: MailDocument, plain: String?, to draft: Draft, signature: String) -> Draft {
-        var draft = draft
-        let signatureText = signature.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard document.hasStructure else {
-            draft.html = nil
-            draft.text = (plain ?? document.plainText()) + (signatureText.isEmpty ? "" : "\n\n" + signatureText)
-            return draft
-        }
-        var html = document.html()
-        if !signatureText.isEmpty {
-            let escaped = signatureText.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;")
-                .replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\n", with: "<br>")
-            // Same text as the plain signature, so a formatted signature can take its place.
-            html = html.replacingOccurrences(of: "\n</div>", with: "\n<p style=\"margin:16px 0 0\">\(escaped)</p>\n</div>")
-        }
-        draft.html = html
-        draft.text = document.plainText() + (signatureText.isEmpty ? "" : "\n\n" + signatureText)
-        return draft
+    /// Experimental: hold the space bar to dictate while writing. Off by default.
+    public var holdSpaceDictates: Bool {
+        get { _ = contactSettingsRevision; return environment.defaults.bool(forKey: "holdSpaceDictates") }
+        set { environment.defaults.set(newValue, forKey: "holdSpaceDictates"); contactSettingsRevision += 1 }
     }
+
 }

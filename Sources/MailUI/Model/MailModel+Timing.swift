@@ -1,5 +1,9 @@
 import Foundation
 import MailCore
+import Network
+#if os(macOS)
+import AppKit
+#endif
 #if canImport(UserNotifications)
 import UserNotifications
 #endif
@@ -159,6 +163,8 @@ extension MailModel {
     /// it's been a while. Blank while everything is fresh.
     public func statusLine(now: Date) -> String {
         if isLoading { return String(localized: "Checking for mail…") }
+        // Not the connection: say so, instead of blaming the network for a refused sign-in.
+        if refusalNote != nil { return String(localized: "Couldn't sign in · showing saved mail") }
         if isOffline { return String(localized: "Offline · showing saved mail") }
         guard let updated = lastUpdated else { return " " }
         // Fresh mail needs no note; it only says something once it's been a while.
@@ -190,6 +196,7 @@ extension MailModel {
         }
         lastSnoozed = targets.map(LabelStore.key(for:))
         for key in lastSnoozed { snoozes[key] = date }
+        for thread in targets { snoozedCopies[LabelStore.key(for: thread)] = thread }
         saveSnoozes()
         selection = []
         let until = date.formatted(.dateTime.weekday(.abbreviated).hour().minute())
@@ -214,6 +221,9 @@ extension MailModel {
 
     func saveSnoozes() {
         JSONFile<[String: Date]>(url: environment.folder.appending(path: "snoozes.json")).save(snoozes)
+        // Copies only of what's still snoozed.
+        snoozedCopies = snoozedCopies.filter { snoozes[$0.key] != nil }
+        saveSnoozedCopies()
     }
 
     // MARK: Waiting for reply
@@ -233,11 +243,19 @@ extension MailModel {
     }
 
     /// Sent mail older than the follow-up setting that nobody has answered.
-    func waitingThreads(_ accountID: UUID?) async -> [MailThread] {
+    /// Sent mail still waiting for an answer. Read from the Sent mail saved on this device;
+    /// with `refresh`, the server's Sent is checked first, at most every two minutes
+    /// (`loadSentMail`), instead of downloaded again on every visit.
+    func waitingThreads(_ accountID: UUID?, refresh: Bool = true) async -> [MailThread] {
         var sent: [MailThread] = []
         for account in accounts where accountID == nil || account.id == accountID {
-            guard let mailbox = combinedMailbox(.sent, of: account.id), let provider = try? provider(for: account) else { continue }
-            let threads = (try? await provider.threads(in: mailbox, limit: 100)) ?? []
+            guard let mailbox = combinedMailbox(.sent, of: account.id) else { continue }
+            if refresh { await loadSentMail(for: account) }
+            var threads = await environment.cache.threads(account: account.id, mailbox: mailbox.id, limit: 100, bodies: false)
+            // Nothing saved yet (a new mailbox, or previews): the server's.
+            if threads.isEmpty, let provider = try? provider(for: account) {
+                threads = (try? await provider.threads(in: mailbox, limit: 100)) ?? []
+            }
             sent += threads.map { Self.tag($0, account: account.id) }
         }
         let me = Set(accounts.map { $0.address.address.lowercased() })
@@ -284,7 +302,11 @@ extension MailModel {
 
     /// Selected conversations, or the open one when nothing is selected.
     public var actionTargets: [MailThread] {
-        if !selection.isEmpty { return visibleThreads.filter { selection.contains($0.id) } }
+        if !selection.isEmpty {
+            let shown = visibleThreads.filter { selection.contains($0.id) }
+            // Select All reaches past the rows shown so far.
+            return shown.count == selection.count ? shown : wholeList.filter { selection.contains($0.id) }
+        }
         return selectedThread.map { [$0] } ?? []
     }
 
@@ -302,8 +324,23 @@ extension MailModel {
         for index in min(anchor, end)...max(anchor, end) { selection.insert(threads[index].id) }
     }
 
+    /// ⇧↓ and ⇧↑: the selection grows (or shrinks back) one row at a time from the open
+    /// conversation, which stays open.
+    public func extendSelection(by delta: Int) {
+        let threads = listSections(visibleThreads)?.flatMap(\.threads) ?? visibleThreads
+        guard let anchor = threads.firstIndex(where: { $0.id == selectedThreadID }) else { moveSelection(delta); return }
+        // Where the selection's moving end is: the furthest selected row from the open one.
+        let chosen = threads.indices.filter { selection.contains(threads[$0].id) }
+        let end = selection.isEmpty ? anchor : (chosen.max(by: { abs($0 - anchor) < abs($1 - anchor) }) ?? anchor)
+        let next = min(max(end + delta, 0), threads.count - 1)
+        selection = next == anchor ? [] : Set(threads[min(anchor, next)...max(anchor, next)].map(\.id))
+        selectionEnd = threads[next].id
+        if delta > 0, next >= threads.count - 5, canShowMore { listReachedEnd() }
+    }
+
     public func selectAll() {
-        selection = Set(visibleThreads.map(\.id))
+        // Everything in the list, also what hasn't been scrolled to yet.
+        selection = Set(wholeList.map(\.id))
     }
 
     // MARK: Clock
@@ -312,12 +349,15 @@ extension MailModel {
     public func startClock() {
         startWatching()
         guard clock == nil else { return }
+        if !environment.isPreview { startDownloading() }
+        watchNetwork()
         clock = Task { [weak self] in
             var ticks = 0
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(20))
                 guard let self else { return }
                 await self.tick()
+                await self.retryUnreachable()
                 ticks += 1
                 if ticks % 9 == 0, !self.isLoading { await self.reload() } // about every 3 minutes
                 if ticks % 180 == 0 { await self.refreshContacts() } // about every hour
@@ -326,17 +366,57 @@ extension MailModel {
         }
     }
 
+    /// Reconnects when the network comes back or changes (Wi-Fi to a hotspot, a VPN going up)
+    /// and, on the Mac, when it wakes from sleep. Without this the app would only find out at
+    /// the next request, one connection at a time.
+    private func watchNetwork() {
+        guard !environment.isPreview else { return }
+        let monitor = NWPathMonitor()
+        let seen = NetworkSeen()
+        monitor.pathUpdateHandler = { [weak self] path in
+            let now = NetworkSeen.State(isUp: path.status == .satisfied, interfaces: path.availableInterfaces.map(\.name))
+            // The first report is just how things are; only a change after it counts.
+            guard let before = seen.swap(now), before != now, now.isUp else { return }
+            Task { @MainActor [weak self] in await self?.reconnect() }
+        }
+        monitor.start(queue: DispatchQueue(label: "margin.network"))
+        networkMonitor = monitor
+        #if os(macOS)
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                // The network needs a moment after waking.
+                try? await Task.sleep(for: .seconds(3))
+                await self?.reconnect()
+            }
+        }
+        #endif
+    }
+
+    /// The mailbox whose Sent folder should be read next: the one read longest ago, once that's
+    /// at least two minutes back. Nil when none is due yet.
+    nonisolated static func dueForSentCheck(_ accounts: [UUID], lastChecked: [UUID: Date], now: Date) -> UUID? {
+        guard let oldest = accounts.min(by: { (lastChecked[$0] ?? .distantPast) < (lastChecked[$1] ?? .distantPast) }),
+              now.timeIntervalSince(lastChecked[oldest] ?? .distantPast) >= 120 else { return nil }
+        return oldest
+    }
+
     func tick() async {
         let now = Date()
         clockTick += 1
         checkReplyReminders(now: now)
         // Now and then, look for invitations in new mail so the calendar knows about them.
         if clockTick % 9 == 1 { await findInvites() }
-        if clockTick % 3 == 0 { await sortNewMail(inboxThreads(nil).filter { now.timeIntervalSince($0.date) < 3 * 3600 }) }
+        if clockTick % 3 == 0 { await sortNewMail(inboxThreads(since: now.addingTimeInterval(-3 * 3600))) }
         // Replies sent from other apps and devices: read each account's Sent now and then, so
         // "reply owed" clears and conversations show both sides without opening them first.
-        if clockTick % 5 == 0 { for account in accounts { await loadSentMail(for: account) } }
+        // One mailbox at a time, the one checked longest ago, so several mailboxes take turns
+        // instead of all going at once (each still gets its turn every couple of minutes).
+        if let due = Self.dueForSentCheck(accounts.map(\.id), lastChecked: sentMailLoaded, now: now),
+           let account = account(due) {
+            await loadSentMail(for: account)
+        }
         runAutomaticBackupIfDue(now: now)
+        rememberSnoozedCopies()
         let woken = snoozes.filter { $0.value <= now }.map(\.key)
         if !woken.isEmpty {
             for key in woken { snoozes[key] = nil }
@@ -403,7 +483,10 @@ extension MailModel {
                 let changed = try await provider.waitForInboxChange(timeout: .seconds(25 * 60))
                 pushingAccounts.insert(account.id)
                 failures = 0
-                if changed, !isLoading { await reload() }
+                // New mail in one mailbox refreshes that mailbox, not all of them: with six
+                // mailboxes, every arrival used to fetch all six again and redo the work that
+                // follows a full refresh.
+                if changed { await reload(only: account) }
             } catch MailError.notSupported {
                 pushingAccounts.remove(account.id)
                 return
@@ -439,12 +522,17 @@ extension MailModel {
         let senders = Set(thread.messages.filter { !isMine($0) }.map { $0.from.address.lowercased() })
         if senders.contains(where: correspondents.contains) { return true }
         if thread.messages.contains(where: { isVIP($0.from) }) { return true }
-        let known = Set(contacts.flatMap(\.addresses).map { $0.address.lowercased() })
+        // Asked for conversation after conversation: the contacts' addresses are gathered once.
+        let all = contacts
+        if knownAddressCache?.count != all.count {
+            knownAddressCache = (all.count, Set(all.flatMap(\.addresses).map { $0.address.lowercased() }))
+        }
+        let known = knownAddressCache?.addresses ?? []
         return senders.contains(where: known.contains)
     }
 
     func notifyAboutNewMail() {
-        let unread = inboxThreads(nil).filter(\.isUnread)
+        let unread = unreadInInboxes()
         let ids = Set(unread.map(\.id))
         // Remembered across launches, so a background check doesn't alert about old mail.
         if seenUnread == nil, !environment.isPreview { seenUnread = seenFile.load() }
@@ -459,7 +547,7 @@ extension MailModel {
             let setting = alertSetting(for: thread)
             // Workspaces not in view stay quiet, except for sign-in codes.
             if isInOtherWorkspace(thread) { return !seen.contains(thread.id) && signInCode(in: thread) != nil }
-            return !seen.contains(thread.id) && !isSnoozed(thread) && setting != .none
+            return !seen.contains(thread.id) && !isSnoozed(thread) && setting != .none && !isQuietByRule(thread)
                 && (setting == .all || (setting == .people && thread.split == .people && isFromSomeoneYouKnow(thread))
                     || (setting == .vips && thread.messages.contains { isVIP($0.from) }) || signInCode(in: thread) != nil)
         }
@@ -568,5 +656,16 @@ extension MailModel {
         _ = swipeRevision
         let saved = environment.defaults.stringArray(forKey: key)?.compactMap(SwipeAction.init(rawValue:))
         return (saved?.count == 2 ? saved : nil) ?? fallback
+    }
+}
+
+/// What the network looked like at the last report, shared with the monitor's own queue.
+final class NetworkSeen: @unchecked Sendable {
+    struct State: Equatable { var isUp: Bool; var interfaces: [String] }
+    private let lock = NSLock()
+    private var last: State?
+    /// Remembers `state` and gives back what was there before (nil the first time).
+    func swap(_ state: State) -> State? {
+        lock.withLock { defer { last = state }; return last }
     }
 }

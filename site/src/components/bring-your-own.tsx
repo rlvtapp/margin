@@ -23,10 +23,12 @@ const apps: [string, string][] = [
 
 const models: [string, string][] = [
 	["On this Mac", "#2f78f5"],
+	["Claude subscription", "#c2603f"],
+	["ChatGPT subscription", "#0d8a6b"],
 	["Ollama", "#525866"],
 	["LM Studio", "#7c5cff"],
-	["Claude", "#d97757"],
-	["ChatGPT", "#10a37f"],
+	["Claude API", "#d97757"],
+	["ChatGPT API", "#10a37f"],
 	["Gemini", "#4a7cf7"],
 	["Grok", "#6b7280"],
 	["Any other server", "#8a93a3"],
@@ -34,7 +36,8 @@ const models: [string, string][] = [
 
 /**
  * What you can bring along: the AI apps you already use (Margin adds itself to them in a
- * click), and the model the built-in assistant runs on.
+ * click), and the model the built-in assistant runs on: on the Mac, through the Claude or ChatGPT
+ * subscription someone already pays for (Claude Code or Codex on their Mac), or with a key.
  */
 export function BringYourOwn() {
 	return (
@@ -52,10 +55,12 @@ export function BringYourOwn() {
 				</ul>
 			</section>
 			<section>
-				<h3>Your model, your key</h3>
+				<h3>Your model, your subscription</h3>
 				<p>
-					The built-in assistant runs on the model you pick. A key you add goes
-					straight to that provider, never through us.
+					The built-in assistant runs on the model you pick. Already pay for
+					Claude or ChatGPT? Use that subscription through Claude Code or Codex,
+					no API key needed. Anything you add talks straight to that provider,
+					never through us.
 				</p>
 				<ul className="chips">
 					{models.map(([name, color], i) => (

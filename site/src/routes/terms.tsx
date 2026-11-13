@@ -9,7 +9,7 @@ export const Route = createFileRoute("/terms")({
 		seo({
 			path: "/terms",
 			title: "Terms of use",
-			description: "The terms for using Margin, the free mail app for Mac, iPhone, iPad and Apple Watch.",
+			description: "The terms for using Margin, the free mail app for Mac.",
 		}),
 });
 
@@ -40,14 +40,6 @@ function Terms() {
 				Margin connects to mail, contacts and other accounts that you already
 				have. Your use of those accounts stays under your provider's own terms,
 				and you're responsible for what you send from them.
-			</p>
-
-			<h2>The notification relay</h2>
-			<p>
-				Instant notifications on iPhone and iPad go through a relay we run. We
-				try to keep it running, but we don't promise it always will, and we may
-				change or stop it. Margin keeps working without it; new mail is then
-				checked in the background instead.
 			</p>
 
 			<h2>No warranty</h2>

@@ -7,7 +7,7 @@ type Backdrop = "cards" | "people";
 const backdrops: Backdrop[] = ["cards", "people"];
 
 /**
- * The hero: the app on a Mac and an iPhone in front of a backdrop, with a few cards floating in
+ * The hero: the app on a Mac in front of a backdrop, with a few cards floating in
  * front. Each visit gets one of the two backdrops at random (it's chosen in the browser, so the
  * page is the same for everyone until then); `?bg=cards` or `?bg=people` asks for one.
  */
@@ -37,23 +37,6 @@ export function HeroScene() {
 					alt="Margin on a Mac in dark mode: every inbox in one list, a conversation open, and the next meeting at the side"
 					width={2600}
 					height={1608}
-				/>
-			</div>
-
-			<div className="scene-phone">
-				<img
-					className="for-light"
-					src="/images/margin-iphone-light.jpg"
-					alt="Margin on iPhone: the inbox"
-					width={506}
-					height={1100}
-				/>
-				<img
-					className="for-dark"
-					src="/images/margin-iphone-dark.jpg"
-					alt="Margin on iPhone in dark mode: the inbox"
-					width={506}
-					height={1100}
 				/>
 			</div>
 

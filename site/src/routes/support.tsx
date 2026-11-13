@@ -62,14 +62,6 @@ function Support() {
 				the right page.
 			</p>
 
-			<h2>Not getting new-mail alerts on iPhone</h2>
-			<p>
-				Check that notifications are allowed for Margin in the Settings app, and
-				open Margin once so it can renew its connection. Mailboxes on plain IMAP
-				servers are checked in the background every so often rather than
-				instantly; that's a limit of iPhone, not of your mail.
-			</p>
-
 			<h2>Your data</h2>
 			<p>
 				Margin doesn't send your mail to us. See the{" "}
@@ -89,7 +81,11 @@ function Support() {
 						({who})
 					</span>
 				))}
-				.
+				. Margin's code is open, on{" "}
+				<a href={site.source} rel="noreferrer">
+					GitHub
+				</a>
+				, if you'd like to look or help.
 			</p>
 		</Prose>
 	);

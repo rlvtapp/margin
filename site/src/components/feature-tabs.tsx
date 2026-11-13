@@ -109,7 +109,7 @@ const tabs: Tab[] = [
 	{
 		id: "assistant",
 		title: "Assistant",
-		text: "Summaries, suggested replies and answers about your mail, from the model on your Mac or with your own key. Or leave it off.",
+		text: "Summaries, answers about your mail, and replies that sound like you. Run it on your Mac, on your Claude or ChatGPT subscription, or with your own key. Or leave it off.",
 		card: () => <SummaryCard />,
 	},
 ];

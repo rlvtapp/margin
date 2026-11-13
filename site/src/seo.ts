@@ -19,7 +19,7 @@ export function seo({ path, title, description, hidden }: Page) {
 	const url = `${site.url}${path}`;
 	const fullTitle = path === "/" ? title : `${title} · ${site.name}`;
 	const image = `${site.url}/images/share.jpg`;
-	const imageAlt = "Margin on a Mac and an iPhone: every inbox in one list, with a conversation open";
+	const imageAlt = "Margin on a Mac: every inbox in one list, with a conversation open";
 	return {
 		meta: [
 			{ title: fullTitle },
@@ -71,12 +71,12 @@ export const structuredData = {
 			"@id": `${site.url}/#app`,
 			name: site.name,
 			description:
-				"A free mail app for Mac, iPhone, iPad and Apple Watch that connects straight to your mail provider, so your mail never passes through anyone else.",
+				"A free mail app for Mac that connects straight to your mail provider, so your mail never passes through anyone else.",
 			url: site.url,
 			applicationCategory: "CommunicationApplication",
-			operatingSystem: "macOS, iOS, iPadOS, watchOS",
+			operatingSystem: "macOS",
 			image: `${site.url}/images/share.jpg`,
-			screenshot: [`${site.url}/images/mac-hero-light.jpg`, `${site.url}/images/margin-iphone-light.jpg`],
+			screenshot: [`${site.url}/images/mac-hero-light.jpg`],
 			offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
 			publisher: { "@id": `${site.publisherURL}/#organization` },
 		},

@@ -307,7 +307,12 @@ nav a:hover {
 }
 
 .bottom nav {
-	gap: 22px;
+	flex-wrap: wrap;
+	gap: 8px 22px;
+}
+
+.bottom nav > * {
+	white-space: nowrap;
 }
 
 .bottom nav a {
@@ -408,6 +413,18 @@ a.button:hover {
 	font-size: 14px;
 }
 
+.meta a {
+	color: var(--muted);
+	text-decoration: underline;
+	text-decoration-color: var(--faint);
+	text-underline-offset: 3px;
+	transition: color 0.15s;
+}
+
+.meta a:hover {
+	color: var(--fg);
+}
+
 /* The scene */
 
 .scene {
@@ -426,8 +443,9 @@ a.button:hover {
 
 .scene-window {
 	position: absolute;
-	left: 9%;
-	right: 20%;
+	/* Centred while the site shows the Mac alone; 9% and 20% make room for a phone. */
+	left: 14%;
+	right: 14%;
 	top: 30%;
 	border-radius: 12px;
 	overflow: hidden;
@@ -2289,11 +2307,11 @@ a.button:hover {
 	text-wrap: pretty;
 }
 
-/* Contact: three ways to reach us */
+/* Contact: the ways to reach us, and the code */
 
 .contact {
 	display: grid;
-	grid-template-columns: repeat(3, 1fr);
+	grid-template-columns: repeat(2, 1fr);
 	gap: 16px;
 	margin-top: 44px;
 }
@@ -2430,6 +2448,18 @@ a.button:hover {
 	margin: 48px 0 8px;
 }
 
+.prose h3 {
+	font-size: 16px;
+	line-height: 1.3;
+	letter-spacing: -0.01em;
+	margin: 28px 0 6px;
+}
+
+.prose li b {
+	color: var(--fg);
+	font-weight: 500;
+}
+
 .prose p,
 .prose li {
 	color: var(--muted);
@@ -2491,9 +2521,9 @@ a.button:hover {
 	}
 
 	.scene-window {
-		left: 6%;
-		right: -40%;
-		top: 40%;
+		left: 5%;
+		right: 5%;
+		top: 44%;
 	}
 
 	.scene-phone {

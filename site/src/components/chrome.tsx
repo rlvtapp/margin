@@ -35,6 +35,9 @@ export function Footer() {
 				<Link to="/privacy">Privacy</Link>
 				<Link to="/terms">Terms</Link>
 				<Link to="/support">Support</Link>
+				<a href={site.source} rel="noreferrer">
+					Source code
+				</a>
 				<span className="year">© {new Date().getFullYear()}</span>
 			</nav>
 		</footer>

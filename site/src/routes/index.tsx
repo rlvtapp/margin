@@ -14,13 +14,14 @@ export const Route = createFileRoute("/")({
 	head: () =>
 		seo({
 			path: "/",
-			title: "Margin: a free mail app for Mac, iPhone and iPad",
+			title: "Margin: a free mail app for Mac",
 			description:
 				"All your mail in one place, nothing in between. Margin connects straight to Gmail, Outlook, iCloud and any IMAP server. Free, with no account to make.",
 		}),
 });
 
 const more = [
+	{ title: "Writes like you", text: "Margin learns your greetings, sign-offs and tone from the mail you send, so drafted replies sound like you, in every language you write in." },
 	{ title: "Undo Send", text: "A ring counts down for up to 30 seconds. Change your mind before it closes." },
 	{ title: "Send later", text: "Write now, deliver in the morning." },
 	{ title: "Send as", text: "Your other addresses come straight from Gmail and Outlook, each with its own name." },
@@ -44,7 +45,7 @@ const more = [
 	{ title: "Templates", text: "The replies you write again and again, saved for next time." },
 	{ title: "Encrypted backup", text: "Your settings and mailboxes in one protected file, ready for a new Mac." },
 	{ title: "View source", text: "Every header and the raw message, when you need to check." },
-	{ title: "Every device", text: "Mac, iPhone, iPad and Apple Watch, synced through your iCloud." },
+	{ title: "Every Mac", text: "Your mailboxes and settings on all your Macs, synced through your iCloud." },
 ];
 
 const questions: { q: string; a: string }[] = [
@@ -58,7 +59,11 @@ const questions: { q: string; a: string }[] = [
 	},
 	{
 		q: "Can you see my mail?",
-		a: "No. Margin runs on your device and talks straight to your provider, so your mail never passes through a server of ours. The one thing we run is a small relay for instant alerts on iPhone and iPad: it wakes your phone when something arrives, and never receives your mail, its subject or its sender. You can turn it off.",
+		a: "No. Margin runs on your device and talks straight to your provider, so your mail never passes through a server of ours.",
+	},
+	{
+		q: "Is Margin open source?",
+		a: "Yes. All of Margin's code is on GitHub under the Apache License 2.0, so you can read it, build it yourself and check what it does with your mail.",
 	},
 	{
 		q: "Do I need to make an account?",
@@ -70,11 +75,11 @@ const questions: { q: string; a: string }[] = [
 	},
 	{
 		q: "What do I need to run it?",
-		a: "A Mac with macOS 15 or later, or an iPhone or iPad with iOS 18 or later. There's an Apple Watch app too.",
+		a: "A Mac with macOS 15 or later.",
 	},
 	{
 		q: "When can I get it?",
-		a: "Soon. Margin is on its way to the App Store.",
+		a: "Soon, as a free download for Mac, straight from us rather than the Mac App Store.",
 	},
 ];
 
@@ -100,18 +105,23 @@ function Home() {
 				</h1>
 				<p className="lead">
 					Gmail, Outlook, iCloud and any IMAP or JMAP account, in one fast app
-					for Mac, iPhone and iPad. It talks straight to your provider, so nobody
+					for Mac. It talks straight to your provider, so nobody
 					else handles your mail. Not even us.
 				</p>
 				<div className="actions">
 					<span className="button" aria-disabled="true">
-						Coming soon to the App Store
+						Download for Mac, coming soon
 					</span>
 					<a className="button ghost" href="#features">
 						See what it does
 					</a>
 				</div>
-				<p className="meta">Free, with no account to make.</p>
+				<p className="meta">
+					Free and open source, with no account to make.{" "}
+					<a href={site.source} rel="noreferrer">
+						See the code on GitHub
+					</a>
+				</p>
 			</section>
 
 			<HeroScene />
@@ -199,7 +209,7 @@ function Home() {
 			<section className="block" id="bring-your-own">
 				<h2>
 					Bring your own.
-					<span className="dim">Your apps, your model, your key.</span>
+					<span className="dim">Your apps, your model, your subscription.</span>
 				</h2>
 				<p className="lead">
 					Margin doesn't sell you an AI. It works with the ones you already have,
@@ -282,6 +292,10 @@ function Home() {
 						<b>@{handle}</b>
 					</a>
 				))}
+				<a href={site.source} rel="noreferrer">
+					<span>Code and contributions on GitHub</span>
+					<b>rlvtapp/margin</b>
+				</a>
 			</div>
 
 			<section className="why" id="why">
@@ -294,7 +308,9 @@ function Home() {
 					<p>
 						We're the team behind <a href="https://relevate.app">Relevate</a>.
 						Margin is free, because we made it for fun, and it stays that way:
-						no paywall, no paid version, no ads.
+						no paywall, no paid version, no ads. And the{" "}
+						<a href={site.source}>code is open</a>, so you don't have to take
+						our word for any of it.
 					</p>
 				</blockquote>
 				<p className="why-sign">The Relevate team</p>
@@ -303,7 +319,7 @@ function Home() {
 			<section className="final">
 				<img src="/icon.svg" alt="" width={84} height={84} />
 				<h2>Your mail, your way.</h2>
-				<p>Free. Coming soon to the App Store.</p>
+				<p>Free and open source. Coming soon as a download for Mac.</p>
 			</section>
 		</>
 	);

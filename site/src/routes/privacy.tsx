@@ -42,8 +42,9 @@ function Privacy() {
 			<p>
 				Margin reads and sends mail by connecting directly from your device to
 				your mail provider, using the standard IMAP, SMTP and JMAP protocols,
-				or the provider's own interface for Google and Microsoft accounts. Mail
-				you've opened is kept on your device so it's quick and works offline.
+				or the provider's own interface for Google and Microsoft accounts.
+				Recent mail and mail you've opened is kept on your device so it's quick
+				and works offline.
 				It's stored in Margin's private storage and removed when you remove the
 				mailbox or delete the app.
 			</p>
@@ -61,16 +62,91 @@ function Privacy() {
 				that only works for your account. We never see it.
 			</p>
 
-			<h2>Google accounts</h2>
+			<h2 id="google">Google accounts</h2>
 			<p>
-				If you sign in with a Google account, Margin uses Google's interfaces to
-				read, organise, send and delete your mail; to read your contacts so it
-				can suggest addresses; to list meeting rooms, check when people and
-				rooms are free, and create the event when you send a meeting
-				invitation; and to turn your out-of-office reply on or off when you ask
-				it to. This data is used only
-				to show and manage your mail inside Margin on your devices. It isn't
-				sent to us, used for advertising, or sold, and no person reads it.
+				This section describes what Google user data Margin accesses when you
+				sign in with a Google account, what it does with it, and how it's
+				protected.
+			</p>
+			<h3>Google user data Margin accesses</h3>
+			<ul>
+				<li>
+					<b>Your Gmail messages and settings:</b> the messages in your mailbox
+					(senders, recipients, subjects, dates, text and attachments), your
+					labels and folders, drafts, and whether a message is read or starred.
+					If you use automatic replies, Margin also reads and changes your
+					out-of-office setting.
+				</li>
+				<li>
+					<b>Your basic profile:</b> your email address, name and profile
+					picture, to label the mailbox in the app.
+				</li>
+				<li>
+					<b>Your contacts</b>, only if you turn that on: names, email
+					addresses and pictures of your contacts and of people you've
+					mailed.
+				</li>
+				<li>
+					<b>Your calendar</b>, only if you turn that on: when you and the
+					people you invite are free or busy, your organisation's meeting
+					rooms, and the events Margin creates or answers for you.
+				</li>
+			</ul>
+			<h3>How Margin uses it</h3>
+			<p>
+				Only to give you the mail app's own features, on your devices: showing
+				and searching your mail, sending mail and replies, archiving, moving,
+				labelling, marking and deleting messages (including deleting them for
+				good when you empty the trash), saving drafts, suggesting addresses as
+				you type, sending and answering meeting invitations, and turning your
+				automatic reply on or off when you ask. Each of these changes is made
+				in your Google account because you did it in Margin.
+			</p>
+			<p>
+				Margin doesn't use Google user data for advertising, doesn't sell it,
+				and doesn't use it to develop, improve or train AI or machine-learning
+				models. No person at {site.publisher} can read it, because it never
+				reaches us.
+			</p>
+			<h3>Where it's kept and how it's protected</h3>
+			<ul>
+				<li>
+					<b>On your device only.</b> Margin talks straight to Google from
+					your device. Your mail, contacts and calendar data are not sent to,
+					or stored on, any server of ours.
+				</li>
+				<li>
+					<b>Encrypted on the way.</b> Every connection to Google uses TLS
+					encryption.
+				</li>
+				<li>
+					<b>Sign-in kept in the Keychain.</b> You sign in on Google's own
+					page; Margin never sees your password. The access token Google
+					gives Margin is stored in your device's Keychain, which the system
+					encrypts, and is only ever sent to Google.
+				</li>
+				<li>
+					<b>Saved mail in private storage.</b> Mail saved for speed and
+					offline use sits in Margin's own sandboxed storage, which other apps
+					can't read, and is covered by your disk's encryption (FileVault)
+					when that's on.
+				</li>
+			</ul>
+			<h3>Sharing and transfer</h3>
+			<p>
+				Margin doesn't share Google user data with anyone. There is one case
+				where data leaves your Mac for somewhere other than Google, and you
+				start it: if you choose an assistant other than the one on your Mac
+				and add your own key or sign-in for it, the conversation you ask about
+				(or, if you ask it to study your writing, a sample of your sent mail) is
+				sent from your Mac to that service when you ask.
+			</p>
+			<h3>Keeping and deleting</h3>
+			<p>
+				Saved mail and the sign-in token stay on your device until you remove
+				the mailbox or delete the app; either removes them. You can also clear
+				saved mail in Margin's settings, and remove Margin's access at any time
+				in your Google Account, under Security, Third-party apps and services.
 			</p>
 			<p>
 				Margin's use and transfer to any other app of information received from
@@ -79,10 +155,6 @@ function Privacy() {
 					Google API Services User Data Policy
 				</a>
 				, including the Limited Use requirements.
-			</p>
-			<p>
-				You can remove Margin's access at any time in your Google Account, under
-				Security, Third-party apps and services.
 			</p>
 
 			<h2>Microsoft accounts</h2>
@@ -108,44 +180,9 @@ function Privacy() {
 			<p>
 				If you turn on Sync with iCloud, your mailbox settings, templates and
 				preferences are stored in Margin's folder in your own iCloud, so your
-				other devices can use them. Your mail itself isn't copied there; it
+				other Macs can use them. Your mail itself isn't copied there; it
 				stays with your provider. This goes through Apple, not through us, and
 				you can turn it off in Margin's settings.
-			</p>
-
-			<h2>Instant notifications on iPhone and iPad</h2>
-			<p>
-				iPhones don't let apps stay connected in the background, so for instant
-				new-mail alerts Margin uses a small relay that we run. It works like this: your mail
-				provider tells the relay that something new arrived, the relay asks
-				Apple to wake your phone, and your phone then fetches the mail directly
-				from your provider.
-			</p>
-			<p>The relay stores only:</p>
-			<ul>
-				<li>your device's push token from Apple and a random ID for your device;</li>
-				<li>a random ID for each mailbox, and the setup code your provider needs;</li>
-				<li>
-					for Gmail, a one-way fingerprint (hash) of your address, so it can tell
-					which phone to wake. Google's notice includes your address and a
-					change counter; the relay doesn't keep the address itself.
-				</li>
-			</ul>
-			<p>
-				It never receives your mail, its subject or sender, or your passwords.
-				None of what it does see is written to its logs either: not your email
-				address, not your device's push token and not your IP address. A log
-				line says only which kind of request came in, the random ID it was for,
-				and whether it worked. Records are deleted when you remove the mailbox, when you turn
-				notifications off, or when Apple reports the device is gone. Mailboxes
-				that can't send these notices, such as most IMAP servers, don't use the
-				relay at all.
-			</p>
-			<p>
-				The relay is optional. Turn off Instant notifications in Margin's
-				Settings → Notifications and your device is deleted from the relay,
-				with everything it held for it. Margin then checks for new mail in the
-				background instead, as often as iOS allows.
 			</p>
 
 			<h2>The assistant</h2>
@@ -153,8 +190,20 @@ function Privacy() {
 				Summaries, reply drafts and other assistant features run on Apple's
 				on-device model by default, so nothing leaves your device. If you choose
 				a different assistant in settings, such as a model running on your own
-				computer or a hosted service with your own key, the mail you ask about
-				is sent to that service under its own terms. It only runs when you ask.
+				computer, a hosted service with your own key, or Claude Code or Codex
+				signed in to your own Claude or ChatGPT subscription, the mail you ask
+				about is sent to that service under its own terms. It only runs when you
+				ask.
+			</p>
+			<p>
+				So that drafted replies sound like you, Margin learns how you write
+				(your usual greetings, sign-offs, length and tone) from the mail you
+				send. It works this out on your device, without a language model, and
+				keeps it there; you can turn this off in settings. If you choose "Study
+				My Writing", the assistant you picked reads up to 40 of your recent sent
+				emails per language, once, and writes a description of your voice; only
+				the description is kept. When a hosted service drafts a reply, these
+				notes on your style go with the request.
 			</p>
 
 			<h2>Setting up a mailbox</h2>
@@ -187,7 +236,7 @@ function Privacy() {
 			</p>
 			<p>
 				One exception is up to Apple and you: if you've chosen to share
-				analytics with app developers in your iPhone, iPad or Mac settings,
+				analytics with app developers in your Mac's settings,
 				Apple may pass us anonymous crash reports. You can turn that off in
 				Privacy &amp; Security → Analytics &amp; Improvements.
 			</p>
@@ -209,8 +258,8 @@ function Privacy() {
 			<p>
 				Everything Margin keeps is on your devices, so removing a mailbox or
 				deleting the app removes it. You can also revoke Margin's access in your
-				Google or Microsoft account at any time. If you'd like us to delete
-				anything from the notification relay, or have any question, write to us.
+				Google or Microsoft account at any time. If you have any question, write
+				to us.
 			</p>
 
 			<h2>Changes</h2>

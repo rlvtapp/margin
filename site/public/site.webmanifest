@@ -1,7 +1,7 @@
 {
   "name": "Margin",
   "short_name": "Margin",
-  "description": "A free mail app for Mac, iPhone, iPad and Apple Watch.",
+  "description": "A free mail app for Mac.",
   "start_url": "/",
   "display": "browser",
   "background_color": "#ffffff",

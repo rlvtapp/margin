@@ -48,7 +48,7 @@ function Beam({ d, duration, delay, outbound }: { d: string; duration: number; d
  * How mail travels, as a drawing on dark paper: each provider on the left, your devices on the
  * right, one thin square-cornered line straight between them with light moving along it, and
  * the dashed outline of the mail server that isn't there. The one thing of ours that does
- * exist, the relay that wakes an iPhone for new mail, is drawn too, off the mail's route.
+ * exist is drawn too, as a ghost.
  */
 export function PrivacyDiagram() {
 	return (
@@ -58,7 +58,7 @@ export function PrivacyDiagram() {
 				className="bp-wide"
 				viewBox="0 0 1120 440"
 				role="img"
-				aria-label="Mail goes straight from your provider to your devices, with no server of ours in between"
+				aria-label="Mail goes straight from your provider to your Mac, with no server of ours in between"
 			>
 				{/* The server that isn't there. */}
 				<g className="bp-ghost">
@@ -68,18 +68,6 @@ export function PrivacyDiagram() {
 					</text>
 					<text x="760" y={door.y + 109} textAnchor="middle" className="small">
 						there isn't one
-					</text>
-				</g>
-
-				{/* The relay that wakes an iPhone: ours, and never on the mail's route. */}
-				<g className="bp-relay">
-					<path d={`M1064 ${door.y + 48}V${door.y + 122}`} />
-					<rect x="896" y={door.y + 122} width="196" height="58" rx="12" />
-					<text x="994" y={door.y + 146} textAnchor="middle">
-						Our notification relay
-					</text>
-					<text x="994" y={door.y + 164} textAnchor="middle" className="small">
-						wakes your iPhone, sees no mail
 					</text>
 				</g>
 
@@ -113,10 +101,8 @@ export function PrivacyDiagram() {
 					<rect x="876" y="158" width="150" height="100" rx="9" />
 					<rect x="886" y="168" width="130" height="80" rx="3" className="screen" />
 					<path d="M858 270h186" />
-					<rect x="1042" y="186" width="44" height="84" rx="9" />
-					<path d="M1058 194h12" />
 					<text x="972" y="308" textAnchor="middle" className="bp-name">
-						Your Mac and iPhone
+						Your Mac
 					</text>
 				</g>
 			</svg>
@@ -149,8 +135,7 @@ function NarrowDiagram() {
 				<i />
 				<i />
 			</div>
-			<div className="device-chip">Your Mac and iPhone</div>
-			<p>For instant alerts, a small relay of ours wakes your iPhone. It never sees your mail.</p>
+			<div className="device-chip">Your Mac</div>
 		</div>
 	);
 }

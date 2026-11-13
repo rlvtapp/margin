@@ -9,9 +9,11 @@ export const site = {
 		{ handle: "rlvtapp", who: "Relevate" },
 		{ handle: "kaanmol_", who: "Kaan, who builds Margin" },
 	],
+	/** Margin's code, open source under the Apache License 2.0. */
+	source: "https://github.com/rlvtapp/margin",
 	/** Who publishes Margin. */
 	publisher: "Relevate",
 	publisherURL: "https://relevate.app",
 	/** Shown at the top of the privacy policy and terms. */
-	updated: "10 November 2026",
+	updated: "13 November 2026",
 };

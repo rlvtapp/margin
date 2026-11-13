@@ -4,7 +4,7 @@ import Foundation
 /// this computer, or a hosted model with the person's own key. Requests go straight from
 /// the app to that provider; there is no service of ours in between.
 public enum AssistantProvider: String, Codable, CaseIterable, Sendable {
-    case off, onDevice, ollama, lmStudio, claude, chatGPT, gemini, grok, custom
+    case off, onDevice, claudeCode, codex, ollama, lmStudio, claude, chatGPT, gemini, grok, custom
 
     public var title: String {
         switch self {
@@ -15,13 +15,36 @@ public enum AssistantProvider: String, Codable, CaseIterable, Sendable {
             #else
             String(localized: "On this device")
             #endif
+        case .claudeCode: String(localized: "Claude Code (your subscription)")
+        case .codex: String(localized: "ChatGPT (your subscription)")
         case .ollama: "Ollama"
         case .lmStudio: "LM Studio"
-        case .claude: "Claude"
-        case .chatGPT: "ChatGPT"
+        case .claude: String(localized: "Claude (API key)")
+        case .chatGPT: String(localized: "ChatGPT (API key)")
         case .gemini: "Gemini"
         case .grok: "Grok"
         case .custom: String(localized: "Other server")
+        }
+    }
+
+    /// Its name in the list of assistants, where a second line says how it connects.
+    public var shortName: String {
+        switch self {
+        case .onDevice: "Apple Intelligence"
+        case .claudeCode: "Claude Code"
+        case .codex, .chatGPT: "ChatGPT"
+        case .claude: "Claude"
+        default: title
+        }
+    }
+
+    /// Its plain name, for "by …" and messages, without how it's set up.
+    public var name: String {
+        switch self {
+        case .claude: "Claude"
+        case .chatGPT, .codex: "ChatGPT"
+        case .claudeCode: "Claude Code"
+        default: title
         }
     }
 
@@ -36,6 +59,8 @@ public enum AssistantProvider: String, Codable, CaseIterable, Sendable {
             String(localized: "Runs on Apple's on-device model. Mail never leaves this device.")
             #endif
         case .ollama, .lmStudio: String(localized: "Runs on a model on this computer. Mail never leaves it.")
+        case .claudeCode: String(localized: "Runs Claude Code on this Mac with your own Claude sign-in. The conversation you ask about goes to Anthropic; nothing goes through Margin. Each answer takes a few seconds.")
+        case .codex: String(localized: "Runs Codex, from the ChatGPT app or installed on its own, on this Mac with your ChatGPT sign-in. The conversation you ask about goes to OpenAI; nothing goes through Margin. Each answer takes a few seconds.")
         case .claude: String(localized: "The conversation you ask about is sent to Anthropic with your API key. Nothing goes through Margin.")
         case .chatGPT: String(localized: "The conversation you ask about is sent to OpenAI with your API key. Nothing goes through Margin.")
         case .gemini: String(localized: "The conversation you ask about is sent to Google with your API key. Nothing goes through Margin.")
@@ -56,12 +81,52 @@ public enum AssistantProvider: String, Codable, CaseIterable, Sendable {
         }
     }
 
+    /// The quickest, cheapest model, when it's known without asking a server.
+    public var quickestModel: String? {
+        switch self {
+        case .claude, .claudeCode, .codex: defaultModel.isEmpty ? nil : defaultModel
+        default: nil
+        }
+    }
+
     /// The model picked before the person chooses one. Other providers list their own.
     public var defaultModel: String {
-        self == .claude ? "claude-opus-5-5" : ""
+        // Mail needs quick answers more than deep thought: the fastest, cheapest model of each.
+        switch self {
+        case .claude: "claude-haiku-5-5"
+        // Claude Code's own names for its models; it picks the newest of each.
+        case .claudeCode: "haiku"
+        case .codex:
+            #if os(macOS)
+            CommandLineTool.codex.fastestModel() ?? ""
+            #else
+            ""
+            #endif
+        default: ""
+        }
     }
 
     public var needsKey: Bool { [.claude, .chatGPT, .gemini, .grok].contains(self) }
+    /// Runs a tool installed on this Mac (Claude Code, Codex) with the person's own sign-in.
+    public var usesCommandLine: Bool { self == .claudeCode || self == .codex }
+    /// Whether this device can use it: the tools only run on a Mac that has them.
+    public var isAvailableHere: Bool {
+        switch self {
+        case .claudeCode:
+            #if os(macOS)
+            CommandLineTool.claude.locate() != nil
+            #else
+            false
+            #endif
+        case .codex:
+            #if os(macOS)
+            CommandLineTool.codex.locate() != nil
+            #else
+            false
+            #endif
+        default: true
+        }
+    }
     public var acceptsKey: Bool { needsKey || self == .custom }
     public var hasServerURL: Bool { self == .ollama || self == .lmStudio || self == .custom }
     public var keychainKey: String { "assistant.\(rawValue)" }
@@ -78,6 +143,15 @@ public struct AssistantSettings: Codable, Equatable, Sendable {
         self.baseURL = baseURL ?? provider.defaultBaseURL
     }
 
+    /// The same assistant on its quickest, cheapest model, where Margin knows that model
+    /// without asking a server (Claude, Claude Code, ChatGPT through its app); otherwise as is.
+    public var onQuickestModel: AssistantSettings {
+        guard let quick = provider.quickestModel else { return self }
+        var settings = self
+        settings.model = quick
+        return settings
+    }
+
     /// The on-device model when this device has one, otherwise off.
     public static var initial: AssistantSettings {
         AssistantSettings(provider: OnDeviceModel.isAvailable ? .onDevice : .off)
@@ -91,6 +165,14 @@ public struct AssistantSettings: Codable, Equatable, Sendable {
             return nil
         case .onDevice:
             return OnDeviceModel.make()
+        case .claudeCode, .codex:
+            #if os(macOS)
+            let tool: CommandLineTool = self.provider == .claudeCode ? .claude : .codex
+            guard let executable = tool.locate() else { return nil }
+            return CommandLineModel(tool: tool, executable: executable, model: model)
+            #else
+            return nil
+            #endif
         case .claude:
             guard let key, !key.isEmpty, !model.isEmpty else { return nil }
             return AnthropicModel(apiKey: key, model: model)
@@ -101,7 +183,7 @@ public struct AssistantSettings: Codable, Equatable, Sendable {
                 baseURL: url, apiKey: key?.isEmpty == false ? key : nil, model: model,
                 attribution: provider == .custom
                     ? String(localized: "by \(url.host() ?? String(localized: "your server"))", comment: "Who wrote an assistant answer: a server or provider name")
-                    : String(localized: "by \(provider.title)", comment: "Who wrote an assistant answer: a server or provider name"),
+                    : String(localized: "by \(provider.name)", comment: "Who wrote an assistant answer: a server or provider name"),
                 isLocal: ["localhost", "127.0.0.1", "::1"].contains(url.host() ?? "")
             )
         }

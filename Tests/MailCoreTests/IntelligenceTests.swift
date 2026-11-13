@@ -82,6 +82,34 @@ final class FakeModel: MailLanguageModel, @unchecked Sendable {
         #expect(MailIntelligence.cleanedSuggestions("了解しました\n是\n明天见吧") == ["了解しました", "明天见吧"])
     }
 
+    @Test func rulesAreWrittenFromWordsWithRealNames() async throws {
+        let fake = FakeModel()
+        fake.replyAnswer = "Here you go:\n```json\n{\"field\":\"from\",\"contains\":\"@bank.example\",\"action\":\"star\"}\n```"
+        let context = RuleContext(mailboxes: ["Work"], folders: ["Work": ["Bills", "Receipts"]], labels: ["Money"],
+                                  groups: ["Bills to Pay"], people: ["Noor <noor@post.example>"])
+        let parts = try await MailIntelligence(model: fake).writeRule("always star mail from my bank", context: context)
+        #expect(parts == RuleParts(field: "from", contains: "@bank.example", action: "star", target: "", mailbox: "all"))
+        let prompt = try #require(fake.requests.first?.prompt)
+        #expect(prompt.contains("Bills, Receipts") && prompt.contains("Bills to Pay") && prompt.contains("always star mail from my bank"))
+
+        #expect(throws: NoRuleWritten.self) { try RuleParts.parse("Sorry, I can't.") }
+    }
+
+    @Test func theAssistantTranslatesWhatTheSystemCant() async throws {
+        let fake = FakeModel()
+        fake.replyAnswer = "  Hello, see you Friday.  "
+        let text = try await MailIntelligence(model: fake).translate("Szia, pénteken találkozunk.", from: "Hungarian", to: "English")
+        #expect(text == "Hello, see you Friday.")
+        let request = try #require(fake.requests.first)
+        #expect(request.instructions.contains("from Hungarian into English") && request.prompt.contains("pénteken"))
+    }
+
+    @Test func aDraftsBodyIsReadAsItArrives() {
+        #expect(StreamedAnswer.answerSoFar(in: #"{"body":"Hi Noor,\nsee"#, key: "body") == "Hi Noor,\nsee")
+        #expect(StreamedAnswer.answerSoFar(in: #"{"answer":"Yes"#) == "Yes")
+        #expect(StreamedAnswer.answerSoFar(in: #"{"bo"#, key: "body") == nil)
+    }
+
     @Test func transcriptKeepsNewestWhenCut() {
         let text = Transcript.build(thread(), bodies: [:], budget: 200)
         #expect(text.contains("Yes! Book it."))
@@ -142,6 +170,6 @@ final class FakeModel: MailLanguageModel, @unchecked Sendable {
         #expect(AssistantSettings(provider: .ollama, model: "llama").makeModel(apiKey: nil)?.transcriptBudget == 12_000)
         #expect(AssistantSettings(provider: .chatGPT, model: "m").makeModel(apiKey: nil) == nil)
         #expect(AssistantSettings(provider: .off).makeModel(apiKey: "k") == nil)
-        #expect(AssistantProvider.claude.defaultModel == "claude-opus-5-5")
+        #expect(AssistantProvider.claude.defaultModel == "claude-haiku-5-5")
     }
 }

@@ -38,13 +38,23 @@ public struct AnthropicModel: MailLanguageModel {
     /// Streams the answer: text deltas arrive as server-sent events, and the `answer` field
     /// of the JSON is read out of what has arrived so far.
     public func answer(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> MailAnswer {
+        try AnswerSchema.decodeAnswer(Data(try await stream(request, key: "answer", partial: partial).utf8))
+    }
+
+    /// Streams a draft the same way, its `body` shown as it's written.
+    public func reply(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> String {
+        try AnswerSchema.decodeReply(Data(try await stream(request, key: "body", partial: partial).utf8))
+    }
+
+    /// The whole JSON answer, with the text of `key` handed over as it arrives.
+    private func stream(_ request: ModelRequest, key: String, partial: @escaping @Sendable (String) async -> Void) async throws -> String {
         var http = try makeRequest(request)
         var body = (try JSONSerialization.jsonObject(with: http.httpBody ?? Data()) as? [String: Any]) ?? [:]
         body["stream"] = true
         http.httpBody = try JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])
         let (bytes, response) = try await URLSession.shared.bytes(for: http)
         try await StreamedAnswer.checkStatus(response, bytes)
-        var reader = StreamedAnswer(partial: partial)
+        var reader = StreamedAnswer(partial: partial, key: key)
         for try await line in bytes.lines {
             guard line.hasPrefix("data:"), let event = StreamedAnswer.json(line) else { continue }
             switch event["type"] as? String {
@@ -59,7 +69,7 @@ public struct AnthropicModel: MailLanguageModel {
             default: break
             }
         }
-        return try AnswerSchema.decodeAnswer(Data(reader.text.utf8))
+        return reader.text
     }
 
     private func fetchJSON(_ request: ModelRequest) async throws -> Data {
@@ -150,6 +160,15 @@ public struct OpenAICompatibleModel: MailLanguageModel {
     /// Streams the answer as chat-completion chunks; servers without schema support get
     /// plain JSON mode, as in `fetchJSON`.
     public func answer(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> MailAnswer {
+        try AnswerSchema.decodeAnswer(Data(try await stream(request, key: "answer", partial: partial).utf8))
+    }
+
+    /// Streams a draft the same way, its `body` shown as it's written.
+    public func reply(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> String {
+        try AnswerSchema.decodeReply(Data(try await stream(request, key: "body", partial: partial).utf8))
+    }
+
+    private func stream(_ request: ModelRequest, key: String, partial: @escaping @Sendable (String) async -> Void) async throws -> String {
         func streaming(strict: Bool) throws -> URLRequest {
             var http = try makeRequest(request, strictSchema: strict)
             var body = (try JSONSerialization.jsonObject(with: http.httpBody ?? Data()) as? [String: Any]) ?? [:]
@@ -162,7 +181,7 @@ public struct OpenAICompatibleModel: MailLanguageModel {
             (bytes, response) = try await URLSession.shared.bytes(for: try streaming(strict: false))
         }
         try await StreamedAnswer.checkStatus(response, bytes)
-        var reader = StreamedAnswer(partial: partial)
+        var reader = StreamedAnswer(partial: partial, key: key)
         for try await line in bytes.lines {
             guard line.hasPrefix("data:"), let event = StreamedAnswer.json(line),
                   let delta = (event["choices"] as? [[String: Any]])?.first?["delta"] as? [String: Any] else { continue }
@@ -170,7 +189,7 @@ public struct OpenAICompatibleModel: MailLanguageModel {
             if let text = delta["content"] as? String { await reader.add(text) }
         }
         guard !reader.text.isEmpty else { throw AssistantError.badResponse(String(localized: "The answer was empty.")) }
-        return try AnswerSchema.decodeAnswer(Data(reader.text.utf8))
+        return reader.text
     }
 
     /// Asks for schema-constrained JSON; servers that don't support schemas (some local
@@ -251,22 +270,27 @@ enum HTTPCheck {
 /// Collects a streamed JSON answer and passes on its `answer` text whenever it grows.
 struct StreamedAnswer {
     let partial: @Sendable (String) async -> Void
+    /// The JSON field being written out: "answer" for Ask, "body" for a draft.
+    var key = "answer"
     private(set) var text = ""
     private var shown = ""
 
-    init(partial: @escaping @Sendable (String) async -> Void) { self.partial = partial }
+    init(partial: @escaping @Sendable (String) async -> Void, key: String = "answer") {
+        self.partial = partial
+        self.key = key
+    }
 
     mutating func add(_ delta: String) async {
         text += delta
-        guard let answer = Self.answerSoFar(in: text), answer != shown else { return }
+        guard let answer = Self.answerSoFar(in: text, key: key), answer != shown else { return }
         shown = answer
         await partial(answer)
     }
 
     /// The `"answer"` string of a JSON object that may still be cut off part-way, with escapes
     /// read; nil until its opening quote has arrived.
-    static func answerSoFar(in json: String) -> String? {
-        guard let key = json.range(of: "\"answer\"") else { return nil }
+    static func answerSoFar(in json: String, key name: String = "answer") -> String? {
+        guard let key = json.range(of: "\"\(name)\"") else { return nil }
         let rest = Array(json[key.upperBound...].unicodeScalars)
         var i = 0
         while i < rest.count, rest[i] == " " || rest[i] == ":" || rest[i] == "\n" || rest[i] == "\t" { i += 1 }

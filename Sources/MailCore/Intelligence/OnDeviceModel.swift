@@ -125,6 +125,19 @@ struct AppleModel: MailLanguageModel {
         }
     }
 
+    func reply(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> String {
+        try await plainErrors {
+            var latest = ""
+            for try await snapshot in session(request).streamResponse(to: request.prompt, generating: Reply.self) {
+                if let body = snapshot.content.body, body != latest {
+                    latest = body
+                    await partial(body)
+                }
+            }
+            return latest
+        }
+    }
+
     func answer(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> MailAnswer {
         try await plainErrors {
             var latest = MailAnswer(text: "", sources: [])
@@ -183,6 +196,26 @@ struct AppleModel: MailLanguageModel {
     }
 
     /// A fresh session per request: each task stands alone, so no history carries over.
+    @Generable struct Rule {
+        @Guide(description: "Where to look: from, to or subject.", .anyOf(["from", "to", "subject"]))
+        var field: String
+        @Guide(description: "The text to look for: an address, a domain like @example.com, a name or a word.")
+        var contains: String
+        @Guide(description: "What to do with matching new mail.", .anyOf(["archive", "trash", "mark_read", "star", "label", "group", "move", "forward", "answer", "quiet"]))
+        var action: String
+        @Guide(description: "The folder, label or group name for move, label and group; the address for forward; the reply for answer; empty otherwise.")
+        var target: String
+        @Guide(description: "A mailbox name, or all.")
+        var mailbox: String
+    }
+
+    func ruleParts(_ request: ModelRequest) async throws -> RuleParts {
+        try await plainErrors {
+            let rule = try await session(request).respond(to: request.prompt, generating: Rule.self).content
+            return RuleParts(field: rule.field, contains: rule.contains, action: rule.action, target: rule.target, mailbox: rule.mailbox)
+        }
+    }
+
     private func session(_ request: ModelRequest) -> LanguageModelSession {
         LanguageModelSession(instructions: request.instructions)
     }

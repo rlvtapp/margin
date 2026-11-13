@@ -212,7 +212,8 @@ extension AssistantProvider {
     /// depend on the server and the model, so Margin checks (or finds out on the first try).
     public var actionSupport: ActionSupport {
         switch self {
-        case .off: .no
+        // Claude Code and Codex run with their tools off: they answer, they don't act.
+        case .off, .claudeCode, .codex: .no
         case .onDevice, .claude, .chatGPT, .gemini, .grok: .yes
         case .ollama, .lmStudio, .custom: .dependsOnModel
         }
@@ -229,7 +230,7 @@ extension AssistantSettings {
 
     /// The provider's name for messages ("Grok", or the server's address for Other server).
     public var displayName: String {
-        provider == .custom ? (URL(string: baseURL)?.host() ?? provider.title) : provider.title
+        provider == .custom ? (URL(string: baseURL)?.host() ?? provider.name) : provider.name
     }
 }
 
@@ -239,7 +240,7 @@ extension AssistantSettings {
     public func makeAgent(apiKey: String?) -> (any MailAgentModel)? {
         let key = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines)
         switch provider {
-        case .off:
+        case .off, .claudeCode, .codex:
             return nil
         case .onDevice:
             return OnDeviceModel.makeAgent()
@@ -257,7 +258,7 @@ extension AssistantSettings {
                 baseURL: url, apiKey: key?.isEmpty == false ? key : nil, model: model, name: displayName,
                 attribution: provider == .custom
                     ? String(localized: "by \(url.host() ?? String(localized: "your server"))", comment: "Who wrote an assistant answer: a server or provider name")
-                    : String(localized: "by \(provider.title)", comment: "Who wrote an assistant answer: a server or provider name"),
+                    : String(localized: "by \(provider.name)", comment: "Who wrote an assistant answer: a server or provider name"),
                 isLocal: isLocal
             )
         }

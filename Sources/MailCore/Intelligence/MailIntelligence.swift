@@ -59,9 +59,24 @@ public protocol MailLanguageModel: Sendable {
     /// An answer, handing over the text written so far as it comes in. The default waits
     /// for the whole answer.
     func answer(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> MailAnswer
+    /// A rule for new mail from the person's own words. The default asks for JSON and reads it.
+    func ruleParts(_ request: ModelRequest) async throws -> RuleParts
+    /// A draft, handing over the text written so far as it comes in. The default waits for the
+    /// whole draft.
+    func reply(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> String
 }
 
 extension MailLanguageModel {
+    public func reply(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> String {
+        let text = try await reply(request)
+        await partial(text)
+        return text
+    }
+
+    public func ruleParts(_ request: ModelRequest) async throws -> RuleParts {
+        try RuleParts.parse(try await reply(request))
+    }
+
     public func answer(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> MailAnswer {
         try await answer(request)
     }
@@ -109,10 +124,12 @@ public actor MailIntelligence {
 
     /// `style` is how the person writes (from their writing profile), so drafts sound like them.
     public func write(_ instruction: WriteInstruction, thread: MailThread, bodies: [String: MessageBody],
-                      me: EmailAddress, draft: String, style: String? = nil) async throws -> String {
+                      me: EmailAddress, draft: String, style: String? = nil,
+                      partial: (@Sendable (String) async -> Void)? = nil) async throws -> String {
         let request = Self.replyRequest(instruction, thread: thread, bodies: bodies, me: me, draft: draft,
                                         style: style, budget: model.transcriptBudget)
-        return try await model.reply(request).trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = if let partial { try await model.reply(request, partial: partial) } else { try await model.reply(request) }
+        return text.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     /// Three short, different answers to the latest message ("Sounds good!", "Can't make it",
@@ -166,14 +183,47 @@ public actor MailIntelligence {
 
     /// Answers a question from the given conversations only, citing which ones it used.
     public func ask(_ question: String, about threads: [(MailThread, [String: MessageBody])], me: EmailAddress,
-                    facts: String = "", partial: (@Sendable (String) async -> Void)? = nil) async throws -> MailAnswer {
-        let request = Self.answerRequest(question, threads: threads, me: me, budget: model.transcriptBudget, facts: facts)
+                    facts: String = "", style: String = "", partial: (@Sendable (String) async -> Void)? = nil) async throws -> MailAnswer {
+        var request = Self.answerRequest(question, threads: threads, me: me, budget: model.transcriptBudget, facts: facts)
+        // The person's own preferences (length, instructions) come last, so they win.
+        if !style.isEmpty { request.instructions += "\n\n" + style }
         var answer = if let partial { try await model.answer(request, partial: partial) } else { try await model.answer(request) }
         answer.text = answer.text.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Only cite conversations that exist, each once.
+        // Only cite conversations that exist, each once, and only ones the answer really speaks of.
         var seen = Set<Int>()
         answer.sources = answer.sources.filter { (1...max(threads.count, 1)).contains($0) && $0 <= threads.count && seen.insert($0).inserted }
+            .filter { Self.answer(answer.text, speaksOf: threads[$0 - 1].0, bodies: threads[$0 - 1].1) }
         return answer
+    }
+
+    /// Whether an answer has anything to do with a conversation it cites. Small models name
+    /// sources they didn't use; a source is kept only when the answer mentions one of the
+    /// conversation's people, a telling word of its subject, or a time, date or amount found in it.
+    static func answer(_ text: String, speaksOf thread: MailThread, bodies: [String: MessageBody]) -> Bool {
+        func words(_ string: String) -> [String] {
+            string.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil).lowercased()
+                .split(whereSeparator: { !($0.isLetter || $0.isNumber || $0 == ":" || $0 == "." || $0 == ",") })
+                .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: ":.,")) }
+                .filter { !$0.isEmpty }
+        }
+        let said = Set(words(text))
+        // Names that say nothing about who wrote: role addresses and the like.
+        let nobody: Set<String> = ["noreply", "no", "reply", "info", "team", "support", "mail", "email", "hello", "news",
+                                   "newsletter", "notifications", "notification", "service", "account", "accounts", "the"]
+        let people = thread.messages.flatMap { [$0.from] + $0.to }
+            .flatMap { words($0.name ?? String($0.address.prefix { $0 != "@" })) }
+            .filter { $0.count >= 3 && !nobody.contains($0) && !$0.contains(where: \.isNumber) }
+        if people.contains(where: said.contains) { return true }
+        // Words every other subject has.
+        let plain: Set<String> = ["your", "about", "email", "address", "please", "update", "verify", "confirm", "account",
+                                  "order", "today", "message", "notification", "reminder", "invitation", "welcome", "thanks"]
+        let subject = words(thread.subject).filter { $0.count >= 5 && !plain.contains($0) && !$0.contains(where: \.isNumber) }
+        if subject.contains(where: said.contains) { return true }
+        // "15:00", "249,00", "2026": a figure in the answer that the conversation holds too.
+        let figures = said.filter { $0.count >= 3 && $0.contains(where: \.isNumber) }
+        guard !figures.isEmpty else { return false }
+        let held = Set(words(thread.subject) + thread.messages.flatMap { words(bodies[$0.id]?.text ?? $0.body?.text ?? $0.snippet) })
+        return figures.contains(where: held.contains)
     }
 
     // MARK: Prompts
@@ -193,13 +243,18 @@ public actor MailIntelligence {
             Answer in the language of the question.
 
             Answer only what was asked. Use a fact or conversation only when it answers the question; a \
-            question about meetings gets meetings, not bills or replies owed. Never pad the answer with \
+            question about meetings gets meetings, not bills or replies owed, and a question about what \
+            needs a reply gets the mail that needs a reply, not meetings. When the facts say "none" for \
+            what was asked, say that nothing does, in one sentence, and stop. Never pad the answer with \
             other things you were given, counts you weren't given, or remarks about what you left out.
+
+            Use only names, times and places that are written in the facts or conversations, exactly as \
+            written there. Never add a person, company or detail that isn't.
 
             Format, in Markdown:
             - Start with one short sentence that answers the question directly.
             - Three or more things: put each on its own line starting with "- ", short, with the useful \
-            detail first (time, who, amount), for example "- **Tue 10:00** Design review with Noor".
+            detail first (the time, the person or the amount) in bold.
             - Use **bold** only for the key detail of a line. No headings, no tables.
             - Under 80 words unless the question asks for more.
 
@@ -274,7 +329,8 @@ public actor MailIntelligence {
             You write email replies for \(me.displayName). Write only the body of the email: no subject line, \
             no quoted text, no placeholders like [Name]. Match the language and tone of the conversation, keep \
             it short, and sign off as \(me.displayName.split(separator: " ").first.map(String.init) ?? me.displayName). \
-            Only answer what this conversation says: never bring in subjects, complaints or facts that aren't in it.
+            Only answer what this conversation says: never bring in subjects, complaints or facts that aren't in it. \
+            Never pad: say what's needed once, without repeating thanks or enthusiasm and without filler.
             """ + (style.map { "\n\n" + $0 } ?? ""),
             prompt: prompt
         )

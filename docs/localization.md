@@ -47,8 +47,15 @@ server, and it costs nothing. The first time a pair of languages is used, the sy
 download them.
 
 - When a message opens, `MessageTranslation.language(of:)` guesses its language from its text
-  (the NaturalLanguage framework; at least 40 letters and a confident guess), and the system is
-  asked whether it can translate from it. The answer is kept per message in `TranslationCache`.
+  (the NaturalLanguage framework), and the system is asked whether it can translate from it. The
+  answer is kept per message in `TranslationCache`. The recognizer settles on about the first
+  hundred characters it's given, and a newsletter's opening (a product name, a headline, a
+  divider) plus its links and address footer can read as Indonesian or Polish on their own. So
+  web and mail addresses, tracking codes, paths, numbers, acronyms and words with capitals inside
+  are left out, quoted lines too; what's left (at least 40 letters) is read in runs of about 70
+  letters through the first 8,000 characters, and each run's guesses count for its letters. A
+  language the reader reads wins with 30% of the message; any other needs 75%, or no language is
+  given and no line shows.
 - Mail in a language that isn't among the reader's preferred languages (System Settings →
   Language & Region) gets one quiet line above it: "Written in German · Translate". Settings →
   Reading → Offer to translate turns that line off.

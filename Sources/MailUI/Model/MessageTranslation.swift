@@ -8,14 +8,129 @@ import NaturalLanguage
 /// and lines survive.
 enum MessageTranslation {
     /// The language a message is written in, when that's clear: enough words and a confident guess.
-    static func language(of text: String) -> Locale.Language? {
-        let sample = String(text.prefix(2000))
-        guard sample.unicodeScalars.filter(CharacterSet.letters.contains).count >= 40 else { return nil }
+    ///
+    /// The system's recognizer settles on about the first hundred characters it's given, and
+    /// newsletters open with a product name, a headline and a divider ("Neon / Neon Changelog /
+    /// -----"), then carry links, tracking codes and a street address: on their own those read
+    /// as Indonesian or Polish. So those go first, what's left is looked at in short runs of
+    /// words through the whole message, and each run's guess counts for its letters. A language
+    /// the reader reads that holds a fair share of the message wins: brand names and an address
+    /// footer don't make English mail foreign.
+    static func language(of text: String, readerLanguages: [String] = Locale.preferredLanguages) -> Locale.Language? {
+        let words = readableWords(in: text.prefix(8000))
+        let letters = words.reduce(0) { $0 + $1.letters }
+        guard letters >= 40 else { return nil }
         let recognizer = NLLanguageRecognizer()
-        recognizer.processString(sample)
-        guard let (language, confidence) = recognizer.languageHypotheses(withMaximum: 1).first,
-              language != .undetermined, confidence >= 0.8 else { return nil }
+        var shares: [NLLanguage: Double] = [:]
+        for run in runs(of: words) {
+            recognizer.reset()
+            recognizer.processString(run.text)
+            for (language, likelihood) in recognizer.languageHypotheses(withMaximum: 5) where language != .undetermined {
+                shares[language, default: 0] += likelihood * Double(run.letters) / Double(letters)
+            }
+        }
+        let reads = Set(readerLanguages.compactMap { Locale.Language(identifier: $0).languageCode?.identifier })
+        let ranked = shares.sorted { $0.value > $1.value }
+        if let own = ranked.first(where: { reads.contains(code(of: $0.key)) }), own.value >= readerShare {
+            return Locale.Language(identifier: own.key.rawValue)
+        }
+        guard let (language, share) = ranked.first, share >= confidentShare else { return nil }
         return Locale.Language(identifier: language.rawValue)
+    }
+
+    /// How much of a message a language has to hold to be the message's language.
+    static let confidentShare = 0.75
+    /// How much a language the reader reads has to hold to count as the message's language.
+    static let readerShare = 0.3
+
+    private static func code(of language: NLLanguage) -> String {
+        Locale.Language(identifier: language.rawValue).languageCode?.identifier ?? language.rawValue
+    }
+
+    /// A word that tells something about the language, and how many letters it has.
+    struct Word: Equatable {
+        let text: String
+        let letters: Int
+    }
+
+    /// The words of a message that are language: not web or mail addresses, tracking codes,
+    /// paths, numbers, acronyms ("HIPAA", "MCP", "CA") or words run together with capitals
+    /// inside ("PostHog", "dgT7swoDAL"). Quoted lines ("> …") are earlier mail and stay out.
+    static func readableWords(in text: Substring) -> [Word] {
+        var words: [Word] = []
+        for line in text.split(whereSeparator: \.isNewline) where !line.drop(while: \.isWhitespace).hasPrefix(">") {
+            for token in line.split(whereSeparator: \.isWhitespace) {
+                if let word = readable(token) { words.append(word) }
+            }
+        }
+        return words
+    }
+
+    private static let wrapping = CharacterSet(charactersIn: "()[]{}<>\"'“”‘’«»„*•·–—-_.,;:!?¡¿…|")
+
+    private static func readable(_ token: Substring) -> Word? {
+        let lowered = token.lowercased()
+        if lowered.contains("://") || lowered.hasPrefix("www.") || lowered.contains("@") { return nil }
+        let word = String(token).trimmingCharacters(in: wrapping)
+        guard !word.isEmpty else { return nil }
+        // Chinese, Japanese and Thai don't put spaces between words: a whole sentence is one token.
+        if word.unicodeScalars.contains(where: writtenWithoutSpaces) {
+            let letters = word.filter(\.isLetter).count
+            return letters > 0 ? Word(text: word, letters: letters) : nil
+        }
+        guard word.count <= 24 else { return nil }
+        var letters = 0, digits = 0, uppercase = 0, lowerThenUpper = false, previousLower = false
+        for character in word {
+            if character.isLetter {
+                letters += 1
+                if character.isUppercase {
+                    uppercase += 1
+                    if previousLower { lowerThenUpper = true }
+                }
+                previousLower = character.isLowercase
+            } else if character.isNumber {
+                digits += 1
+                previousLower = false
+            } else if "/=_\\#%&?+$€£".contains(character) {
+                return nil  // a path, a query, an identifier, an amount
+            } else {
+                previousLower = false
+            }
+        }
+        guard letters > 0, digits == 0, !lowerThenUpper else { return nil }
+        // An acronym or a state code; a capital alone ("I", "A") is a word.
+        if letters >= 2, uppercase == letters, letters <= 5 { return nil }
+        return Word(text: word, letters: letters)
+    }
+
+    private static func writtenWithoutSpaces(_ scalar: Unicode.Scalar) -> Bool {
+        scalar.properties.isIdeographic || (0x3040...0x30FF).contains(scalar.value) || (0x0E00...0x0EFF).contains(scalar.value)
+            || (0x1000...0x109F).contains(scalar.value) || (0x1780...0x17FF).contains(scalar.value)
+    }
+
+    /// The words in runs short enough for the recognizer to read all of each.
+    static func runs(of words: [Word]) -> [(text: String, letters: Int)] {
+        var runs: [(text: String, letters: Int)] = []
+        var current: [String] = []
+        var letters = 0
+        for word in words {
+            current.append(word.text)
+            letters += word.letters
+            if letters >= 70 {
+                runs.append((current.joined(separator: " "), letters))
+                current = []
+                letters = 0
+            }
+        }
+        if !current.isEmpty {
+            // A short tail goes with the run before it.
+            if letters < 30, let last = runs.popLast() {
+                runs.append((last.text + " " + current.joined(separator: " "), last.letters + letters))
+            } else {
+                runs.append((current.joined(separator: " "), letters))
+            }
+        }
+        return runs
     }
 
     /// Whether someone with these languages (the system's preferred ones) needs it translated.

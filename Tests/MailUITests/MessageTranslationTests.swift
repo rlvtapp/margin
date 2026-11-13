@@ -11,6 +11,136 @@ import Testing
         #expect(MessageTranslation.language(of: english)?.languageCode?.identifier == "en")
     }
 
+    /// A product changelog as its plain-text part comes: a headline, the product's name, a
+    /// divider, short bullets full of product names, links and a street address. The recognizer
+    /// reads only about its first hundred characters, and on their own those read as Indonesian.
+    static let changelog = """
+        Changelog 82 plus Lumen Docs search is now built on Lumen
+
+        Lumen
+
+        --------------
+        Lumen Changelog
+        --------------
+
+        * HIPAA support for Lumen's backend services
+        * Managed Auth adds passkey and single sign-on
+        * Drag and drop uploads for Object Storage
+        * A new model is now available in the Lumen AI Gateway
+
+        Read the full Changelog ( https://lumen.example.com/docs/changelog )
+
+        In case you missed it...
+
+        * Lumen Docs search is now built on Lumen ( https://lumen.example.com/blog/docs-search )
+        * Building data pipelines with the Lumen backend ( https://lumen.example.com/blog/data-pipelines )
+
+        Lumen LLC, 160 Spear Street, 15th Floor San Francisco, CA 94105 - Unsubscribe ( https://track.example.com/unsubscribe/dgT7swoDALvwDLrwDAGhjmEDRt5Yyy-rZtN5WrA= )
+        """
+
+    @Test func anEnglishChangelogIsEnglish() {
+        let reader = ["en-NL", "nl-NL"]
+        #expect(MessageTranslation.language(of: Self.changelog, readerLanguages: reader)?.languageCode?.identifier == "en")
+        // Someone who doesn't read English still gets it as English, to translate.
+        #expect(MessageTranslation.language(of: Self.changelog, readerLanguages: ["de-DE"])?.languageCode?.identifier == "en")
+    }
+
+    @Test func englishBetweenTrackingLinksIsEnglish() {
+        let newsletter = """
+            Lumen Changelog
+            https://link.mail.example.com/ss/c/u001.Xq9mZ0aWfKz3dHkTnPq8sLw2bY5vRcEjU7hGtD4iMoN6pA1yBxCzV/4dk/aB3cD9eFgHiJkLmN/h0/h001.QwErTyUiOpAsDfGhJkLzXcVbNm
+
+            Lumen Changelog | Nov 13, 2026
+
+            * Version 18 support is now generally available
+              https://lumen.example.com/docs/changelog?utm_source=newsletter&utm_medium=email&utm_campaign=changelog-2026-11-13
+            * Branch restore now keeps your compute settings
+            * Lumen Auth: a new SDK for web apps
+            * Lumen MCP server adds query_stats tools
+            * Console: faster SQL Editor, dark mode tweaks
+
+            Read the full Changelog
+            https://link.mail.example.com/ss/c/u001.ZxCvBnMaSdFgHjKlQwErTyUiOp1234567890abcdefGHIJ/4dk/QwErT/h1/h001.AsDfGhJkL
+
+            In case you missed it…
+            * How we scaled logical replication
+              https://link.mail.example.com/ss/c/u001.LkJhGfDsAPoIuYtReWqMnBvCxZ/4dk/yy/h3/h001.Lkjhg
+
+            Lumen, Inc. 2261 Market Street #4521, San Francisco, CA 94114
+            Unsubscribe https://link.mail.example.com/ss/c/u001.unsub123ABCdefGHI/4dk/xx/h4/h001.Unsub
+            """
+        #expect(MessageTranslation.language(of: newsletter, readerLanguages: ["en-US"])?.languageCode?.identifier == "en")
+    }
+
+    @Test func mailInAnotherLanguageIsStillFound() {
+        let reader = ["en-NL", "nl-NL"]
+        // A newsletter with English product names, links and an address, in German.
+        let german = """
+            Lumen Plus Update
+
+            -----------------
+            Neuigkeiten im November
+            -----------------
+
+            * Checkout Extensibility ist jetzt für alle Händler verfügbar
+            * Neue Berichte im Analytics Dashboard zeigen Umsätze pro Kanal
+            * Lumen Flow kann jetzt Bestellungen automatisch markieren
+
+            Alle Neuigkeiten lesen ( https://click.mail.example.com/ls/click?upn=u001.abcDEF123-2Fxyz )
+
+            Lumen International Ltd., Victoria Buildings, 1-2 Haddington Road, Dublin 4, Irland
+            Abmelden ( https://click.mail.example.com/unsub?u=abc123 )
+            """
+        let indonesian = """
+            Halo Kaan,
+
+            Terima kasih sudah mendaftar. Kami akan mengirimkan kabar terbaru tentang produk dan promo menarik setiap minggu. \
+            Jika kamu punya pertanyaan, balas saja email ini dan tim kami akan membantu.
+
+            Salam hangat,
+            Tim Dukungan
+            """
+        let spanish = """
+            Lumen Newsletter
+
+            Novedades de noviembre
+
+            * Lumen AI ahora puede buscar en tus documentos y calendarios
+            * Las bases de datos cargan el doble de rápido
+            * Nuevas plantillas para equipos de producto
+
+            Leer más ( https://lumen.example.com/es/releases?utm_source=email&utm_medium=newsletter )
+
+            Lumen Labs, Inc., 2300 Harrison Street, San Francisco, CA 94110
+            Cancelar suscripción
+            """
+        let japanese = "山田様\n\nいつもお世話になっております。来週の打ち合わせの件で、ご都合の良い日時を教えていただけますでしょうか。資料は事前にお送りいたします。\n\nよろしくお願いいたします。"
+        let russian = "Здравствуйте, Каан!\n\nСпасибо за ваше письмо. Мы рассмотрели ваш запрос и готовы предложить встречу на следующей неделе. Пожалуйста, сообщите, какое время вам удобно."
+        for (text, code) in [(german, "de"), (indonesian, "id"), (spanish, "es"), (japanese, "ja"), (russian, "ru")] {
+            let found = MessageTranslation.language(of: text, readerLanguages: reader)
+            #expect(found?.languageCode?.identifier == code)
+            #expect(found.map { MessageTranslation.isForeign($0, readerLanguages: reader) } == true)
+        }
+    }
+
+    @Test func aLanguageTheReaderReadsWinsWithAFairShare() {
+        // Mostly Dutch with an English quote in it: for someone who reads Dutch, it's Dutch.
+        let mixed = """
+            Hoi Kaan, je hebt een nieuw bod ontvangen op je advertentie. Bekijk het bod en reageer snel, dan weet de koper waar hij aan toe is.
+            The buyer wrote: is it still available and can you ship it this week?
+            """
+        #expect(MessageTranslation.language(of: mixed, readerLanguages: ["nl-NL"])?.languageCode?.identifier == "nl")
+    }
+
+    @Test func looksOnlyAtWords() {
+        let words = MessageTranslation.readableWords(in: """
+            Read the full Changelog ( https://lumen.example.com/docs ) or mail team@lumen.example.com
+            HIPAA, MCP and CA 94105 on 15th Floor; LumenHub dgT7swoDALvwDLrwDAGhjmEDRt5Yyy-rZtN5WrA= utm_source=x a/b I
+            > Quoted earlier mail stays out
+            """).map(\.text)
+        #expect(words == ["Read", "the", "full", "Changelog", "or", "mail", "and", "on", "Floor", "I"])
+    }
+
     @Test func leavesShortTextAlone() {
         #expect(MessageTranslation.language(of: "Ok, top!") == nil)
         #expect(MessageTranslation.language(of: "") == nil)

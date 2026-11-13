@@ -9,6 +9,18 @@ public protocol MailProvider: Sendable {
     func threads(in mailbox: Mailbox, limit: Int) async throws -> [MailThread]
     /// The full text of one message.
     func body(of message: MailMessage) async throws -> MessageBody
+    /// The message someone just opened, as fast as it can be shown. `isComplete` false means the
+    /// text is there but files sent with it are still to come: `bodies(of:)` brings the whole.
+    /// Never waits behind background work (refreshing, reading ahead).
+    func openedBody(of message: MailMessage) async throws -> (body: MessageBody, isComplete: Bool)
+    /// Several messages whole, in as few requests as the server allows, by message id. Ones
+    /// that couldn't be read are left out. History and attachments must leave the connection
+    /// used by `openedBody` free so opening another message stays responsive.
+    func bodies(of messages: [MailMessage]) async throws -> [String: MessageBody]
+    /// The readable text of several messages, by message id, for saving ahead of time. Heavy
+    /// files are left out and the body is then marked partial (`MessageBody.isPartial`); ones
+    /// that couldn't be read are left out. Background work: never on `openedBody`'s connection.
+    func readableBodies(of messages: [MailMessage]) async throws -> [String: MessageBody]
     /// Applies an action to every message of the given threads.
     func perform(_ action: MailAction, on threads: [MailThread]) async throws
     /// Sends a message, and files a copy in Sent where the protocol doesn't.
@@ -30,9 +42,70 @@ public protocol MailProvider: Sendable {
     /// Waits until the inbox changes, or `timeout` passes. Returns whether it changed.
     /// Throws `notSupported` when the account can't push; callers then check on a timer.
     func waitForInboxChange(timeout: Duration) async throws -> Bool
+    /// A page of a folder's older mail, headers only (no texts, no files), newest first: the
+    /// messages just older than `position`, which is the `next` of the page before; nil starts
+    /// at the newest. Unlike `threads(in:limit:)` this keeps nothing: what it returns isn't
+    /// added to what a refresh brings up to date. Never waits behind a mail being opened.
+    func olderMessages(in mailbox: Mailbox, after position: String?, limit: Int) async throws -> OlderMailPage
+    /// Compares saved copies of a folder's mail (`ids`) with the server: which are gone, moved,
+    /// or carry other flags now. `token` is the `token` of the answer before; with it, a server
+    /// that keeps count of changes (CONDSTORE, QRESYNC, JMAP states) says only what changed.
+    func checkSaved(_ ids: [String], in mailbox: Mailbox, since token: String?) async throws -> SavedMailCheck
+}
+
+/// A page of older mail (see `MailProvider.olderMessages`).
+public struct OlderMailPage: Sendable {
+    public var messages: [MailMessage]
+    /// Where the page after this one starts; nil when this one reached the folder's oldest.
+    public var next: String?
+    /// What the folder's message ids are good for (IMAP's UIDVALIDITY). When it changes, ids
+    /// saved before name other messages now. Nil when ids last for ever.
+    public var validity: String?
+
+    public init(messages: [MailMessage] = [], next: String? = nil, validity: String? = nil) {
+        self.messages = messages
+        self.next = next
+        self.validity = validity
+    }
+}
+
+/// What a server says about saved copies of a folder's mail (see `MailProvider.checkSaved`).
+public struct SavedMailCheck: Sendable, Equatable {
+    /// Flags as they are now, by message id: the changed ones, or all of them.
+    public var flags: [String: MessageFlags] = [:]
+    /// Messages now in another folder, by id, with that folder (JMAP keeps an id across moves).
+    public var moved: [String: String] = [:]
+    /// Messages no longer in the folder.
+    public var gone: [String] = []
+    /// To hand back next time, so only changes since are reported; nil when the server keeps
+    /// no count of changes (then a check looks at every message, so it's done rarely).
+    public var token: String?
+
+    public init(flags: [String: MessageFlags] = [:], moved: [String: String] = [:], gone: [String] = [], token: String? = nil) {
+        self.flags = flags
+        self.moved = moved
+        self.gone = gone
+        self.token = token
+    }
 }
 
 extension MailProvider {
+    public func openedBody(of message: MailMessage) async throws -> (body: MessageBody, isComplete: Bool) {
+        (try await body(of: message), true)
+    }
+
+    public func bodies(of messages: [MailMessage]) async throws -> [String: MessageBody] {
+        var found: [String: MessageBody] = [:]
+        for message in messages {
+            if let body = try? await body(of: message) { found[message.id] = body }
+        }
+        return found
+    }
+
+    public func readableBodies(of messages: [MailMessage]) async throws -> [String: MessageBody] {
+        try await bodies(of: messages)
+    }
+
     public func rawSource(of message: MailMessage) async throws -> Data {
         throw MailError.notSupported(String(localized: "This account can't show a message's source."))
     }
@@ -40,6 +113,13 @@ extension MailProvider {
         throw MailError.notSupported(String(localized: "This account can't push new mail."))
     }
     public func search(_ text: String, limit: Int) async throws -> [MailThread] { [] }
+    /// Providers that can't page through older mail aren't asked again (never shown).
+    public func olderMessages(in mailbox: Mailbox, after position: String?, limit: Int) async throws -> OlderMailPage {
+        throw MailError.notSupported("older mail")
+    }
+    public func checkSaved(_ ids: [String], in mailbox: Mailbox, since token: String?) async throws -> SavedMailCheck {
+        SavedMailCheck()
+    }
     public func createMailbox(named name: String) async throws { throw MailError.notSupported(String(localized: "This account can't create folders.")) }
     public func renameMailbox(_ mailbox: Mailbox, to name: String) async throws { throw MailError.notSupported(String(localized: "This account can't rename folders.")) }
     public func deleteMailbox(_ mailbox: Mailbox) async throws { throw MailError.notSupported(String(localized: "This account can't delete folders.")) }

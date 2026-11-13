@@ -140,7 +140,9 @@ final class FakeServer: @unchecked Sendable {
         let listener = try NWListener(using: .tcp, on: .any)
         self.listener = listener
         let queue = self.queue
+        let open = self.open
         listener.newConnectionHandler = { connection in
+            open.add(connection)
             connection.start(queue: queue)
             connection.send(content: Data((greeting + "\r\n").utf8), completion: .contentProcessed { _ in })
             FakeServer.receive(on: connection, buffer: Data(), respond: respond)
@@ -159,6 +161,18 @@ final class FakeServer: @unchecked Sendable {
     }
 
     func stop() { listener.cancel() }
+
+    /// Cuts every open connection without a word, the way a sleeping computer or a changed
+    /// network does. The server keeps listening for new ones.
+    func hangUp() { open.cancelAll() }
+
+    private let open = Connections()
+    final class Connections: @unchecked Sendable {
+        private let lock = NSLock()
+        private var all: [NWConnection] = []
+        func add(_ connection: NWConnection) { lock.withLock { all.append(connection) } }
+        func cancelAll() { lock.withLock { all.forEach { $0.forceCancel() }; all = [] } }
+    }
 
     private static func receive(on connection: NWConnection, buffer: Data, respond: @escaping @Sendable (String) -> String) {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, complete, error in

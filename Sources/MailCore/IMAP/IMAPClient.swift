@@ -274,6 +274,12 @@ actor IMAPClient {
         await connection.close()
     }
 
+    /// Closes the line at once, without the goodbye: for a connection that's dead or in the
+    /// middle of a long wait, where LOGOUT would sit until its timeout.
+    func abandon() async {
+        await connection.close()
+    }
+
     // MARK: Commands
 
     func command(_ text: String, redacted: String? = nil) async throws -> IMAPReply {

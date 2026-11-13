@@ -470,6 +470,14 @@ final class FakeJMAPServer: @unchecked Sendable {
         }
     }
 
+    func remove(_ id: String) {
+        lock.withLock {
+            emailState += 1
+            emails.removeAll { $0.id == id }
+            emailLog.append((emailState, id, "destroyed"))
+        }
+    }
+
     func setUnread(_ mailbox: String, _ count: Int) {
         lock.withLock {
             mailboxState += 1
@@ -527,12 +535,14 @@ final class FakeJMAPServer: @unchecked Sendable {
                     "created": [String](), "updated": updated, "destroyed": [String]()]
         case "Email/query":
             let sorted = emails.sorted { $0.received > $1.received }.map(\.id)
-            return ["ids": Array(sorted.prefix(arguments["limit"] as? Int ?? 50))]
+            let position = arguments["position"] as? Int ?? 0
+            return ["ids": Array(sorted.dropFirst(position).prefix(arguments["limit"] as? Int ?? 50)), "total": sorted.count]
         case "Email/get":
             let chosen = emails.filter { ids?.contains($0.id) ?? true }
             let properties = arguments["properties"] as? [String] ?? []
             if properties.contains("subject") { emailGets.append(chosen.map(\.id)) }
-            return ["state": "e\(emailState)", "list": chosen.map { email -> [String: Any] in
+            let missing = (ids ?? []).filter { id in !emails.contains { $0.id == id } }
+            return ["state": "e\(emailState)", "notFound": missing, "list": chosen.map { email -> [String: Any] in
                 [
                     "id": email.id, "threadId": "t-\(email.id)", "mailboxIds": ["inbox": true],
                     "keywords": email.seen ? ["$seen": true] : [String: Bool](),
@@ -547,9 +557,10 @@ final class FakeJMAPServer: @unchecked Sendable {
             let since = Int((arguments["sinceState"] as? String ?? "e0").dropFirst()) ?? 0
             let recent = emailLog.filter { $0.state > since }
             let created = recent.filter { $0.kind == "created" }.map(\.id)
-            let updated = Array(Set(recent.filter { $0.kind == "updated" }.map(\.id)).subtracting(created)).sorted()
+            let destroyed = recent.filter { $0.kind == "destroyed" }.map(\.id)
+            let updated = Array(Set(recent.filter { $0.kind == "updated" }.map(\.id)).subtracting(created).subtracting(destroyed)).sorted()
             return ["oldState": "e\(since)", "newState": "e\(emailState)", "hasMoreChanges": false,
-                    "created": created, "updated": updated, "destroyed": [String]()]
+                    "created": created, "updated": updated, "destroyed": destroyed]
         default:
             return [:]
         }

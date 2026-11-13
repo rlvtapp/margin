@@ -53,12 +53,7 @@ enum JMAPEmail {
 
     static func message(from email: [String: Any], folders: [Mailbox], fallbackMailbox: String) -> MailMessage? {
         guard let id = email["id"] as? String else { return nil }
-        let keywords = email["keywords"] as? [String: Bool] ?? [:]
-        var flags: MessageFlags = []
-        if keywords["$seen"] == true { flags.insert(.seen) }
-        if keywords["$flagged"] == true { flags.insert(.flagged) }
-        if keywords["$answered"] == true { flags.insert(.answered) }
-        if keywords["$draft"] == true { flags.insert(.draft) }
+        let flags = Self.flags(email["keywords"] as? [String: Bool] ?? [:])
         let mailboxIDs = (email["mailboxIds"] as? [String: Bool])?.keys.sorted() ?? []
         var headers: [String: String] = [:]
         for (key, name) in [("header:List-Id:asText", "list-id"), ("header:List-Unsubscribe:asText", "list-unsubscribe"),
@@ -87,6 +82,15 @@ enum JMAPEmail {
             hasAttachments: email["hasAttachment"] as? Bool ?? false,
             listHeaders: headers
         )
+    }
+
+    static func flags(_ keywords: [String: Bool]) -> MessageFlags {
+        var flags: MessageFlags = []
+        if keywords["$seen"] == true { flags.insert(.seen) }
+        if keywords["$flagged"] == true { flags.insert(.flagged) }
+        if keywords["$answered"] == true { flags.insert(.answered) }
+        if keywords["$draft"] == true { flags.insert(.draft) }
+        return flags
     }
 
     static func body(from email: [String: Any]) -> MessageBody {

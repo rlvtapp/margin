@@ -228,6 +228,91 @@ extension JMAPProvider {
         }.sorted { $0.date > $1.date }
     }
 
+    // MARK: Older mail, in the background
+
+    /// A page of a folder's mail by its place in the server's order (newest first), headers
+    /// only. Nothing is kept in `sync`: the folder's own list stays as it was. New mail arriving
+    /// while the pages are walked moves everything down, so a few may come twice (harmless);
+    /// mail deleted meanwhile can make a few be skipped until the next check.
+    func olderPage(in mailbox: Mailbox, after position: String?, limit: Int) async throws -> OlderMailPage {
+        let session = try await connected()
+        let start = position.flatMap { Int($0) } ?? 0
+        let responses = try await call([
+            ["Email/query", [
+                "accountId": session.accountID, "filter": ["inMailbox": mailbox.id],
+                "sort": [["property": "receivedAt", "isAscending": false]],
+                "position": start, "limit": limit, "calculateTotal": true,
+            ], "q"],
+            ["Email/get", ["accountId": session.accountID, "#ids": Self.reference("q", "Email/query", "/ids"),
+                           "properties": JMAPEmail.listProperties], "e"],
+        ])
+        let ids = Self.response("q", in: responses)?["ids"] as? [String] ?? []
+        let total = Self.response("q", in: responses)?["total"] as? Int
+        let messages = Self.list("e", in: responses)
+            .compactMap { JMAPEmail.message(from: $0, folders: folders, fallbackMailbox: mailbox.id) }
+            .sorted { $0.date > $1.date }
+        let end = start + ids.count
+        let more = ids.count == limit && (total.map { end < $0 } ?? true)
+        return OlderMailPage(messages: messages, next: more ? String(end) : nil)
+    }
+
+    /// Saved emails compared with the server. With a state from before, `Email/changes` says
+    /// what happened since and only those emails are fetched; without one (or when the server
+    /// can't work it out), every saved email's folders and keywords are fetched, 500 at a time.
+    func checkSavedEmails(_ ids: [String], in mailbox: Mailbox, since token: String?) async throws -> SavedMailCheck {
+        let session = try await connected()
+        let accountID = session.accountID
+        let asked = Set(ids)
+        var check = SavedMailCheck()
+        var toFetch: [String] = []
+        var state = token
+        var complete = false
+        if var since = token {
+            do {
+                for _ in 0..<40 {
+                    let responses = try await call([["Email/changes", ["accountId": accountID, "sinceState": since, "maxChanges": 2_000], "c"]])
+                    guard let changes = Self.response("c", in: responses), let next = changes["newState"] as? String else { break }
+                    check.gone += (changes["destroyed"] as? [String] ?? []).filter(asked.contains)
+                    toFetch += (changes["updated"] as? [String] ?? []).filter(asked.contains)
+                    since = next
+                    if changes["hasMoreChanges"] as? Bool != true { complete = true; break }
+                }
+            } catch MailError.serverRejected {
+                // cannotCalculateChanges: look at all of them below.
+            }
+            if complete { state = since } else { check.gone = []; toFetch = [] }
+        }
+        if !complete {
+            toFetch = ids
+            state = nil
+        }
+        let goneSet = Set(check.gone)
+        toFetch = Array(Set(toFetch).subtracting(goneSet))
+        var start = 0
+        while start < toFetch.count {
+            let chunk = Array(toFetch[start..<min(start + 500, toFetch.count)])
+            start += 500
+            let responses = try await call([["Email/get", ["accountId": accountID, "ids": chunk, "properties": ["id", "mailboxIds", "keywords"]], "g"]])
+            let answer = Self.response("g", in: responses)
+            if state == nil { state = answer?["state"] as? String }
+            check.gone += answer?["notFound"] as? [String] ?? []
+            for email in answer?["list"] as? [[String: Any]] ?? [] {
+                guard let id = email["id"] as? String else { continue }
+                let boxes = Set((email["mailboxIds"] as? [String: Bool])?.keys.map { $0 } ?? [])
+                check.flags[id] = JMAPEmail.flags(email["keywords"] as? [String: Bool] ?? [:])
+                if !boxes.contains(mailbox.id) {
+                    if let other = boxes.sorted().first { check.moved[id] = other } else { check.gone.append(id) }
+                }
+            }
+        }
+        if state == nil {
+            let responses = try await call([["Email/get", ["accountId": accountID, "ids": [String](), "properties": ["id"]], "s"]])
+            state = Self.response("s", in: responses)?["state"] as? String
+        }
+        check.token = state
+        return check
+    }
+
     // MARK: Responses
 
     static func reference(_ callID: String, _ name: String, _ path: String) -> [String: String] {

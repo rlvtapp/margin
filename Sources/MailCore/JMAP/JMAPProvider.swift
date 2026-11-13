@@ -30,6 +30,14 @@ public actor JMAPProvider: MailProvider {
         try await syncThreads(in: mailbox, limit: limit)
     }
 
+    public func olderMessages(in mailbox: Mailbox, after position: String?, limit: Int) async throws -> OlderMailPage {
+        try await olderPage(in: mailbox, after: position, limit: limit)
+    }
+
+    public func checkSaved(_ ids: [String], in mailbox: Mailbox, since token: String?) async throws -> SavedMailCheck {
+        try await checkSavedEmails(ids, in: mailbox, since: token)
+    }
+
     public func body(of message: MailMessage) async throws -> MessageBody {
         let session = try await connected()
         let responses = try await call([

@@ -36,6 +36,24 @@ public actor SampleProvider: MailProvider {
         return Array(Threader.threads(from: inFolder).sorted { $0.date > $1.date }.prefix(limit))
     }
 
+    public func olderMessages(in mailbox: Mailbox, after position: String?, limit: Int) async throws -> OlderMailPage {
+        let inFolder = messages.filter { $0.mailboxID == mailbox.id }.sorted { $0.date > $1.date }
+        let start = min(position.flatMap { Int($0) } ?? 0, inFolder.count)
+        let end = min(start + limit, inFolder.count)
+        return OlderMailPage(messages: Array(inFolder[start..<end]).map { var light = $0; light.body = nil; return light },
+                             next: end < inFolder.count ? String(end) : nil)
+    }
+
+    public func checkSaved(_ ids: [String], in mailbox: Mailbox, since token: String?) async throws -> SavedMailCheck {
+        var check = SavedMailCheck()
+        for id in ids {
+            guard let message = messages.first(where: { $0.id == id }) else { check.gone.append(id); continue }
+            check.flags[id] = message.flags
+            if message.mailboxID != mailbox.id { check.moved[id] = message.mailboxID }
+        }
+        return check
+    }
+
     public func body(of message: MailMessage) async throws -> MessageBody {
         messages.first { $0.id == message.id }?.body ?? MessageBody(text: message.snippet)
     }

@@ -109,6 +109,9 @@ public struct MessageBody: Hashable, Codable, Sendable {
     public var invite: CalendarInvite?
     /// The emoji of a Gmail-format reaction part (`text/vnd.google.email-reaction+json`).
     public var reaction: String?
+    /// True while only the start of the message has arrived: the text can be read, the files
+    /// sent with it are still on their way. Never saved; the whole message replaces it.
+    public var isPartial: Bool?
 
     public init(text: String, html: String? = nil, attachments: [AttachmentInfo] = [], invite: CalendarInvite? = nil,
                 reaction: String? = nil) {

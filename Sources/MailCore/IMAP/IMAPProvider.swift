@@ -15,6 +15,18 @@ public actor IMAPProvider: MailProvider {
     private var sync: [String: IMAPFolderSync] = [:]
     private var isBusy = false
     private var waiting: [CheckedContinuation<Void, Never>] = []
+    /// A third connection, only for the mail someone just opened. The first one does one folder
+    /// operation at a time (a refresh, the Sent check, reading ahead), and a click shouldn't
+    /// stand in that line.
+    private var reader: IMAPClient?
+    private var readerIsBusy = false
+    private var readerWaiting: [CheckedContinuation<Void, Never>] = []
+    /// Set when the server wouldn't give a connection for reading (some allow very few): until
+    /// then the first connection is used, as before.
+    private var readerRefusedUntil: Date?
+    /// How much of a message is fetched first. Text comes before attachments in nearly all
+    /// mail, so this is enough to show it; the rest follows.
+    static let openingBytes = 200_000
 
     /// The parts of a message a list needs: no body.
     static let listItems = "(UID FLAGS ENVELOPE RFC822.SIZE INTERNALDATE BODYSTRUCTURE BODY.PEEK[HEADER.FIELDS (LIST-ID LIST-UNSUBSCRIBE LIST-UNSUBSCRIBE-POST PRECEDENCE REFERENCES AUTO-SUBMITTED FEEDBACK-ID X-CSA-COMPLAINTS X-MAILGUN-SID X-SES-OUTGOING X-SG-EID X-MC-USER X-MS-REACTIONS)])"
@@ -30,6 +42,10 @@ public actor IMAPProvider: MailProvider {
     }
 
     public func mailboxes() async throws -> [Mailbox] {
+        try await reliably { try await self.listMailboxes() }
+    }
+
+    private func listMailboxes() async throws -> [Mailbox] {
         let client = try await connected()
         let items = try await client.list().filter(\.isSelectable)
         let names = Set(items.map(\.name))
@@ -45,15 +61,17 @@ public actor IMAPProvider: MailProvider {
     /// later ones fetch only what changed (see `refresh`).
     public func threads(in mailbox: Mailbox, limit: Int) async throws -> [MailThread] {
         try await exclusive {
-            let client = try await self.connected()
-            let state = try await self.refresh(mailbox.id, limit: limit, client: client)
-            let newest = state.messages.keys.sorted(by: >).prefix(max(0, limit)).compactMap { state.messages[$0] }
-            return Threader.threads(from: newest).sorted { $0.date > $1.date }
+            try await self.reliably {
+                let client = try await self.connected()
+                let state = try await self.refresh(mailbox.id, limit: limit, client: client)
+                let newest = state.messages.keys.sorted(by: >).prefix(max(0, limit)).compactMap { state.messages[$0] }
+                return Threader.threads(from: newest).sorted { $0.date > $1.date }
+            }
         }
     }
 
     public func body(of message: MailMessage) async throws -> MessageBody {
-        try await exclusive { try await self.fetchBody(of: message) }
+        try await exclusive { try await self.reliably { try await self.fetchBody(of: message) } }
     }
 
     private func fetchBody(of message: MailMessage) async throws -> MessageBody {
@@ -68,21 +86,156 @@ public actor IMAPProvider: MailProvider {
         return MIMEMessage.parse(raw).body
     }
 
-    public func rawSource(of message: MailMessage) async throws -> Data {
-        try await exclusive {
-            let client = try await self.connected()
-            guard let uid = Self.uid(of: message) else { throw MailError.protocolViolation(String(localized: "Unknown message.")) }
+    // MARK: The mail on screen
+
+    public func openedBody(of message: MailMessage) async throws -> (body: MessageBody, isComplete: Bool) {
+        guard let uid = Self.uid(of: message) else { throw MailError.protocolViolation(String(localized: "Unknown message.")) }
+        return try await onReader { client in
             if await client.selected != message.mailboxID { try await client.select(message.mailboxID) }
-            let items = try await client.fetch("\(uid)", "(UID BODY.PEEK[])", byUID: true)
-            guard let raw = items.first?.sections[""] else {
+            let items = try await client.fetch("\(uid)", "(UID RFC822.SIZE BODY.PEEK[]<0.\(Self.openingBytes)>)", byUID: true)
+            guard let item = items.first, let start = item.sections[""] else {
                 throw MailError.protocolViolation(String(localized: "The message body was missing."))
             }
-            return Data(raw)
+            // All of it came: small mail, which is most mail, is done in one request.
+            if start.count < Self.openingBytes || (item.size ?? .max) <= start.count {
+                return (MIMEMessage.parse(start).body, true)
+            }
+            if let opening = Self.readableStart(of: start) { return (opening, false) }
+            // The start didn't hold the text (a huge newsletter, or files put first): the whole.
+            let whole = try await client.fetch("\(uid)", "(UID BODY.PEEK[])", byUID: true)
+            guard let raw = whole.first?.sections[""] else {
+                throw MailError.protocolViolation(String(localized: "The message body was missing."))
+            }
+            return (MIMEMessage.parse(raw).body, true)
+        }
+    }
+
+    /// The text of a message from its first bytes, when they hold all of it: the text parts
+    /// were read and a file after them had begun, so the cut fell in the files, not the text.
+    /// The files are left out (they're incomplete) and the body is marked partial.
+    static func readableStart(of bytes: [UInt8]) -> MessageBody? {
+        let parsed = MIMEMessage.parse(bytes)
+        guard !parsed.attachments.isEmpty, !(parsed.text.isEmpty && (parsed.html ?? "").isEmpty) else { return nil }
+        let readable = parsed.text.isEmpty ? (parsed.html.map(HTMLText.plain) ?? "") : parsed.text
+        var body = MessageBody(text: readable.trimmingCharacters(in: .whitespacesAndNewlines), html: parsed.html, invite: parsed.invite,
+                               reaction: parsed.reaction)
+        body.isPartial = true
+        return body
+    }
+
+    public func bodies(of messages: [MailMessage]) async throws -> [String: MessageBody] {
+        var found: [String: MessageBody] = [:]
+        // One request per folder, however many messages.
+        for (mailboxID, group) in Dictionary(grouping: messages, by: \.mailboxID) {
+            let uids = group.compactMap(Self.uid(of:))
+            guard !uids.isEmpty else { continue }
+            // Conversation history and attachments must not occupy the connection used to
+            // open the next message. That connection is reserved for `openedBody`.
+            let items = try await exclusive {
+                try await self.reliably {
+                    let client = try await self.connected()
+                    if await client.selected != mailboxID { try await client.select(mailboxID) }
+                    return try await client.fetch(IMAPClient.set(uids.sorted()), "(UID BODY.PEEK[])", byUID: true)
+                }
+            }
+            for item in items {
+                guard let uid = item.uid, let raw = item.sections[""] else { continue }
+                found["\(mailboxID)/\(uid)"] = MIMEMessage.parse(raw).body
+            }
+        }
+        return found
+    }
+
+    /// The first `openingBytes` of each message in one request per folder: small mail (most
+    /// mail) comes whole, bigger mail as its text without the files, marked partial.
+    public func readableBodies(of messages: [MailMessage]) async throws -> [String: MessageBody] {
+        var found: [String: MessageBody] = [:]
+        for (mailboxID, group) in Dictionary(grouping: messages, by: \.mailboxID) {
+            let uids = group.compactMap(Self.uid(of:))
+            guard !uids.isEmpty else { continue }
+            let items = try await exclusive {
+                try await self.reliably {
+                    let client = try await self.connected()
+                    if await client.selected != mailboxID { try await client.select(mailboxID) }
+                    return try await client.fetch(IMAPClient.set(uids.sorted()), "(UID RFC822.SIZE BODY.PEEK[]<0.\(Self.openingBytes)>)", byUID: true)
+                }
+            }
+            for item in items {
+                guard let uid = item.uid, let start = item.sections[""] else { continue }
+                if start.count < Self.openingBytes || (item.size ?? .max) <= start.count {
+                    found["\(mailboxID)/\(uid)"] = MIMEMessage.parse(start).body
+                } else if let opening = Self.readableStart(of: start) {
+                    found["\(mailboxID)/\(uid)"] = opening
+                }
+            }
+        }
+        return found
+    }
+
+    /// Does `work` on the connection kept for the mail on screen, one request at a time, and
+    /// gets over that connection having died the same way `reliably` does. A server that won't
+    /// give a connection for it is asked on the first one instead.
+    private func onReader<T: Sendable>(_ work: (IMAPClient) async throws -> T) async throws -> T {
+        if let until = readerRefusedUntil, until > Date() {
+            return try await exclusive { try await self.reliably { try await work(try await self.connected()) } }
+        }
+        if readerIsBusy { await withCheckedContinuation { readerWaiting.append($0) } }
+        readerIsBusy = true
+        defer {
+            if readerWaiting.isEmpty { readerIsBusy = false } else { readerWaiting.removeFirst().resume() }
+        }
+        let reused = reader != nil
+        do {
+            return try await work(try await readerConnection())
+        } catch where MailError.isConnectionProblem(error) {
+            await dropReader()
+            guard reused, !Task.isCancelled else { throw error }
+        } catch where reader == nil {
+            // Couldn't even sign in a third time (too many connections, for one): the first
+            // connection does it, and this isn't tried again for a while.
+            readerRefusedUntil = Date().addingTimeInterval(10 * 60)
+            return try await exclusive { try await self.reliably { try await work(try await self.connected()) } }
+        }
+        do {
+            return try await work(try await readerConnection())
+        } catch where MailError.isConnectionProblem(error) {
+            await dropReader()
+            throw error
+        }
+    }
+
+    private func readerConnection() async throws -> IMAPClient {
+        if let reader { return reader }
+        let client = try await signedIn(readTimeout: 30)
+        reader = client
+        return client
+    }
+
+    private func dropReader() async {
+        guard let dead = reader else { return }
+        reader = nil
+        Task.detached { await dead.logout() }
+    }
+
+    public func rawSource(of message: MailMessage) async throws -> Data {
+        try await exclusive {
+            try await self.reliably {
+                let client = try await self.connected()
+                guard let uid = Self.uid(of: message) else { throw MailError.protocolViolation(String(localized: "Unknown message.")) }
+                if await client.selected != message.mailboxID { try await client.select(message.mailboxID) }
+                let items = try await client.fetch("\(uid)", "(UID BODY.PEEK[])", byUID: true)
+                guard let raw = items.first?.sections[""] else {
+                    throw MailError.protocolViolation(String(localized: "The message body was missing."))
+                }
+                return Data(raw)
+            }
         }
     }
 
     public func perform(_ action: MailAction, on threads: [MailThread]) async throws {
-        try await exclusive { try await self.apply(action, on: threads) }
+        // Flag changes can be said twice without harm, and a move names its messages by UID: once
+        // they've moved, saying it again moves nothing. So these are safe to do over.
+        try await exclusive { try await self.reliably { try await self.apply(action, on: threads) } }
     }
 
     private func apply(_ action: MailAction, on threads: [MailThread]) async throws {
@@ -128,7 +281,7 @@ public actor IMAPProvider: MailProvider {
         await smtp.quit()
         // SMTP doesn't keep a copy; file one in Sent. Some servers (Gmail, Outlook) already do.
         if !Self.serverFilesSent(incoming.host), let sent = folder(.sent) {
-            try? await connected().append(to: sent.id, message: message)
+            try? await checkedConnection().append(to: sent.id, message: message)
         }
     }
 
@@ -141,7 +294,7 @@ public actor IMAPProvider: MailProvider {
             guard word.unicodeScalars.allSatisfy(\.isASCII), let quoted = IMAPParser.quoted(word) else { throw MailError.notSupported("") }
             return "TEXT \(quoted)"
         }).joined(separator: " ") else { return [] }
-        return try await exclusive { try await self.searchServer(criteria, limit: limit) }
+        return try await exclusive { try await self.reliably { try await self.searchServer(criteria, limit: limit) } }
     }
 
     private func searchServer(_ criteria: String, limit: Int) async throws -> [MailThread] {
@@ -159,14 +312,110 @@ public actor IMAPProvider: MailProvider {
         return Array(Threader.threads(from: messages).sorted { $0.date > $1.date }.prefix(limit))
     }
 
+    // MARK: Older mail, in the background
+
+    /// A page of headers below the lowest UID fetched so far (`position`), by sequence number:
+    /// the lowest UID's place in the folder is asked for (`UID FETCH u (UID)`), and the
+    /// `limit` messages before it are fetched. Nothing is added to `sync`, so a refresh keeps
+    /// looking at its own window only. One page holds the main connection for one request or
+    /// two; a refresh waits at most that long, and the mail on screen has its own connection.
+    public func olderMessages(in mailbox: Mailbox, after position: String?, limit: Int) async throws -> OlderMailPage {
+        try await exclusive {
+            try await self.reliably {
+                let client = try await self.connected()
+                let selection = try await client.selectMailbox(mailbox.id)
+                let validity = selection.uidValidity.map(String.init)
+                guard selection.exists > 0, limit > 0 else { return OlderMailPage(validity: validity) }
+                var top = selection.exists
+                var below: Int?
+                if let position, let uid = Int(position) {
+                    below = uid
+                    guard uid > 1, let place = try await self.sequence(below: uid, client: client) else {
+                        return OlderMailPage(validity: validity)
+                    }
+                    top = place
+                }
+                let first = max(1, top - limit + 1)
+                let items = try await client.fetch("\(first):\(top)", Self.listItems)
+                    .filter { item in below.map { (item.uid ?? .max) < $0 } ?? true }
+                var page = IMAPFolderSync(uidValidity: selection.uidValidity ?? 0, uidNext: nil, exists: selection.exists, messages: [:], window: 0)
+                await self.add(items, to: &page, mailbox: mailbox.id, client: client)
+                let lowest = page.messages.keys.min()
+                return OlderMailPage(messages: page.messages.keys.sorted(by: >).compactMap { page.messages[$0] },
+                                     next: first > 1 ? (lowest ?? below).map(String.init) : nil, validity: validity)
+            }
+        }
+    }
+
+    /// The sequence number of the highest message below `uid`.
+    private func sequence(below uid: Int, client: IMAPClient) async throws -> Int? {
+        // Usually the message is still there: its own place, less one.
+        if let item = try await client.fetch("\(uid)", "(UID)", byUID: true).first(where: { $0.uid == uid }) {
+            return item.sequence > 1 ? item.sequence - 1 : nil
+        }
+        // It left: the nearest one below it.
+        var low = max(1, uid - 2_000)
+        while true {
+            if let found = try await client.uidSearch("UID \(low):\(uid - 1)").filter({ $0 < uid }).max() {
+                return try await client.fetch("\(found)", "(UID)", byUID: true).first(where: { $0.uid == found })?.sequence
+            }
+            if low == 1 { return nil }
+            low = max(1, low - 50_000)
+        }
+    }
+
+    /// Which saved messages are gone and whose flags changed. With CONDSTORE and a token from
+    /// before (`uidvalidity:modseq`) only flags changed since are fetched; without, the flags of
+    /// every saved message. Gone ones are found with one `UID SEARCH` over the saved range. A
+    /// new UIDVALIDITY means every saved id names another message now: all of them are gone.
+    public func checkSaved(_ ids: [String], in mailbox: Mailbox, since token: String?) async throws -> SavedMailCheck {
+        var byUID: [Int: String] = [:]
+        for id in ids {
+            guard id.hasPrefix(mailbox.id + "/"), let uid = Self.uid(of: id) else { continue }
+            byUID[uid] = id
+        }
+        return try await exclusive {
+            try await self.reliably {
+                let client = try await self.connected()
+                let condStore = await client.supportsCondStore
+                let selection = try await client.selectMailbox(mailbox.id, parameters: condStore ? "(CONDSTORE)" : nil)
+                var check = SavedMailCheck()
+                let validity = selection.uidValidity ?? 0
+                check.token = selection.highestModSeq.map { "\(validity):\($0)" }
+                guard let low = byUID.keys.min(), let high = byUID.keys.max() else { return check }
+                let parts = token?.split(separator: ":").compactMap { Int($0) } ?? []
+                if parts.count == 2, parts[0] != validity {
+                    check.gone = Array(byUID.values)
+                    return check
+                }
+                let present = Set(try await client.uidSearch("UID \(low):\(high)"))
+                check.gone = byUID.filter { !present.contains($0.key) }.map(\.value)
+                let asked = byUID.keys.filter(present.contains)
+                guard !asked.isEmpty else { return check }
+                let since = parts.count == 2 && condStore ? parts[1] : nil
+                if let since, let now = selection.highestModSeq, now == since { return check }
+                let changes = since.map { " (CHANGEDSINCE \($0))" } ?? ""
+                for item in try await client.fetch(IMAPClient.set(asked), "(UID FLAGS)" + changes, byUID: true) {
+                    guard let uid = item.uid, item.hasFlags, let id = byUID[uid] else { continue }
+                    check.flags[id] = item.flags
+                }
+                return check
+            }
+        }
+    }
+
+    static func uid(of id: String) -> Int? {
+        id.split(separator: "/").last.flatMap { Int($0) }
+    }
+
     public func createMailbox(named name: String) async throws {
-        try await connected().create(name)
+        try await checkedConnection().create(name)
         _ = try await mailboxes()
     }
 
     public func renameMailbox(_ mailbox: Mailbox, to name: String) async throws {
         try await exclusive {
-            try await self.connected().rename(mailbox.id, to: name)
+            try await self.checkedConnection().rename(mailbox.id, to: name)
             self.sync[mailbox.id] = nil
         }
         _ = try await mailboxes()
@@ -174,7 +423,7 @@ public actor IMAPProvider: MailProvider {
 
     public func deleteMailbox(_ mailbox: Mailbox) async throws {
         try await exclusive {
-            try await self.connected().delete(mailbox.id)
+            try await self.checkedConnection().delete(mailbox.id)
             self.sync[mailbox.id] = nil
         }
         _ = try await mailboxes()
@@ -183,14 +432,66 @@ public actor IMAPProvider: MailProvider {
     /// Appends the message to Drafts with the \Draft flag (RFC 9051 §6.3.12).
     public func saveDraft(_ draft: Draft) async throws {
         guard let drafts = folder(.drafts) else { throw MailError.notSupported(String(localized: "This account has no Drafts folder.")) }
-        try await connected().append(to: drafts.id, message: MessageBuilder.build(draft), flags: "(\\Seen \\Draft)")
+        try await checkedConnection().append(to: drafts.id, message: MessageBuilder.build(draft), flags: "(\\Seen \\Draft)")
     }
 
     public func disconnect() async {
-        await client?.logout()
+        await dropConnection()
+        await dropReader()
+        // The watcher may be deep in a long wait; its line is simply closed.
+        if let waiting = watcher {
+            watcher = nil
+            await waiting.abandon()
+        }
+    }
+
+    // MARK: Staying connected
+
+    /// Does `work` over the account's connection, and gets over that connection having died.
+    ///
+    /// A connection is kept open between requests, and it dies without telling anyone: the
+    /// computer sleeps, the phone puts the app away, the network changes, or the server hangs up
+    /// after a quiet while. The next request then fails with "Socket is not connected", a
+    /// timeout, or "connection closed". A dead connection is never kept: it's dropped, and when
+    /// the failed work ran on a connection from before, it's done once more on a new one. A
+    /// brand-new connection that fails is the real thing (no network, server down) and is
+    /// reported as it is.
+    private func reliably<T: Sendable>(_ work: () async throws -> T) async throws -> T {
+        let reused = client != nil
+        do {
+            return try await work()
+        } catch where MailError.isConnectionProblem(error) {
+            await dropConnection()
+            guard reused, !Task.isCancelled else { throw error }
+        }
+        do {
+            return try await work()
+        } catch where MailError.isConnectionProblem(error) {
+            await dropConnection()
+            throw error
+        }
+    }
+
+    /// Forgets the connection in use, so the next request makes a new one. The goodbye is said
+    /// on the side: on a dead line it can sit until its timeout, and nobody should wait for that.
+    private func dropConnection() async {
+        guard let dead = client else { return }
         client = nil
-        await watcher?.logout()
-        watcher = nil
+        Task.detached { await dead.logout() }
+    }
+
+    /// A connection that was just seen to answer. For work that mustn't be done twice (adding a
+    /// message to a folder), which is why it's checked first instead of repeated after.
+    private func checkedConnection() async throws -> IMAPClient {
+        if let client {
+            do {
+                _ = try await client.command("NOOP")
+                return client
+            } catch where MailError.isConnectionProblem(error) {
+                await dropConnection()
+            }
+        }
+        return try await connected()
     }
 
     // MARK: Sync
@@ -299,14 +600,21 @@ public actor IMAPProvider: MailProvider {
             if let part = item.textPart { parts[uid] = part }
         }
         // Previews: the start of each message's text, one request per kind of part. IMAP's list
-        // has no preview of its own. A failure only leaves previews empty.
-        for (part, uids) in Dictionary(grouping: parts.keys, by: { parts[$0]! }) {
-            let section = "BODY.PEEK[\(part.section)]<0.\(part.previewBytes)>"
-            guard let fetched = try? await client.fetch(IMAPClient.set(uids.sorted()), "(UID \(section))", byUID: true) else { continue }
-            for item in fetched {
-                guard let uid = item.uid, let bytes = item.sections[part.section] else { continue }
-                state.messages[uid]?.snippet = part.preview(from: bytes)
+        // has no preview of its own. A failure only leaves previews empty. A plain part that is
+        // really HTML gets one more, longer read, past its style code.
+        for round in 0..<2 where !parts.isEmpty {
+            var again: [Int: IMAPTextPart] = [:]
+            for (part, uids) in Dictionary(grouping: parts.keys, by: { parts[$0]! }) {
+                let section = "BODY.PEEK[\(part.section)]<0.\(part.previewBytes)>"
+                guard let fetched = try? await client.fetch(IMAPClient.set(uids.sorted()), "(UID \(section))", byUID: true) else { continue }
+                for item in fetched {
+                    guard let uid = item.uid, let bytes = item.sections[part.section] else { continue }
+                    let preview = part.preview(from: bytes)
+                    state.messages[uid]?.snippet = preview
+                    if round == 0, let longer = part.againAsHTML(after: bytes, preview: preview) { again[uid] = longer }
+                }
             }
+            parts = again
         }
     }
 
@@ -364,7 +672,8 @@ public actor IMAPProvider: MailProvider {
         while true {
             do {
                 return try await signInOnce(readTimeout: readTimeout)
-            } catch let MailError.authenticationFailed(detail) where Self.isPassing(detail) && attempt < 3 {
+            } catch let MailError.authenticationFailed(detail) where Self.isPassing(detail) {
+                guard attempt < 3 else { throw MailError.connectionFailed(detail) }
                 attempt += 1
                 try await Task.sleep(for: .milliseconds(800 * attempt))
             }
@@ -422,7 +731,7 @@ public actor IMAPProvider: MailProvider {
     }
 
     static func uid(of message: MailMessage) -> Int? {
-        message.id.split(separator: "/").last.flatMap { Int($0) }
+        uid(of: message.id)
     }
 
     static func serverFilesSent(_ host: String) -> Bool {

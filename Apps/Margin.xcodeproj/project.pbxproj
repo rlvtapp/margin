@@ -48,6 +48,7 @@
 		A1000000000000000000E014 /* AppIcon-Red-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D014 /* AppIcon-Red-Dark.icon */; };
 		A1000000000000000000C015 /* AppIcon-Graphite-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D015 /* AppIcon-Graphite-Dark.icon */; };
 		A1000000000000000000E015 /* AppIcon-Graphite-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D015 /* AppIcon-Graphite-Dark.icon */; };
+		A10000000000000000000112 /* MarginDockTile.docktileplugin in Embed Dock Tile Plug-in */ = {isa = PBXBuildFile; fileRef = A10000000000000000000209 /* MarginDockTile.docktileplugin */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -74,12 +75,14 @@
 		A1000000000000000000D013 /* AppIcon-Pink-Dark.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Pink-Dark.icon"; sourceTree = "<group>"; };
 		A1000000000000000000D014 /* AppIcon-Red-Dark.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Red-Dark.icon"; sourceTree = "<group>"; };
 		A1000000000000000000D015 /* AppIcon-Graphite-Dark.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "Shared/AppIcon-Graphite-Dark.icon"; sourceTree = "<group>"; };
+		A10000000000000000000209 /* MarginDockTile.docktileplugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MarginDockTile.docktileplugin; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A10000000000000000000401 /* macOS */ = {isa = PBXFileSystemSynchronizedRootGroup; path = macOS; sourceTree = "<group>"; };
 		A10000000000000000000402 /* iOS */ = {isa = PBXFileSystemSynchronizedRootGroup; path = iOS; sourceTree = "<group>"; };
 		A10000000000000000000403 /* watchOS */ = {isa = PBXFileSystemSynchronizedRootGroup; path = watchOS; sourceTree = "<group>"; };
+		A10000000000000000000404 /* DockTile */ = {isa = PBXFileSystemSynchronizedRootGroup; path = DockTile; sourceTree = "<group>"; };
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -108,6 +111,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10000000000000000000507 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -122,6 +132,17 @@
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10000000000000000000809 /* Embed Dock Tile Plug-in */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A10000000000000000000112 /* MarginDockTile.docktileplugin in Embed Dock Tile Plug-in */,
+			);
+			name = "Embed Dock Tile Plug-in";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXContainerItemProxy section */
@@ -132,6 +153,13 @@
 			remoteGlobalIDString = A10000000000000000000705;
 			remoteInfo = "Margin Watch";
 		};
+		A10000000000000000000A03 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10000000000000000000707;
+			remoteInfo = MarginDockTile;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXTargetDependency section */
@@ -139,6 +167,11 @@
 			isa = PBXTargetDependency;
 			target = A10000000000000000000705 /* Margin Watch */;
 			targetProxy = A10000000000000000000A01 /* PBXContainerItemProxy */;
+		};
+		A10000000000000000000A04 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A10000000000000000000707 /* MarginDockTile */;
+			targetProxy = A10000000000000000000A03 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -149,6 +182,7 @@
 				A10000000000000000000401 /* macOS */,
 				A10000000000000000000402 /* iOS */,
 				A10000000000000000000403 /* watchOS */,
+				A10000000000000000000404 /* DockTile */,
 				A10000000000000000000206 /* Localizable.xcstrings */,
 				A10000000000000000000208 /* AppIcon.icon */,
 				A1000000000000000000D000 /* AppIcon-Green.icon */,
@@ -179,6 +213,7 @@
 				A10000000000000000000201 /* Margin.app */,
 				A10000000000000000000205 /* Margin.app */,
 				A10000000000000000000207 /* Margin.app */,
+				A10000000000000000000209 /* MarginDockTile.docktileplugin */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -193,10 +228,12 @@
 				A10000000000000000000801 /* Sources */,
 				A10000000000000000000501 /* Frameworks */,
 				A10000000000000000000802 /* Resources */,
+				A10000000000000000000809 /* Embed Dock Tile Plug-in */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A10000000000000000000A04 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A10000000000000000000401 /* macOS */,
@@ -256,6 +293,25 @@
 			productReference = A10000000000000000000207 /* Margin.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A10000000000000000000707 /* MarginDockTile */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000905 /* Build configuration list for PBXNativeTarget "MarginDockTile" */;
+			buildPhases = (
+				A10000000000000000000808 /* Sources */,
+				A10000000000000000000507 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A10000000000000000000404 /* DockTile */,
+			);
+			name = MarginDockTile;
+			productName = MarginDockTile;
+			productReference = A10000000000000000000209 /* MarginDockTile.docktileplugin */;
+			productType = "com.apple.product-type.bundle";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -304,6 +360,7 @@
 				A10000000000000000000701 /* Margin */,
 				A10000000000000000000703 /* Margin iOS */,
 				A10000000000000000000705 /* Margin Watch */,
+				A10000000000000000000707 /* MarginDockTile */,
 			);
 		};
 /* End PBXProject section */
@@ -384,6 +441,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		A10000000000000000000805 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000808 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -631,6 +695,48 @@
 			};
 			name = Release;
 		};
+		A10000000000000000000951 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A10000000000000000000204 /* Margin.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Apache License 2.0";
+				INFOPLIST_KEY_NSPrincipalClass = MarginDockTilePlugIn;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(MARGIN_BUNDLE_ID).docktile";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				WRAPPER_EXTENSION = docktileplugin;
+			};
+			name = Debug;
+		};
+		A10000000000000000000952 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A10000000000000000000204 /* Margin.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Apache License 2.0";
+				INFOPLIST_KEY_NSPrincipalClass = MarginDockTilePlugIn;
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(MARGIN_BUNDLE_ID).docktile";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				WRAPPER_EXTENSION = docktileplugin;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -666,6 +772,15 @@
 			buildConfigurations = (
 				A10000000000000000000941 /* Debug */,
 				A10000000000000000000942 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000000000000000000905 /* Build configuration list for PBXNativeTarget "MarginDockTile" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000951 /* Debug */,
+				A10000000000000000000952 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

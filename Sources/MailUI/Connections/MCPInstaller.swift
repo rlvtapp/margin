@@ -4,8 +4,8 @@ import MailCore
 import SwiftUI
 
 /// Adds Margin to an AI app's MCP servers in one click, so nobody has to edit config files.
-/// Apps that take an install link get one. Margin is sandboxed, so for apps that keep a
-/// settings file the first click asks once to pick that file. Claude Code gets a command to paste.
+/// Apps that take an install link get one; for apps that keep a settings file, Margin adds
+/// itself to that file (a sandboxed build asks once to pick it). Claude Code gets a command to paste.
 enum MCPApp: String, CaseIterable, Identifiable {
     case claudeDesktop, claudeCode, chatGPT, codex, cursor, vsCode, windsurf, antigravity, lmStudio, geminiCLI
 
@@ -79,7 +79,11 @@ enum MCPInstaller {
             NSPasteboard.general.setString(claudeCodeCommand, forType: .string)
             return String(localized: "Command copied. Paste it in Terminal.")
         case .file:
-            guard let url = pickConfig(for: app) else { throw CancellationError() }
+            // Outside the sandbox the file is written where the app keeps it; inside, the
+            // person picks it once.
+            guard let url = SandboxMigration.isSandboxed ? pickConfig(for: app) : app.configPath.map(Self.homeFile) else {
+                throw CancellationError()
+            }
             let access = url.startAccessingSecurityScopedResource()
             defer { if access { url.stopAccessingSecurityScopedResource() } }
             let existing = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
@@ -122,6 +126,11 @@ enum MCPInstaller {
 
     private static func json(_ object: [String: Any]) throws -> Data {
         try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .withoutEscapingSlashes])
+    }
+
+    /// A path in the real home folder (not a sandbox container's).
+    static func homeFile(_ path: String) -> URL {
+        URL(fileURLWithPath: NSHomeDirectoryForUser(NSUserName()) ?? NSHomeDirectory()).appending(path: path)
     }
 
     /// Asks once for the config file, opened at the right place with the file chosen.

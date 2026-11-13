@@ -46,6 +46,8 @@
 	<string>$(MARGIN_PUSH_RELAY_URL)</string>
 	<key>MarginGmailPushTopic</key>
 	<string>$(MARGIN_GMAIL_PUSH_TOPIC)</string>
+	<key>NSDockTilePlugIn</key>
+	<string>MarginDockTile.docktileplugin</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Margin suggests people from your contacts while you address mail. They stay on this device.</string>
 	<key>NSMicrophoneUsageDescription</key>
@@ -74,5 +76,9 @@
 			</dict>
 		</dict>
 	</array>
+	<!-- Outside the sandbox: files Margin writes (attachments) are still marked as downloaded,
+	     so macOS checks them before they open. -->
+	<key>LSFileQuarantineEnabled</key>
+	<true/>
 </dict>
 </plist>

@@ -58,10 +58,12 @@ public enum AppIconChoice: String, CaseIterable, Identifiable, Sendable {
 
 extension MailModel {
     /// Puts the chosen icon on the app. On iPhone and iPad the system shows the new icon on the
-    /// Home Screen (and says so once); on the Mac it shows in the Dock while Margin is open.
+    /// Home Screen (and says so once); on the Mac it shows in the Dock, and Margin's Dock tile
+    /// plug-in keeps it there after Margin quits.
     public func applyAppIcon() {
         #if os(macOS)
         NSApplication.shared.applicationIconImage = NSImage(named: appIcon.assetName(dark: appIconDark) ?? "AppIcon")
+        DockTileLink.announce(appIcon.assetName(dark: appIconDark))
         #elseif os(iOS)
         guard UIApplication.shared.supportsAlternateIcons,
               UIApplication.shared.alternateIconName != appIcon.assetName(dark: appIconDark) else { return }
@@ -69,6 +71,38 @@ extension MailModel {
         #endif
     }
 }
+
+#if os(macOS)
+/// Tells Margin's Dock tile plug-in (Apps/DockTile) which icon is chosen, so the Dock keeps
+/// showing it while Margin is closed. The plug-in runs in a helper of the Dock, outside Margin's
+/// sandbox, so nothing on disk is shared: the icon's name travels as a notification's object
+/// (a sandboxed app can't send more than that) and the plug-in remembers it. See docs/app-icon.md.
+@MainActor
+private enum DockTileLink {
+    /// The alternate icon's name, or "" for the main icon.
+    private static var chosen = ""
+    private static var observer: NSObjectProtocol?
+
+    static func announce(_ assetName: String?) {
+        chosen = assetName ?? ""
+        guard let id = Bundle.main.bundleIdentifier else { return }
+        let center = DistributedNotificationCenter.default()
+        // A plug-in loaded after this (Margin's tile just added to the Dock) asks for the choice.
+        // Listen before posting, so one of the two always gets through.
+        if observer == nil {
+            observer = center.addObserver(forName: Notification.Name(id + ".dock-icon.ask"), object: nil, queue: .main) { _ in
+                MainActor.assumeIsolated { post(to: id) }
+            }
+        }
+        post(to: id)
+    }
+
+    private static func post(to id: String) {
+        DistributedNotificationCenter.default()
+            .postNotificationName(Notification.Name(id + ".dock-icon"), object: chosen, userInfo: nil, deliverImmediately: true)
+    }
+}
+#endif
 
 /// A small drawing of the icon in one colour, for the picker.
 struct AppIconPreview: View {

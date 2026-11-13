@@ -4,8 +4,11 @@
 <dict>
 	<!-- Use these instead of Margin.entitlements when building with your own Apple developer
 	     team, to turn on "Sync with iCloud". See docs/icloud.md. -->
-	<key>com.apple.security.app-sandbox</key>
-	<true/>
+	<!-- Not sandboxed: Margin is a direct download, so it can run Claude Code and Codex for
+	     the assistant. Its own defences: email HTML cleaned and shown without scripts, links
+	     limited to the web and mail, attachments marked as downloaded and apps and scripts
+	     never opened from mail (Tests/*/SafetyTests). Data from the sandboxed versions is
+	     moved over once (SandboxMigration). The keys below are the Hardened Runtime's. -->
 	<key>com.apple.security.network.client</key>
 	<true/>
 	<!-- Files you choose: attaching them, and Save As for attachments. -->

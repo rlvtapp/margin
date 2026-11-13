@@ -61,59 +61,80 @@ struct AccountRail: View {
             Color.clear.frame(height: 30) // the window buttons
             #endif
             RailButton(help: Text("All inboxes  ⌃1"), badge: model.unreadCount(account: nil), isSelected: model.place.isCombined) {
-                Image(systemName: "tray.2").font(.system(size: 14))
+                Image(systemName: "tray.2").font(.system(size: Look.size(14)))
             } action: { model.go(to: .allInboxes) }
             // Places across every mailbox, a click away: what needs you, what you're waiting
             // on, and what's snoozed.
             RailButton(help: Text("Home"), badge: model.needYouCount, isSelected: model.place.isHome) {
-                Image(systemName: "house").font(.system(size: 14))
+                Image(systemName: "house").font(.system(size: Look.size(14)))
             } action: { model.go(to: .home(group: nil)) }
             RailButton(help: Text("Waiting for reply"), badge: model.waitingCount,
                        isSelected: model.place == .waiting(account: nil)) {
-                Image(systemName: "hourglass").font(.system(size: 14))
+                Image(systemName: "hourglass").font(.system(size: Look.size(14)))
             } action: { model.go(to: .waiting(account: nil)) }
             RailButton(help: Text("Snoozed"), badge: 0, isSelected: model.place == .snoozed(account: nil)) {
-                Image(systemName: "clock").font(.system(size: 14))
+                Image(systemName: "clock").font(.system(size: Look.size(14)))
             } action: { model.go(to: .snoozed(account: nil)) }
             RailButton(help: Text("Calendar"), badge: 0, isSelected: model.place == .calendar) {
-                Image(systemName: "calendar").font(.system(size: 14))
+                Image(systemName: "calendar").font(.system(size: Look.size(14)))
             } action: { model.go(to: .calendar) }
             Rectangle().fill(Line.hairline).frame(width: 20, height: 1).padding(.vertical, 2)
 
-            ForEach(Array(shown.enumerated()), id: \.element.id) { index, account in
-                RailMailbox(
-                    account: account,
-                    help: Text(verbatim: "\(account.label) · \(account.address.address)\(index < 8 ? "  ⌃\(index + 2)" : "")"),
-                    badge: model.unreadCount(account: account.id),
-                    isSelected: model.place.accountID == account.id,
-                    hasError: model.loadErrors[account.id] != nil,
-                    isDragging: dragging == account.id,
-                    shift: dragging == account.id ? CGFloat(dragTarget - dragStart) * step : 0,
-                    step: step,
-                    open: { model.go(to: .inbox(account: account.id, split: nil)) },
-                    begin: { begin(account, at: index) },
-                    moved: { places in moved(account, places: places) },
-                    end: endDrag
-                )
-                .zIndex(dragging == account.id ? 1 : 0)
-                .contextMenu {
-                    Button("Move Up") { withAnimation(Motion.quick) { model.moveAccount(account.id, by: -1) } }
-                        .disabled(!model.canMoveAccount(account.id, by: -1))
-                    Button("Move Down") { withAnimation(Motion.quick) { model.moveAccount(account.id, by: 1) } }
-                        .disabled(!model.canMoveAccount(account.id, by: 1))
+            // More mailboxes than fit: the column scrolls, and Add a mailbox stays in view below.
+            ScrollView(.vertical, showsIndicators: false) {
+                VStack(spacing: 10) {
+                    ForEach(Array(shown.enumerated()), id: \.element.id) { index, account in
+                        RailMailbox(
+                            account: account,
+                            help: Text(verbatim: "\(account.label) · \(account.address.address)\(index < 8 ? "  ⌃\(index + 2)" : "")"),
+                            badge: model.unreadCount(account: account.id),
+                            isSelected: model.place.accountID == account.id,
+                            // A red dot is for trouble that needs you; a dropped connection mends itself.
+                            hasError: model.loadErrors[account.id] != nil && !model.isUnreachable(account.id),
+                            isDragging: dragging == account.id,
+                            shift: dragging == account.id ? CGFloat(dragTarget - dragStart) * step : 0,
+                            step: step,
+                            open: { model.go(to: .inbox(account: account.id, split: nil)) },
+                            begin: { begin(account, at: index) },
+                            moved: { places in moved(account, places: places) },
+                            end: endDrag
+                        )
+                        .zIndex(dragging == account.id ? 1 : 0)
+                        .contextMenu {
+                            Button("Move Up") { withAnimation(Motion.quick) { model.moveAccount(account.id, by: -1) } }
+                                .disabled(!model.canMoveAccount(account.id, by: -1))
+                            Button("Move Down") { withAnimation(Motion.quick) { model.moveAccount(account.id, by: 1) } }
+                                .disabled(!model.canMoveAccount(account.id, by: 1))
+                            if model.canSignInAgain(account) {
+                                Divider()
+                                Button("Sign In Again…") { model.signingInAgain = account }
+                            }
+                        }
+                    }
                 }
+                // The whole rail's width, with room above the first: the scroll view clips to
+                // its content, and unread counts sit past each picture's top-right corner.
+                .frame(maxWidth: .infinity)
+                .padding(.top, 6)
+                .padding(.bottom, 2)
             }
+            .scrollBounceBehavior(.basedOnSize)
+            .frame(maxHeight: CGFloat(shown.count) * step + 8)
             RailButton(help: Text("Add a mailbox"), badge: 0, isSelected: false) {
-                Image(systemName: "plus").font(.system(size: 13, weight: .medium))
+                Image(systemName: "plus").font(.system(size: Look.size(13), weight: .medium))
             } action: { model.isAddingAccount = true }
 
             Spacer(minLength: 0)
             #if os(macOS)
+            // Help, above Settings: it opens beside the mail.
+            RailButton(help: Text("Help and feedback"), badge: 0, isSelected: model.isShowingHelp) {
+                Image(systemName: "questionmark.circle").font(.system(size: Look.size(14)))
+            } action: { model.isShowingHelp.toggle() }
             SettingsLink {
                 Image(systemName: "gearshape")
-                    .font(.system(size: 14))
+                    .font(.system(size: Look.size(14)))
                     .foregroundStyle(Ink.tertiary)
-                    .frame(width: 34, height: 34)
+                    .frame(width: Look.pick(34, roomy: 40), height: Look.pick(34, roomy: 40))
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -126,7 +147,7 @@ struct AccountRail: View {
 }
 
 /// A mailbox's picture: its company's logo when its domain has one (relevate.app), otherwise
-/// the first letter of its name on a disc in its colour. The name, not the person: one person
+/// the first letter of its name on a rounded square in its colour. The name, not the person: one person
 /// often has several mailboxes. A small provider mark in the corner says where the mail lives.
 struct AccountAvatar: View {
     let account: MailAccount
@@ -136,6 +157,9 @@ struct AccountAvatar: View {
 
     var body: some View {
         let domain = account.address.domain
+        // A rounded square, like the small mailbox mark (`AccountMark`): people are circles,
+        // mailboxes aren't people.
+        let shape = RoundedRectangle(cornerRadius: size * 0.27, style: .continuous)
         Group {
             if let logo = AccountLogos.shared.image(for: domain) {
                 logo
@@ -143,14 +167,14 @@ struct AccountAvatar: View {
                     .scaledToFill()
                     .frame(width: size, height: size)
                     .background(.white)
-                    .clipShape(Circle())
-                    .overlay(Circle().strokeBorder(.black.opacity(colorScheme == .dark ? 0 : 0.08)))
+                    .clipShape(shape)
+                    .overlay(shape.strokeBorder(.black.opacity(colorScheme == .dark ? 0 : 0.08)))
             } else {
                 Text(account.label.first.map { String($0).uppercased() } ?? "?")
                     .font(.system(size: size * 0.38, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(width: size, height: size)
-                    .background(Palette.account(account.colorIndex), in: Circle())
+                    .background(Palette.account(account.colorIndex), in: shape)
             }
         }
         .overlay(alignment: .bottomTrailing) {
@@ -215,23 +239,28 @@ private struct RailButton<Face: View>: View {
         Button(action: action) {
             face
                 .foregroundStyle(isSelected ? Ink.primary : Ink.tertiary)
-                .frame(width: 34, height: 34)
+                .frame(width: Look.pick(34, roomy: 40), height: Look.pick(34, roomy: 40))
                 .background {
                     if !isAvatar {
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
                             .fill(isSelected ? Fill.two : (isHovered ? Fill.one : .clear))
                     }
                 }
-                // Avatars show selection as a ring with a gap, like a focused control.
-                .overlay {
+                .overlay(alignment: .topTrailing) { badgeView }
+                // The mailbox in view is marked with a short bar at the rail's own edge, clear
+                // of the picture, its unread count and its provider mark (a ring around the
+                // picture ran through both). Pointing at another shows a shorter, fainter one.
+                .overlay(alignment: .leading) {
                     if isAvatar {
-                        Circle()
-                            .strokeBorder(Ink.primary, lineWidth: 1.5)
-                            .frame(width: 37, height: 37)
-                            .opacity(isSelected ? 1 : (isHovered ? 0.25 : 0))
+                        UnevenRoundedRectangle(bottomTrailingRadius: 2, topTrailingRadius: 2, style: .continuous)
+                            .fill(Ink.primary)
+                            .frame(width: 3, height: isSelected ? 22 : 10)
+                            .opacity(isSelected ? 1 : (isHovered ? 0.3 : 0))
+                            .offset(x: -(MailLayout.railWidth - Look.pick(34, roomy: 40)) / 2)
+                            .animation(Look.reduceMotion ? nil : Motion.quick, value: isSelected)
+                            .animation(Look.reduceMotion ? nil : Motion.quick, value: isHovered)
                     }
                 }
-                .overlay(alignment: .topTrailing) { badgeView }
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -255,7 +284,7 @@ private struct RailButton<Face: View>: View {
                 .offset(x: 2, y: -1)
         } else if badge > 0 {
             Text(verbatim: "\(badge)")
-                .font(.system(size: 9, weight: .semibold).monospacedDigit())
+                .font(.system(size: Look.size(9), weight: .semibold).monospacedDigit())
                 .foregroundStyle(.white)
                 .padding(.horizontal, 4)
                 .frame(minWidth: 15, minHeight: 15)
@@ -287,7 +316,7 @@ private struct RailMailbox: View {
 
     var body: some View {
         RailButton(help: help, badge: badge, isSelected: isSelected, hasError: hasError, isAvatar: true,
-                   face: { AccountAvatar(account: account, size: 30) }, action: open)
+                   face: { AccountAvatar(account: account, size: Look.pick(30, roomy: 36)) }, action: open)
             .scaleEffect(isDragging ? 1.1 : 1)
             .shadow(color: .black.opacity(isDragging ? 0.18 : 0), radius: 8, y: 3)
             .offset(y: isDragging ? dragY - shift : 0)

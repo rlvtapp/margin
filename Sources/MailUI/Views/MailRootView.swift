@@ -6,6 +6,7 @@ import SwiftUI
 public struct MailRootView: View {
     @Bindable var model: MailModel
     @FocusState private var listFocused: Bool
+    @State private var windowWidth: CGFloat = 0
     @FocusState private var searchFocused: Bool
     @Environment(\.colorSchemeContrast) private var systemContrast
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
@@ -28,17 +29,20 @@ public struct MailRootView: View {
             // window buttons sit at its left end, and every column starts under it.
             WindowBar(model: model, searchFocus: $searchFocused)
                 .background(WindowButtonPlacement(barHeight: WindowBar.height))
+                .background(DockBadge(model: model))
                 // Above the columns, so the "Ask: …" offer under the search field isn't covered.
                 .zIndex(1)
             #endif
             HStack(spacing: 0) {
-            AccountRail(model: model)
+            if model.showsAccountRail { AccountRail(model: model) }
             VStack(spacing: 0) {
                 HStack(spacing: 0) {
-                    // The Calendar has the whole width; mailboxes come back with the mail.
-                    if !model.isSidebarHidden && model.place != .calendar {
+                    // The Calendar has the whole width; mailboxes come back with the mail. In a
+                    // window too narrow for the column, it's a drawer (below).
+                    // Without the account column, the sidebar stays on the Calendar too: it's the way back.
+                    if !model.isSidebarOutOfSight && (model.place != .calendar || !model.showsAccountRail) {
                         SidebarView(model: model)
-                            .frame(width: 220)
+                            .frame(width: MailModel.sidebarWidth)
                             .transition(.move(edge: .leading).combined(with: .opacity))
                     }
                     // The list and the reader: edge to edge on the window with a hairline where they meet
@@ -51,17 +55,56 @@ public struct MailRootView: View {
                             .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Line.edge))
                             .shadow(color: .black.opacity(0.04), radius: 3, y: 1)
                             .padding([.top, .bottom, .trailing], 8)
-                            .padding(.leading, model.isSidebarHidden ? 8 : 0)
+                            .padding(.leading, model.isSidebarOutOfSight ? 8 : 0)
                     } else {
                         Rectangle().fill(Line.hairline).frame(width: 1)
                         ListAndReader(model: model, listFocused: $listFocused, searchFocused: $searchFocused)
                             .background(Paper.panel)
+                    }
+                    // Help slides in at the right; the mail moves over to make room.
+                    if model.isShowingHelp {
+                        HStack(spacing: 0) {
+                            Rectangle().fill(Line.hairline).frame(width: 1)
+                            HelpPanel(model: model)
+                                .frame(width: HelpPanel.width)
+                                .background(Paper.sidebar)
+                        }
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                    }
+                }
+                // The mailbox column as a drawer over the mail, when the window has no room for
+                // it as a column: a click beside it, or choosing a mailbox, closes it.
+                .overlay(alignment: .leading) {
+                    if model.sidebarNeedsDrawer && model.isSidebarDrawerOpen && model.place != .calendar {
+                        ZStack(alignment: .leading) {
+                            Color.black.opacity(0.12)
+                                .contentShape(Rectangle())
+                                .onTapGesture { withAnimation(Motion.present) { model.isSidebarDrawerOpen = false } }
+                                .transition(.opacity)
+                            SidebarView(model: model)
+                                .frame(width: MailModel.sidebarWidth + 20)
+                                .background(Paper.sidebar)
+                                .overlay(alignment: .trailing) { Rectangle().fill(Line.hairline).frame(width: 1) }
+                                .shadow(color: .black.opacity(0.16), radius: 18, x: 6)
+                                .transition(.move(edge: .leading))
+                        }
                     }
                 }
             }
         }
         }
         .animation(Motion.present, value: model.isSidebarHidden)
+        .animation(Motion.present, value: model.isShowingHelp)
+        .animation(Motion.present, value: model.sidebarNeedsDrawer)
+        // The window's width decides which columns fit.
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { model.fit(windowWidth: $0) }
+        .onChange(of: model.isSidebarHidden) { _, _ in model.fit(windowWidth: windowWidth) }
+        .onChange(of: model.place) { _, _ in
+            model.isSidebarDrawerOpen = false
+            model.fit(windowWidth: windowWidth)
+        }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { windowWidth = $0 }
+        .signsInAgain(model: model, account: $model.signingInAgain)
         // Colours are read from the tokens, so redraw everything when the look changes.
         .id(lookKey)
         .background(Paper.sidebar)
@@ -86,9 +129,9 @@ public struct MailRootView: View {
         .animation(Motion.present, value: model.agentRun?.id)
         // New mail opens in the reading pane (ListAndReader); only Subscriptions, which has
         // its own columns, still writes in a sheet.
-        .sheet(isPresented: Binding(get: { model.compose != nil && !model.isComposePutAway && model.place == .subscriptions },
+        .sheet(isPresented: Binding(get: { model.isWritingNew && !model.isComposePutAway && model.place == .subscriptions },
                                     set: { if !$0, !model.isComposePutAway { model.compose = nil } })) {
-            if let compose = Binding(keepingLast: $model.compose) { ComposeSheet(model: model, state: compose) }
+            ComposeHost(model: model)
         }
         .sheet(isPresented: $model.isShowingShortcuts) {
             ShortcutsView(model: model).background { CancelKey { model.isShowingShortcuts = false } }
@@ -116,7 +159,12 @@ public struct MailRootView: View {
             await model.start()
         }
         #if os(macOS)
-        .onAppear { TextEditingKeys.install() }
+        .onAppear {
+            TextEditingKeys.install()
+            HoldSpaceDictation.shared.install()
+            HoldSpaceDictation.shared.isEnabled = model.holdSpaceDictates
+        }
+        .onChange(of: model.holdSpaceDictates) { _, on in HoldSpaceDictation.shared.isEnabled = on }
         #endif
         .onChange(of: model.focusRequest) { _, _ in listFocused = true }
         .onChange(of: model.searchRequest) { _, _ in searchFocused = true }
@@ -124,10 +172,10 @@ public struct MailRootView: View {
 
     /// Single keys act only while the list has focus, never while typing.
     private func handle(_ press: KeyPress) -> KeyPress.Result {
-        guard listFocused, !model.isPaletteOpen, model.compose == nil || model.isComposePutAway else { return .ignored }
+        guard listFocused, !model.isPaletteOpen, !model.isWritingNew || model.isComposePutAway else { return .ignored }
         // With a reply being written, the arrows still move through the list, but no single key
         // acts on mail: a letter meant for the reply must never archive or trash something.
-        if model.reply != nil, press.key != .downArrow, press.key != .upArrow { return .ignored }
+        if model.isWritingReply, press.key != .downArrow, press.key != .upArrow { return .ignored }
         if press.modifiers == .command && press.characters.lowercased() == "a" {
             model.selectAll()
             return .handled
@@ -135,14 +183,19 @@ public struct MailRootView: View {
         if press.modifiers.contains(.command) || press.modifiers.contains(.control) || press.modifiers.contains(.option) {
             return .ignored
         }
+        // ⇧↓ and ⇧↑ select the next rows as well, like ⇧-click does.
+        if press.modifiers.contains(.shift), press.key == .downArrow || press.key == .upArrow {
+            model.extendSelection(by: press.key == .downArrow ? 1 : -1)
+            return .handled
+        }
         switch press.key {
         case .downArrow: model.moveSelection(1); return .handled
         case .upArrow: model.moveSelection(-1); return .handled
-        case .return where model.layout.opensOverList && model.selectedThread != nil:
+        case .return where model.opensOverList && model.selectedThread != nil:
             model.isReaderOpen = true
             return .handled
         case .escape:
-            if model.layout.opensOverList && model.isReaderOpen { model.isReaderOpen = false; return .handled }
+            if model.opensOverList && model.isReaderOpen { model.isReaderOpen = false; return .handled }
             if !model.selection.isEmpty { model.selection = []; return .handled }
             if !model.searchText.isEmpty { model.searchText = ""; return .handled }
             if !model.quickFilters.isEmpty { model.quickFilters = []; return .handled }
@@ -189,6 +242,7 @@ extension Look {
         underlineLinks = model.underlineLinks
         darkensMail = model.darkensMail
         theme = model.appearance
+        density = model.density
         LabelColors.chosen = model.labelColors
         reduceTransparency = systemReduceTransparency || ProcessInfo.processInfo.arguments.contains("-reduce-transparency")
         return key
@@ -201,9 +255,9 @@ extension View {
     func noticeSurface() -> some View {
         #if os(iOS)
         if #available(iOS 26, *) {
-            self.frame(minHeight: 44).glassEffect(.regular, in: Capsule())
+            self.frame(minHeight: Look.gap(44)).glassEffect(.regular, in: Capsule())
         } else {
-            self.frame(minHeight: 44).background(.regularMaterial, in: Capsule())
+            self.frame(minHeight: Look.gap(44)).background(.regularMaterial, in: Capsule())
         }
         #else
         self.background(Paper.popover, in: Capsule())
@@ -215,8 +269,8 @@ extension View {
 
 enum MailLayout {
     /// The shared height of the sidebar's top row, the list header and the reader toolbar.
-    static let topBand: CGFloat = 52
-    static let railWidth: CGFloat = 56
+    static var topBand: CGFloat { Look.pick(52, roomy: 60) }
+    static var railWidth: CGFloat { Look.pick(56, roomy: 64) }
     /// Room the window's close, minimise and zoom buttons take at the top bar's left, past its padding.
     static let windowButtonsWidth: CGFloat = 64
 }
@@ -274,7 +328,7 @@ struct NoticeBar: View {
                     }
                 }
                 .padding(.horizontal, Space.l)
-                .frame(minHeight: 38)
+                .frame(minHeight: Look.gap(38))
                 .noticeSurface()
                 .frame(maxWidth: 520)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -295,7 +349,7 @@ private struct ListAndReader: View {
     @Bindable var model: MailModel
     var listFocused: FocusState<Bool>.Binding
     var searchFocused: FocusState<Bool>.Binding
-    @State private var listWidth: CGFloat = 380
+    @State private var listWidth: CGFloat = Look.pick(380, roomy: 420)
     @State private var dragStartWidth: CGFloat?
     /// The reader's width, and the width it keeps while the edge is being dragged: an HTML mail
     /// laid out again on every step is what made dragging stutter, so it reflows once, at the end.
@@ -309,14 +363,15 @@ private struct ListAndReader: View {
             if model.place == .subscriptions {
                 // Newsletters in the list column; the chosen one, or one of its emails, beside it.
                 #if os(macOS)
-                SubscriptionsColumns(model: model, listWidth: listWidth)
+                SubscriptionsColumns(model: model, listWidth: fittedListWidth)
                 #endif
             } else if model.place == .calendar {
                 CalendarPage(model: model)
-            } else if model.layout.opensOverList {
-                // Wide list: the list fills the panel; a conversation opens over it.
-                if let compose = writing {
-                    ComposeSheet(model: model, state: compose, inPane: true)
+            } else if model.opensOverList {
+                // The list fills the panel and a conversation opens over it: in the layouts made
+                // that way, and in any layout when the window is too narrow for both.
+                if isWriting {
+                    ComposeHost(model: model, inPane: true)
                 } else if model.isReaderOpen && model.selectedThread != nil {
                     ReaderView(model: model)
                         .focusable()
@@ -330,15 +385,15 @@ private struct ListAndReader: View {
                 }
             } else {
                 ThreadListView(model: model, searchFocus: searchFocused)
-                    .frame(width: listWidth)
+                    .frame(width: fittedListWidth)
                     .focusable()
                     .focused(listFocused)
                     .focusEffectDisabled()
                 resizeHandle
                 Group {
                     // A new message takes the reading pane: room to write, the list still beside it.
-                    if let compose = writing {
-                        ComposeSheet(model: model, state: compose, inPane: true)
+                    if isWriting {
+                        ComposeHost(model: model, inPane: true)
                     } else {
                         ReaderView(model: model)
                     }
@@ -364,10 +419,16 @@ private struct ListAndReader: View {
         .onChange(of: showsNextUp, initial: true) { _, shown in model.isNextUpOnScreen = shown }
     }
 
-    /// The new message being written, while it isn't put away.
-    private var writing: Binding<ComposeState>? {
-        guard model.compose != nil, !model.isComposePutAway else { return nil }
-        return Binding(keepingLast: Binding(get: { model.compose }, set: { model.compose = $0 }))
+    /// A new message is being written and isn't put away. The message itself is read only by
+    /// `ComposeHost`, so typing doesn't redraw the list and the pane around it.
+    private var isWriting: Bool { model.isWritingNew && !model.isComposePutAway }
+
+    /// The list at the width it was dragged to, or narrower when the window leaves the message
+    /// too little room at that width (never under the list's own minimum).
+    private var fittedListWidth: CGFloat {
+        guard panelWidth > 0 else { return listWidth }
+        let nextUp = showsNextUp ? NextUpColumn.width + 1 : 0
+        return min(listWidth, max(320, panelWidth - nextUp - 360))
     }
 
     /// Next up shows beside the reader when it's on, the layout has a reader beside the list,

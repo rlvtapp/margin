@@ -22,7 +22,7 @@ struct TouchThreadList: View {
                     } else if model.place.isHome {
                         // In the calm layouts the header leaves its own edge to the column; give
                         // it the same inset as the rows, as on the Mac.
-                        HomeHeader(model: model).padding(.horizontal, model.layout.isCalm ? Space.m : 0)
+                        HomeHeader(model: model, edgeInset: model.layout.isCalm ? Space.m : 0).padding(.horizontal, model.layout.isCalm ? Space.m : 0)
                     }
                 }
                 .background(Paper.panel)
@@ -92,23 +92,18 @@ struct TouchThreadList: View {
     /// "15 conversations, 9 unread"
     private var summary: String {
         if case .search = model.place, model.isSearchingServers {
-            return String(localized: "\(model.visibleThreads.count) found so far · searching servers…")
+            return String(localized: "\(model.listCount) found so far · searching servers…")
         }
-        let threads = model.visibleThreads
-        let unread = threads.filter(\.isUnread).count
-        let count = threads.count == 1 ? String(localized: "1 conversation") : String(localized: "\(threads.count) conversations")
+        // Of everything the place holds, not only the rows shown so far.
+        let total = model.listCount, unread = model.listUnreadCount
+        let count = total == 1 ? String(localized: "1 conversation") : String(localized: "\(total) conversations")
         return unread > 0 ? String(localized: "\(count), \(unread) unread", comment: "Conversation count, then how many are unread") : count
     }
 
     /// "Updated just now" at the foot of the list, as plain text rather than a button.
     private var statusItem: some ToolbarContent {
         ToolbarItem(placement: .status) {
-            TimelineView(.periodic(from: .now, by: 30)) { context in
-                Text(model.statusLine(now: context.date))
-                    .font(TypeScale.caption)
-                    .foregroundStyle(Ink.tertiary)
-                    .fixedSize()
-            }
+            StatusLine(model: model).fixedSize()
         }
     }
 
@@ -132,6 +127,12 @@ struct TouchThreadList: View {
                     }
                     // Another part of the inbox replaces the list at once; only cleared rows slide out.
                     .transaction(value: model.place) { $0.animation = nil }
+                    // After the last conversation: brings in the next rows, then older mail.
+                    if index == sections.count - 1, model.canShowMore {
+                        ListEndRow(model: model, shown: threads.count)
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                    }
                 } header: {
                     VStack(alignment: .leading, spacing: 0) {
                     // Nothing to show (Home has its own header above): no empty band either.
@@ -248,7 +249,15 @@ struct TouchThreadList: View {
     @ViewBuilder
     private var emptyMessage: some View {
         if let error = model.place.accountID.flatMap({ model.loadErrors[$0] }) {
-            ListMessage(title: "Couldn't load mail", verbatimDetail: error, action: ("Try Again", { Task { await model.reload() } }))
+            // A refused sign-in is fixed by signing in again; anything else by trying again.
+            if let id = model.place.accountID, model.needsSignIn(id), let account = model.account(id), model.canSignInAgain(account) {
+                ListMessage(title: "Couldn't sign in", verbatimDetail: error, action: ("Sign in again", { model.signingInAgain = account }))
+            } else if let id = model.place.accountID, model.isUnreachable(id) {
+                ListMessage(title: "Couldn't load mail", detail: "Can't reach the server right now. Margin keeps trying.",
+                            action: ("Try Again", { Task { await model.reload() } }))
+            } else {
+                ListMessage(title: "Couldn't load mail", verbatimDetail: error, action: ("Try Again", { Task { await model.reload() } }))
+            }
         } else if model.isListLoading {
             LoadingMessage()
         } else if !model.searchText.isEmpty {
@@ -262,26 +271,29 @@ struct TouchThreadList: View {
         }
     }
 
-    /// All, People, Updates and Newsletters as glass tabs a thumb can hit.
+    /// All, Important and Other as glass tabs a thumb can hit.
     private func splitTabs(_ current: InboxSplit?) -> some View {
         let accountID = model.place.accountID
         return ScrollView(.horizontal, showsIndicators: false) {
             GlassChipRow(spacing: Space.s) {
-                Button { withAnimation(Motion.present) { model.go(to: .inbox(account: accountID, split: nil)) } } label: {
+                // The list swaps at once; only the chips animate (below).
+                Button { model.go(to: .inbox(account: accountID, split: nil)) } label: {
                     GlassChip(Text("All"), symbol: current == nil ? "tray.fill" : "tray", color: Ink.primary,
                               count: model.unreadCount(account: accountID), isOn: current == nil, size: .regular)
                 }
                 .buttonStyle(.plain)
-                ForEach(InboxSplit.allCases, id: \.self) { split in
-                    Button { withAnimation(Motion.present) { model.go(to: .inbox(account: accountID, split: split)) } } label: {
-                        GlassChip(Text(split.title), symbol: Self.symbol(split) + (current == split ? ".fill" : ""), color: Palette.split(split),
+                ForEach(InboxSplit.tabs, id: \.self) { split in
+                    let isOn = current.map { ($0 == .people) == (split == .people) } ?? false
+                    Button { model.go(to: .inbox(account: accountID, split: split)) } label: {
+                        GlassChip(Text(split.tabTitle), symbol: (split == .people ? "person.2" : "tray.full") + (isOn ? ".fill" : ""), color: Palette.split(split),
                                   tint: Palette.deep(split), count: model.unreadCount(account: accountID, split: split),
-                                  isOn: current == split, size: .regular)
+                                  isOn: isOn, size: .regular)
                     }
                     .buttonStyle(.plain)
                 }
             }
             .padding(.vertical, 2)
+            .animation(Look.reduceMotion ? nil : Motion.present, value: current)
         }
         .sensoryFeedback(.selection, trigger: current)
     }
@@ -352,12 +364,12 @@ private struct InboxZero: View {
     var body: some View {
         VStack(spacing: Space.m) {
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 52, weight: .regular))
+                .font(.system(size: Look.size(52), weight: .regular))
                 .foregroundStyle(Status.done)
                 .symbolEffect(.bounce, value: appeared)
                 .scaleEffect(appeared || Look.reduceMotion ? 1 : 0.6)
                 .opacity(appeared ? 1 : 0)
-            Text(split == nil ? "Inbox zero" : "Nothing in \(split?.title ?? "")")
+            Text(split == nil ? "Inbox zero" : "Nothing in \(split?.tabTitle ?? "")")
                 .font(TypeScale.title)
                 .foregroundStyle(Ink.primary)
             Text(split == nil ? "Everything's handled. Enjoy the quiet." : "You're all caught up here.")

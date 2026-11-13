@@ -62,6 +62,7 @@ public struct TouchMailView: View {
             TouchConversation(model: model)
         }
         .tint(Ink.primary)
+        .signsInAgain(model: model, account: $model.signingInAgain)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { newWidth in
             let wasNarrow = width < Self.twoColumnWidth
             width = newWidth
@@ -88,13 +89,13 @@ public struct TouchMailView: View {
         // Above the bottom toolbar.
         .overlay(alignment: .bottom) { NoticeBar(model: model).padding(.horizontal, Space.l).padding(.bottom, 60) }
         // Writing takes the whole screen: new messages and forwards, and replies.
-        .fullScreenCover(isPresented: Binding(get: { model.compose != nil && !model.isComposePutAway },
+        .fullScreenCover(isPresented: Binding(get: { model.isWritingNew && !model.isComposePutAway },
                                               set: { if !$0, !model.isComposePutAway { model.compose = nil } })) {
-            if let compose = Binding(keepingLast: $model.compose) { TouchComposer(model: model, state: compose, isReply: false) }
+            TouchComposerHost(model: model, isReply: false)
         }
-        .fullScreenCover(isPresented: Binding(get: { model.reply != nil && !model.isReplyPutAway },
+        .fullScreenCover(isPresented: Binding(get: { model.isWritingReply && !model.isReplyPutAway },
                                               set: { if !$0, !model.isReplyPutAway { model.reply = nil } })) {
-            if let reply = Binding(keepingLast: $model.reply) { TouchComposer(model: model, state: reply, isReply: true) }
+            TouchComposerHost(model: model, isReply: true)
         }
         .sheet(isPresented: $model.isAddingAccount) { AccountSetupView(model: model) }
         .sheet(isPresented: $model.isNewMeetingOpen) { NewMeetingView(model: model) }
@@ -143,5 +144,17 @@ public struct TouchMailView: View {
 extension EnvironmentValues {
     /// The bar buttons sit in a column on the side of the screen, not along the top.
     @Entry var barsOnSide = false
+}
+/// The message being written on iPhone and iPad. The only view that reads its text, so typing
+/// redraws the composer and not the mail behind it (see `ReplyEditorHost`).
+struct TouchComposerHost: View {
+    @Bindable var model: MailModel
+    let isReply: Bool
+
+    var body: some View {
+        if let state = Binding(keepingLast: isReply ? $model.reply : $model.compose) {
+            TouchComposer(model: model, state: state, isReply: isReply)
+        }
+    }
 }
 #endif

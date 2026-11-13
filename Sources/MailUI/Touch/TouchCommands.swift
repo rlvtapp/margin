@@ -40,8 +40,10 @@ public struct TouchCommands: Commands {
             Button("Previous Conversation") { model.moveSelection(-1) }
                 .keyboardShortcut(.upArrow, modifiers: .command)
             Divider()
+            // Only with an assistant to ask: Apple Intelligence on the device, or another service.
             Button("Ask About Your Mail") { model.isAsking = true }
                 .keyboardShortcut("k")
+                .disabled(!model.isAssistantOn)
             Button("Sort My Mail") { model.sortMailWithAssistant() }
                 .disabled(!model.isAssistantOn)
             Button("Ask Margin To…") { model.isAgentPromptOpen = true }

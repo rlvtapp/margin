@@ -15,14 +15,17 @@ struct WindowBar: View {
 
     var body: some View {
         HStack(spacing: Space.s) {
-            Spacer(minLength: Space.m)
+            // At least the room the window buttons and the sidebar button take, so search never
+            // slides under them in a narrow window.
+            Spacer(minLength: MailLayout.windowButtonsWidth + 34)
                 // Right of the window buttons: the sidebar's button, where Mac apps keep it; then a
                 // message that's been put away, waiting.
                 .overlay(alignment: .leading) {
                     HStack(spacing: Space.s) {
                         if model.place != .calendar {
-                            IconButton("sidebar.left", help: model.isSidebarHidden ? "Show sidebar  ⌃⌘S" : "Hide sidebar  ⌃⌘S") {
-                                model.isSidebarHidden.toggle()
+                            IconButton("sidebar.left", help: (model.sidebarNeedsDrawer ? !model.isSidebarDrawerOpen : model.isSidebarHidden)
+                                       ? "Show sidebar  ⌃⌘S" : "Hide sidebar  ⌃⌘S") {
+                                withAnimation(Motion.present) { model.toggleSidebar() }
                             }
                         }
                         if model.isComposePutAway, let state = model.compose {
@@ -34,13 +37,19 @@ struct WindowBar: View {
                 }
             MailSearchField(model: model, focus: searchFocus)
                 .frame(maxWidth: 560)
-            Spacer(minLength: Space.m)
+            Spacer(minLength: MailModel.nextUpAvailable && model.layout == .panels && !model.isWindowNarrow ? 34 : Space.m)
                 // The one next thing, at the top right: a meeting soon, or mail coming back. The
                 // Next up column lists them all, so the badge steps aside while it shows.
                 .overlay(alignment: .trailing) {
                     HStack(spacing: Space.s) {
-                        if MailModel.nextUpAvailable && !model.isNextUpOnScreen { NextUpBadge(model: model) }
-                        if MailModel.nextUpAvailable && model.layout == .panels {
+                        // Whether mail is up to date, and the Outbox while something waits to go.
+                        if !model.outbox.isEmpty, !model.isWindowNarrow {
+                            OutboxButton(model: model)
+                        }
+                        SyncStatusButton(model: model)
+                        // In a narrow window there's no room for either beside search.
+                        if MailModel.nextUpAvailable && !model.isNextUpOnScreen && !model.isWindowNarrow { NextUpBadge(model: model) }
+                        if MailModel.nextUpAvailable && model.layout == .panels && !model.isWindowNarrow {
                             IconButton("sidebar.right", help: model.showsNextUp ? "Hide Next up" : "Show Next up") {
                                 withAnimation(Motion.quick) { model.showsNextUp.toggle() }
                             }
@@ -63,6 +72,51 @@ struct WindowBar: View {
     }
 }
 
+/// Whether mail is up to date: a quiet check mark, turning while mail is checked, a warning
+/// when offline or a sign-in was refused. Click to check now; the pointer shows when it last did.
+struct SyncStatusButton: View {
+    let model: MailModel
+    @State private var isHovered = false
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            let line = model.statusLine(now: context.date).trimmingCharacters(in: .whitespaces)
+            let trouble = model.isOffline || model.refusalNote != nil
+            Button { Task { await model.reload() } } label: {
+                Group {
+                    if model.isLoading {
+                        ProgressView().controlSize(.small).scaleEffect(0.7)
+                    } else {
+                        Image(systemName: trouble ? "exclamationmark.icloud" : "checkmark.icloud")
+                            .font(.system(size: Look.size(13)))
+                            .foregroundStyle(trouble ? Status.star : (isHovered ? Ink.secondary : Ink.tertiary))
+                    }
+                }
+                .frame(width: 28, height: 28)
+                .background(isHovered ? Fill.one : .clear, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .onHover { isHovered = $0 }
+            .help(line.isEmpty ? Text("Up to date. Click to check for new mail.") : Text(verbatim: line))
+            .accessibilityLabel(line.isEmpty ? Text("Up to date") : Text(verbatim: line))
+        }
+    }
+}
+
+/// The Outbox, while messages wait to be sent: how many, one click to see them.
+struct OutboxButton: View {
+    let model: MailModel
+
+    var body: some View {
+        Button { model.go(to: .scheduled) } label: {
+            GlassChip(Text("Outbox"), symbol: "paperplane", count: model.outbox.count, isOn: model.place == .scheduled)
+        }
+        .buttonStyle(.plain)
+        .help(Text("Messages waiting to be sent"))
+    }
+}
+
 /// What a double-click on a title bar does, as chosen in System Settings → Desktop & Dock.
 public enum TitleBarDoubleClick: Equatable, Sendable {
     case zoom, minimize, nothing
@@ -77,13 +131,20 @@ public enum TitleBarDoubleClick: Equatable, Sendable {
         default: legacyMinimize ? .minimize : .zoom
         }
     }
+
+    /// Whether the double-click is still unanswered a moment later. Newer versions of macOS act
+    /// on a double-click in this part of the window by themselves; doing it again on top would
+    /// zoom the window and straight back. So Margin only acts when the window hasn't moved.
+    public static func isUnanswered(before: CGRect, after: CGRect, isMiniaturized: Bool) -> Bool {
+        !isMiniaturized && before == after
+    }
 }
 
 #if os(macOS)
 /// The empty part of the window bar, acting as the title bar the window doesn't have. It's a
 /// plain AppKit view rather than SwiftUI's window-drag gesture, because that gesture only
 /// started answering double-clicks in a later macOS: on the Macs before it, double-clicking the
-/// bar did nothing.
+/// bar did nothing. On the Macs that do answer by themselves, it leaves the double-click to them.
 struct TitleBarArea: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView { TitleBarView() }
     func updateNSView(_ view: NSView, context: Context) {}
@@ -98,12 +159,26 @@ struct TitleBarArea: NSViewRepresentable {
                 window.performDrag(with: event)
                 return
             }
-            let defaults = UserDefaults.standard
-            switch TitleBarDoubleClick.action(setting: defaults.string(forKey: "AppleActionOnDoubleClick"),
-                                             legacyMinimize: defaults.bool(forKey: "AppleMiniaturizeOnDoubleClick")) {
-            case .zoom: window.performZoom(nil)
-            case .minimize: window.performMiniaturize(nil)
-            case .nothing: break
+            frameAtDoubleClick = window.frame
+        }
+
+        /// Where the window was when the second click went down.
+        private var frameAtDoubleClick: CGRect?
+
+        override func mouseUp(with event: NSEvent) {
+            guard let before = frameAtDoubleClick else { return }
+            frameAtDoubleClick = nil
+            // The system gets a moment to answer first (it starts moving the window at once).
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak window] in
+                guard let window,
+                      TitleBarDoubleClick.isUnanswered(before: before, after: window.frame, isMiniaturized: window.isMiniaturized) else { return }
+                let defaults = UserDefaults.standard
+                switch TitleBarDoubleClick.action(setting: defaults.string(forKey: "AppleActionOnDoubleClick"),
+                                                 legacyMinimize: defaults.bool(forKey: "AppleMiniaturizeOnDoubleClick")) {
+                case .zoom: window.performZoom(nil)
+                case .minimize: window.performMiniaturize(nil)
+                case .nothing: break
+                }
             }
         }
     }
@@ -118,7 +193,7 @@ struct MailSearchField: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 11))
+                .font(.system(size: Look.size(11)))
                 .foregroundStyle(Ink.tertiary)
             TextField("Search", text: $model.searchText)
                 .textFieldStyle(.plain)
@@ -151,7 +226,7 @@ struct MailSearchField: View {
         }
         .padding(.leading, 9)
         .padding(.trailing, 4)
-        .frame(height: 30)
+        .frame(height: Look.gap(30))
         .background(Fill.one, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
         // A question gets an offer under the field: the assistant answers it from your mail.
         .overlay(alignment: .topLeading) {
@@ -161,14 +236,14 @@ struct MailSearchField: View {
                     model.searchText = ""
                 } label: {
                     HStack(spacing: Space.s) {
-                        Image(systemName: "sparkles").font(.system(size: 12)).foregroundStyle(Palette.accent)
+                        Image(systemName: "sparkles").font(.system(size: Look.size(12))).foregroundStyle(Palette.accent)
                         Text("Ask: \(model.searchText.trimmingCharacters(in: .whitespaces))")
                             .font(TypeScale.row).foregroundStyle(Ink.primary).lineLimit(1)
                         Spacer(minLength: Space.s)
                         Text(verbatim: "⌘↩").font(TypeScale.label).foregroundStyle(Ink.tertiary)
                     }
                     .padding(.horizontal, 10)
-                    .frame(height: 34)
+                    .frame(height: Look.gap(34))
                     .background(Paper.popover, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Line.edge))
                     .shadow(color: .black.opacity(0.12), radius: 10, y: 4)
@@ -199,7 +274,7 @@ struct PutAwayDraftChip: View {
                 }
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: "square.and.pencil").font(.system(size: 11, weight: .medium))
+                    Image(systemName: "square.and.pencil").font(.system(size: Look.size(11), weight: .medium))
                     Text(verbatim: title).font(TypeScale.label.weight(.medium)).lineLimit(1)
                 }
                 .foregroundStyle(Ink.primary)
@@ -214,7 +289,7 @@ struct PutAwayDraftChip: View {
             Button {
                 model.closeComposer(state, isReply: isReply)
             } label: {
-                Image(systemName: "xmark").font(.system(size: 9, weight: .semibold))
+                Image(systemName: "xmark").font(.system(size: Look.size(9), weight: .semibold))
                     .foregroundStyle(Ink.tertiary)
                     .frame(width: touch ? 40 : 22, height: touch ? 40 : 26)
                     .contentShape(Rectangle())

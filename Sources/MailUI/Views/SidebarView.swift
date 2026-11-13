@@ -30,6 +30,8 @@ struct SidebarView: View {
                 .padding(.bottom, Space.s)
             ScrollView {
                 VStack(alignment: .leading, spacing: 1) {
+                    // The account column is hidden: its places and mailboxes are here instead.
+                    if !model.showsAccountRail { SidebarMailboxes(model: model) }
                     SidebarRow(
                         title: "Inbox", symbol: "tray", count: model.unreadCount(account: scope),
                         isSelected: model.place.accountID == scope && model.split != nil
@@ -45,7 +47,7 @@ struct SidebarView: View {
                         ) { model.go(to: .vips(account: scope)) }
                     }
                     SidebarRow(
-                        title: "Snoozed", symbol: "clock", count: model.inboxThreads(scope).filter { model.isSnoozed($0) }.count,
+                        title: "Snoozed", symbol: "clock", count: model.snoozedInInboxes(scope).count,
                         isSelected: model.place == .snoozed(account: scope)
                     ) { model.go(to: .snoozed(account: scope)) }
                     SidebarRow(
@@ -61,11 +63,10 @@ struct SidebarView: View {
                     if let scope { folders(scope) } else { combinedFolders }
                     labelsSection
                     // Not part of any one mailbox: every newsletter, from all of them together.
+                    // Home and the Calendar are in the rail on the left, so they aren't repeated here.
                     Rectangle().fill(Line.hairline).frame(height: 1)
                         .padding(.horizontal, 8)
                         .padding(.vertical, Space.m)
-                    SidebarRow(title: "Home", symbol: "house", count: nil, isSelected: model.place.isHome) { model.go(to: .home(group: nil)) }
-                    SidebarRow(title: "Calendar", symbol: "calendar", count: nil, isSelected: model.place == .calendar) { model.go(to: .calendar) }
                     let rarely = model.newsletterSuggestions.count
                     SidebarRow(title: "Subscriptions", symbol: "newspaper", count: rarely > 0 ? rarely : nil,
                                isSelected: model.place == .subscriptions) { model.go(to: .subscriptions) }
@@ -130,7 +131,7 @@ struct SidebarView: View {
             foldTitle("Folders", key: "folders")
             Spacer()
             Button { naming = FolderNaming(accountID: accountID, mailbox: nil) } label: {
-                Image(systemName: "plus").font(.system(size: 10, weight: .semibold)).foregroundStyle(Ink.tertiary)
+                Image(systemName: "plus").font(.system(size: Look.size(10), weight: .semibold)).foregroundStyle(Ink.tertiary)
             }
             .buttonStyle(.plain)
             .padding(.top, Space.l)
@@ -150,7 +151,7 @@ struct SidebarView: View {
                     if entry.hasChildren {
                         Button { toggleFolder(mailbox.id) } label: {
                             Image(systemName: isOpen(mailbox.id) ? "chevron.down" : "chevron.right")
-                                .font(.system(size: 9, weight: .semibold)).foregroundStyle(Ink.tertiary)
+                                .font(.system(size: Look.size(9), weight: .semibold)).foregroundStyle(Ink.tertiary)
                                 .frame(width: 22, height: 22).contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
@@ -180,13 +181,38 @@ struct SidebarView: View {
                 .padding(.horizontal, 8)
                 .padding(.top, 4)
         }
-        if let error = model.loadErrors[accountID] {
+        if let error = model.loadErrors[accountID], model.isUnreachable(accountID) {
+            // A connection that dropped or a network that's away passes by itself: no alarm, no
+            // system error text (that's in the tooltip), just what's happening and a way to hurry it.
+            VStack(alignment: .leading, spacing: Space.xs) {
+                Text("Can't reach the server right now. Margin keeps trying.")
+                    .font(TypeScale.caption)
+                    .foregroundStyle(Ink.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .tip(Text(verbatim: error))
+                Button("Try Again") {
+                    if let account = model.account(accountID) { Task { await model.reload(only: account) } }
+                }
+                .buttonStyle(.plain)
+                .font(TypeScale.caption)
+                .foregroundStyle(Ink.secondary)
+            }
+            .padding(.horizontal, 8)
+            .padding(.top, Space.s)
+        } else if let error = model.loadErrors[accountID] {
             Text(error)
                 .font(TypeScale.caption)
                 .foregroundStyle(Status.danger)
                 .padding(.horizontal, 8)
                 .padding(.top, Space.s)
                 .fixedSize(horizontal: false, vertical: true)
+            // The sign-in was refused: one click signs in again, and everything else stays.
+            if model.needsSignIn(accountID), let account = model.account(accountID), model.canSignInAgain(account) {
+                Button("Sign in again") { model.signingInAgain = account }
+                    .buttonStyle(QuietButtonStyle())
+                    .padding(.horizontal, 8)
+                    .padding(.top, Space.xs)
+            }
         }
     }
 
@@ -244,7 +270,7 @@ struct SidebarView: View {
         Button { withAnimation(Motion.quick) { toggleSection(key) } } label: {
             HStack(spacing: 4) {
                 Text(text)
-                Image(systemName: isFolded(key) ? "chevron.right" : "chevron.down").font(.system(size: 8, weight: .bold))
+                Image(systemName: isFolded(key) ? "chevron.right" : "chevron.down").font(.system(size: Look.size(8), weight: .bold))
             }
             .font(TypeScale.label.weight(.medium))
             .foregroundStyle(Ink.tertiary)
@@ -284,11 +310,7 @@ struct SidebarView: View {
     }
 
     private var footer: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { context in
-            Text(model.statusLine(now: context.date))
-                .font(TypeScale.caption)
-                .foregroundStyle(Ink.quaternary)
-        }
+        StatusLine(model: model, color: Ink.quaternary)
         .padding(.horizontal, 18)
         .padding(.vertical, Space.m)
     }
@@ -316,14 +338,14 @@ private struct ComposeButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: Space.s) {
-                Image(systemName: "square.and.pencil").font(.system(size: 13, weight: .semibold))
+                Image(systemName: "square.and.pencil").font(.system(size: Look.size(13), weight: .semibold))
                 Text("New message").font(TypeScale.rowStrong).lineLimit(1).fixedSize()
                 Spacer(minLength: 0)
             }
             .foregroundStyle(Ink.inverse)
             .padding(.leading, 12)
             .padding(.trailing, 8)
-            .frame(height: 34)
+            .frame(height: Look.gap(34))
             .background(Ink.primary.opacity(isHovered ? 0.88 : 1), in: Capsule())
             .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
             .contentShape(Capsule())
@@ -386,7 +408,7 @@ struct SidebarRow: View {
         Button(action: action) {
             HStack(spacing: Space.s) {
                 Image(systemName: symbol)
-                    .font(.system(size: 12))
+                    .font(.system(size: Look.size(12)))
                     .foregroundStyle(tint ?? (isSelected ? Ink.primary : Ink.tertiary))
                     .frame(width: 16)
                 title
@@ -401,7 +423,7 @@ struct SidebarRow: View {
                 }
             }
             .padding(.horizontal, 8)
-            .frame(height: 28)
+            .frame(height: Look.gap(28))
             .background(isSelected ? Fill.two : (isHovered ? Fill.one : .clear), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
             .contentShape(Rectangle())
         }

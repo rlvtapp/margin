@@ -79,7 +79,7 @@ struct TouchConversation: View {
     private func header(_ thread: MailThread) -> some View {
         VStack(alignment: .leading, spacing: Space.m) {
             Text(thread.subject.isEmpty ? String(localized: "(No subject)") : thread.subject)
-                .font(.system(size: 28, weight: .bold))
+                .font(.system(size: Look.size(28), weight: .bold))
                 .tracking(-0.3)
                 .foregroundStyle(Ink.primary)
                 .textSelection(.enabled)
@@ -169,6 +169,14 @@ private struct TouchMessageCard: View {
     @State private var showsNoticeText = false
     @State private var showsPerson = false
     @State private var showsSource = false
+    /// The earlier mail quoted under this message, unfolded with the "···" button.
+    @State private var showsQuote = false
+
+    /// Earlier mail quoted under a message is folded away behind "···", except in a forward,
+    /// where the quoted part is the point.
+    private var foldsQuote: Bool {
+        !QuotedHistory.isForward(message.subject)
+    }
 
     init(model: MailModel, thread: MailThread, message: MailMessage, reactions: [MailReaction] = [], startsExpanded: Bool) {
         self.model = model
@@ -208,7 +216,7 @@ private struct TouchMessageCard: View {
                         .padding(.bottom, 12)
                 } else {
                     TranslatableBody(model: model, message: message, text: content?.text, html: showsHTML ? content?.html.map { SafeHTMLCache.sanitized($0).html } : nil,
-                                     textScale: model.textScale * 17 / 15, inset: 20) {
+                                     textScale: model.textScale * 17 / 15, inset: 20, trimsQuote: foldsQuote && !showsQuote) {
                         messageBody
                     }
                     .transition(.opacity)
@@ -236,27 +244,27 @@ private struct TouchMessageCard: View {
                 HStack(alignment: .firstTextBaseline, spacing: Space.s) {
                     Button { showsPerson = true } label: {
                         Text(verbatim: message.from.displayName)
-                            .font(.system(size: 17, weight: .semibold))
+                            .font(.system(size: Look.size(17), weight: .semibold))
                             .foregroundStyle(Ink.primary)
                             .lineLimit(1)
                     }
                     .buttonStyle(.plain)
                     Spacer(minLength: Space.s)
                     Text(RowDate.string(message.date))
-                        .font(.system(size: 14))
+                        .font(.system(size: Look.size(14)))
                         .foregroundStyle(Ink.tertiary)
                         .fixedSize()
                 }
                 if isExpanded {
                     if !recipients.isEmpty {
                         Text(recipients)
-                            .font(.system(size: 14))
+                            .font(.system(size: Look.size(14)))
                             .foregroundStyle(Ink.tertiary)
                             .lineLimit(1)
                     }
                 } else {
                     Text(verbatim: preview)
-                        .font(.system(size: 15))
+                        .font(.system(size: Look.size(15)))
                         .foregroundStyle(Ink.secondary)
                         .lineLimit(2)
                 }
@@ -286,21 +294,30 @@ private struct TouchMessageCard: View {
                         .padding(.bottom, 12)
                 }
                 // The mail fills the card: its own colors, margins and a reading size.
-                HTMLMessageView(html: model.translations.shown(safe, for: message.id), allowsRemote: allowsRemote, zoom: model.textScale, fillsCard: true) {
+                let full = model.translations.shown(safe, for: message.id)
+                let folded = foldsQuote ? QuotedHistory.htmlWithoutQuote(full.html) : nil
+                HTMLMessageView(html: showsQuote ? full : full.replacing(html: folded), allowsRemote: allowsRemote, zoom: model.textScale, fillsCard: true) {
                     model.startCompose(mailto: $0)
+                }
+                if folded != nil {
+                    QuoteToggle(isOpen: $showsQuote).padding(.horizontal, 20).padding(.top, 8)
                 }
                 attachments(content.attachments)
                     .padding(20)
+                if content.isPartial == true { AttachmentsLoadingNote().padding(.horizontal, 20).padding(.bottom, 12) }
             }
         } else if let content {
             VStack(alignment: .leading, spacing: Space.l) {
-                Text(verbatim: content.text.trimmingCharacters(in: .whitespacesAndNewlines))
+                let folded = foldsQuote ? QuotedHistory.textWithoutQuote(content.text) : nil
+                Text(verbatim: (showsQuote ? content.text : folded ?? content.text).trimmingCharacters(in: .whitespacesAndNewlines))
                     .font(.system(size: 17 * model.textScale))
                     .foregroundStyle(Ink.primary)
                     .lineSpacing(7)
                     .textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                if folded != nil { QuoteToggle(isOpen: $showsQuote) }
                 attachments(content.attachments)
+                if content.isPartial == true { AttachmentsLoadingNote() }
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 20)
@@ -329,19 +346,19 @@ private struct TouchMessageCard: View {
     /// "Pictures off · 1 blocked        Load"
     private func picturesNote(trackers: Int) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: "eye.slash").font(.system(size: 13))
+            Image(systemName: "eye.slash").font(.system(size: Look.size(13)))
             Text(trackers > 0 ? String(localized: "Pictures off · \(trackers) blocked") : String(localized: "Pictures off"))
                 .lineLimit(1)
             Spacer(minLength: Space.s)
             Button("Load") { PicturesShownOnce.allow(message.id); loadsPicturesOnce = true }
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: Look.size(14), weight: .semibold))
                 .foregroundStyle(Ink.primary)
                 .padding(.horizontal, 12)
                 .frame(height: 28)
                 .background(Fill.two, in: Capsule())
                 .buttonStyle(.plain)
         }
-        .font(.system(size: 14))
+        .font(.system(size: Look.size(14)))
         .foregroundStyle(Ink.tertiary)
     }
 
@@ -372,7 +389,7 @@ private struct TouchMessageCard: View {
             Button("Show Source") { showsSource = true }
         } label: {
             Image(systemName: "ellipsis")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: Look.size(16), weight: .semibold))
                 .foregroundStyle(Ink.tertiary)
                 .frame(width: 36, height: 36)
                 .contentShape(Rectangle())

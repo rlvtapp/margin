@@ -37,7 +37,7 @@ struct TouchMailboxes: View {
             if !model.vipAddresses.isEmpty {
                 row(String(localized: "VIPs"), symbol: "star.circle", count: model.vipThreads(scope).filter(\.isUnread).count, place: .vips(account: scope))
             }
-            row(String(localized: "Snoozed"), symbol: "clock", count: model.inboxThreads(scope).filter { model.isSnoozed($0) }.count,
+            row(String(localized: "Snoozed"), symbol: "clock", count: model.snoozedInInboxes(scope).count,
                 place: .snoozed(account: scope))
             row(String(localized: "Waiting for reply"), symbol: "arrowshape.turn.up.backward.badge.clock",
                 count: scope == nil ? model.waitingCount : nil, place: .waiting(account: scope))
@@ -119,7 +119,7 @@ struct TouchMailboxes: View {
             HStack(spacing: Space.m) {
                 railButton(isOn: scope == nil, label: String(localized: "All inboxes")) {
                     Image(systemName: "tray.2")
-                        .font(.system(size: 15))
+                        .font(.system(size: Look.size(15)))
                         .foregroundStyle(Ink.secondary)
                         .frame(width: 38, height: 38)
                         .background(Fill.two, in: Circle())
@@ -141,7 +141,7 @@ struct TouchMailboxes: View {
                 }
                 Button { model.isAddingAccount = true } label: {
                     Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: Look.size(14), weight: .medium))
                         .foregroundStyle(Ink.tertiary)
                         .frame(width: 38, height: 38)
                         .overlay(Circle().strokeBorder(Line.edge, style: StrokeStyle(lineWidth: 1, dash: [3, 3])))
@@ -184,7 +184,7 @@ struct TouchMailboxes: View {
         let isOn = selected == place
         return HStack(spacing: Space.m) {
             Image(systemName: symbol)
-                .font(.system(size: 15))
+                .font(.system(size: Look.size(15)))
                 .foregroundStyle(isOn ? Ink.primary : Ink.tertiary)
                 .frame(width: 22)
             Text(title)
@@ -218,12 +218,7 @@ struct TouchMailboxes: View {
 
     private var statusItem: some ToolbarContent {
         ToolbarItem(placement: .status) {
-            TimelineView(.periodic(from: .now, by: 30)) { context in
-                Text(model.statusLine(now: context.date))
-                    .font(TypeScale.caption)
-                    .foregroundStyle(Ink.tertiary)
-                    .fixedSize()
-            }
+            StatusLine(model: model).fixedSize()
         }
     }
 

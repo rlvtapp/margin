@@ -56,7 +56,7 @@ struct WorkspaceHeader: View {
                     WorkspaceBadge(workspace: workspace, size: 28)
                 } else {
                     Image(systemName: "tray.2")
-                        .font(.system(size: 13))
+                        .font(.system(size: Look.size(13)))
                         .foregroundStyle(Ink.secondary)
                         .frame(width: 28, height: 28)
                         .background(Fill.two, in: Circle())
@@ -65,7 +65,7 @@ struct WorkspaceHeader: View {
                     HStack(spacing: 4) {
                         Text(verbatim: model.currentWorkspace?.name ?? String(localized: "All inboxes"))
                             .font(TypeScale.rowStrong).foregroundStyle(Ink.primary)
-                        Image(systemName: "chevron.up.chevron.down").font(.system(size: 8, weight: .semibold)).foregroundStyle(Ink.tertiary)
+                        Image(systemName: "chevron.up.chevron.down").font(.system(size: Look.size(8), weight: .semibold)).foregroundStyle(Ink.tertiary)
                     }
                     Text(verbatim: model.workspaceAccounts.map(\.label).formatted(.list(type: .and)))
                         .font(TypeScale.caption).foregroundStyle(Ink.tertiary).lineLimit(1)
@@ -97,6 +97,24 @@ struct WorkspaceBadge: View {
     }
 }
 
+extension Binding {
+    /// One item of a list being edited, found by its id each time instead of by its place.
+    /// A field that still reads or writes an item after it was deleted gets the last copy and
+    /// changes nothing. A binding by place, as `ForEach($list)` makes, reaches past the end of
+    /// the list there and stops the app.
+    @MainActor
+    func item<Element: Identifiable & Sendable>(_ item: Element) -> Binding<Element>
+    where Value == [Element], Element.ID: Sendable {
+        Binding<Element>(
+            get: { wrappedValue.first { $0.id == item.id } ?? item },
+            set: { changed in
+                guard let index = wrappedValue.firstIndex(where: { $0.id == item.id }) else { return }
+                wrappedValue[index] = changed
+            }
+        )
+    }
+}
+
 /// Making and changing workspaces: name, colour, and which mailboxes are in each.
 struct WorkspaceEditor: View {
     let model: MailModel
@@ -109,23 +127,31 @@ struct WorkspaceEditor: View {
                 Section {
                     Text("Group your mailboxes, like Work and Personal. Pick one at the top of the sidebar, or with ⌥⌘1, ⌥⌘2…, to see only its mail. The others keep checking quietly: no alerts except sign-in codes.")
                         .font(TypeScale.label).foregroundStyle(Ink.secondary)
+                    Text("A mailbox that's in no workspace shows in all of them.")
+                        .font(TypeScale.label).foregroundStyle(Ink.secondary)
                 }
-                ForEach($workspaces) { $workspace in
+                // By id, not by place: a name field that is still writing when its workspace is
+                // deleted must not reach into the list at a place that is gone.
+                ForEach(workspaces) { item in
+                    let draft = $workspaces.item(item)
+                    let workspace = draft.wrappedValue
                     Section {
                         HStack {
                             WorkspaceBadge(workspace: workspace, size: 24)
-                            TextField("Name", text: $workspace.name)
+                            TextField("Name", text: draft.name)
                         }
-                        Picker("Color", selection: $workspace.colorIndex) {
+                        Picker("Color", selection: draft.colorIndex) {
                             ForEach(0..<12, id: \.self) { index in
                                 Text(verbatim: "●").foregroundStyle(Palette.account(index)).tag(index)
                             }
                         }
                         ForEach(model.accounts) { account in
                             Toggle(isOn: Binding(
-                                get: { workspace.accounts.contains(account.id) },
+                                get: { draft.wrappedValue.accounts.contains(account.id) },
                                 set: { on in
-                                    if on { workspace.accounts.append(account.id) } else { workspace.accounts.removeAll { $0 == account.id } }
+                                    var accounts = draft.wrappedValue.accounts.filter { $0 != account.id }
+                                    if on { accounts.append(account.id) }
+                                    draft.wrappedValue.accounts = accounts
                                 }
                             )) {
                                 HStack { AccountMark(account, size: 16); Text(verbatim: account.label) }

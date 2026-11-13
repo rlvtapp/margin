@@ -18,10 +18,19 @@ import AppKit
         #expect(TitleBarDoubleClick.action(setting: nil, legacyMinimize: true) == .minimize)
     }
 
+    /// When the system already zoomed or minimized the window, Margin doesn't do it a second
+    /// time (which sent the window out and straight back).
+    @Test func leavesTheDoubleClickToTheSystemWhenItAnswered() {
+        let before = CGRect(x: 100, y: 100, width: 900, height: 600)
+        #expect(TitleBarDoubleClick.isUnanswered(before: before, after: before, isMiniaturized: false))
+        #expect(!TitleBarDoubleClick.isUnanswered(before: before, after: CGRect(x: 40, y: 60, width: 1100, height: 700), isMiniaturized: false))
+        #expect(!TitleBarDoubleClick.isUnanswered(before: before, after: before, isMiniaturized: true))
+    }
+
     #if os(macOS)
     /// A real double-click on the bar's empty space, on a real window, with the Mac's default
     /// setting (zoom): the window changes size.
-    @MainActor @Test func aDoubleClickOnTheBarZoomsTheWindow() throws {
+    @MainActor @Test func aDoubleClickOnTheBarZoomsTheWindow() async throws {
         let defaults = UserDefaults.standard
         guard TitleBarDoubleClick.action(setting: defaults.string(forKey: "AppleActionOnDoubleClick"),
                                          legacyMinimize: defaults.bool(forKey: "AppleMiniaturizeOnDoubleClick")) == .zoom else { return }
@@ -37,6 +46,12 @@ import AppKit
                                                     timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
                                                     context: nil, eventNumber: 0, clickCount: 2, pressure: 1))
         bar.mouseDown(with: click)
+        let release = try #require(NSEvent.mouseEvent(with: .leftMouseUp, location: NSPoint(x: 200, y: 380), modifierFlags: [],
+                                                      timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: window.windowNumber,
+                                                      context: nil, eventNumber: 0, clickCount: 2, pressure: 0))
+        bar.mouseUp(with: release)
+        // Nothing else answered the double-click here, so after a moment the bar does.
+        try await Task.sleep(for: .milliseconds(400))
         #expect(window.frame != before)
         #expect(window.frame.width > before.width)
     }

@@ -14,11 +14,19 @@ struct ThreadListView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+            if case .some(let split) = model.split, model.layout != .spark {
+                // The tabs scroll on to the column's edge; the first starts at the page's margin.
+                splitTabs(split)
+                    .contentMargins(.leading, model.layout.isCalm ? Space.s : Space.l, for: .scrollContent)
+                    .contentMargins(.trailing, Space.s, for: .scrollContent)
+                    .padding(.bottom, Space.s)
+                    .calmColumn(model.layout.isCalm)
+            }
             Group {
                 if model.layout == .spark {
                     SparkHeader(model: model)
                 } else if model.place.isHome && !model.showsMinimalHome {
-                    HomeHeader(model: model)
+                    HomeHeader(model: model, edgeInset: model.layout.isCalm ? Space.m : 0)
                 }
             }
             .padding(.horizontal, model.layout.isCalm ? Space.m : 0)
@@ -34,6 +42,7 @@ struct ThreadListView: View {
         }
         .background(Paper.panel)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { listWidth = $0 }
+        .sheet(item: $model.creatingRule) { form in CreateRuleSheet(model: model, form: form) }
     }
 
     // MARK: Header
@@ -45,7 +54,6 @@ struct ThreadListView: View {
                     Text(model.title)
                         .font(TypeScale.heading)
                         .foregroundStyle(Ink.primary)
-                    if case .some(let split) = model.split { filterMenu(split) }
                 }
                 Text(summary)
                     .font(TypeScale.caption)
@@ -55,7 +63,7 @@ struct ThreadListView: View {
             // New message lives in the sidebar; with the sidebar hidden, it's here instead. The
             // sidebar's own button is in the top bar.
             IconButton("arrow.clockwise", help: "Check for new mail  ⇧⌘N") { Task { await model.reload() } }
-            if model.isSidebarHidden {
+            if model.isSidebarOutOfSight {
                 IconButton("square.and.pencil", help: "New message  C") { model.startCompose() }
             }
         }
@@ -70,46 +78,51 @@ struct ThreadListView: View {
     /// "15 conversations, 9 unread"
     private var summary: String {
         if case .search = model.place, model.isSearchingServers {
-            return String(localized: "\(model.visibleThreads.count) found so far · searching servers…")
+            return String(localized: "\(model.listCount) found so far · searching servers…")
         }
-        let threads = model.visibleThreads
-        let unread = threads.filter(\.isUnread).count
-        let count = threads.count == 1 ? String(localized: "1 conversation") : String(localized: "\(threads.count) conversations")
+        // Of everything the place holds, not only the rows shown so far.
+        let total = model.listCount, unread = model.listUnreadCount
+        let count = total == 1 ? String(localized: "1 conversation") : String(localized: "\(total) conversations")
         return unread > 0 ? String(localized: "\(count), \(unread) unread", comment: "Conversation count, then how many are unread") : count
     }
 
-    /// All, People, Updates or Newsletters: which part of the inbox to show.
-    private func filterMenu(_ current: InboxSplit?) -> some View {
+    /// All, Important (mail from people) or Other (updates and newsletters): which part of the
+    /// inbox to show, as the same Liquid Glass tabs Home and the iPhone use.
+    private func splitTabs(_ current: InboxSplit?) -> some View {
         let accountID = model.place.accountID
-        return Menu {
-            Picker("Show", selection: Binding(
-                get: { current },
-                set: { model.go(to: .inbox(account: accountID, split: $0)) }
-            )) {
-                Text("Everything").tag(InboxSplit?.none)
-                Divider()
-                ForEach(InboxSplit.allCases, id: \.self) { split in
-                    let unread = model.unreadCount(account: accountID, split: split)
-                    Text(unread > 0 ? "\(split.title)  \(unread)" : split.title).tag(InboxSplit?.some(split))
+        return ScrollView(.horizontal, showsIndicators: false) {
+            GlassChipRow {
+                // The picked glass's own deep tint: the text colour as a tint is near white in
+                // dark mode, under white text.
+                // The list swaps at once; only the chips animate (below). Animating the place
+                // change animated every row and the reader too, which lagged on a full inbox.
+                Button {
+                    model.go(to: .inbox(account: accountID, split: nil))
+                } label: {
+                    GlassChip(Text("All"), symbol: current == nil ? "tray.fill" : "tray", color: Ink.primary,
+                              count: model.unreadCount(account: accountID), isOn: current == nil)
+                }
+                .buttonStyle(.plain)
+                ForEach(InboxSplit.tabs, id: \.self) { split in
+                    splitTab(split, isOn: current.map { ($0 == .people) == (split == .people) } ?? false, accountID: accountID)
                 }
             }
-            .pickerStyle(.inline)
-        } label: {
-            HStack(spacing: 4) {
-                Text(current?.title ?? String(localized: "Everything"))
-                Image(systemName: "chevron.down").font(.system(size: 7, weight: .bold))
-            }
-            .font(TypeScale.label.weight(.medium))
-            .foregroundStyle(Ink.secondary)
-            .padding(.horizontal, 7)
-            .frame(height: 20)
-            .background(Fill.two, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+            .padding(.vertical, 4)
+            .animation(Look.reduceMotion ? nil : Motion.quick, value: current)
         }
-        .menuStyle(.button)
+        .tip("Show part of the inbox  ⌘1–⌘3")
+    }
+
+    private func splitTab(_ split: InboxSplit, isOn: Bool, accountID: UUID?) -> some View {
+        let symbol = split == .people ? "person.2" : "tray.full"
+        let unread: Int = model.unreadCount(account: accountID, split: split)
+        return Button {
+            model.go(to: .inbox(account: accountID, split: split))
+        } label: {
+            GlassChip(Text(split.tabTitle), symbol: symbol + (isOn ? ".fill" : ""), color: Palette.split(split),
+                      tint: Palette.deep(split), count: unread, isOn: isOn)
+        }
         .buttonStyle(.plain)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .tip("Show part of the inbox  ⌘1–⌘4")
     }
 
     // MARK: List
@@ -122,7 +135,15 @@ struct ThreadListView: View {
         } else if model.place == .subscriptions {
             SubscriptionsPage(model: model)
         } else if let error = model.place.accountID.flatMap({ model.loadErrors[$0] }), threads.isEmpty {
-            ListMessage(title: "Couldn't load mail", verbatimDetail: error, action: ("Try Again", { Task { await model.reload() } }))
+            // A refused sign-in is fixed by signing in again; anything else by trying again.
+            if let id = model.place.accountID, model.needsSignIn(id), let account = model.account(id), model.canSignInAgain(account) {
+                ListMessage(title: "Couldn't sign in", verbatimDetail: error, action: ("Sign in again", { model.signingInAgain = account }))
+            } else if let id = model.place.accountID, model.isUnreachable(id) {
+                ListMessage(title: "Couldn't load mail", detail: "Can't reach the server right now. Margin keeps trying.",
+                            action: ("Try Again", { Task { await model.reload() } }))
+            } else {
+                ListMessage(title: "Couldn't load mail", verbatimDetail: error, action: ("Try Again", { Task { await model.reload() } }))
+            }
         } else if threads.isEmpty && model.isListLoading {
             LoadingMessage()
         } else if threads.isEmpty {
@@ -155,12 +176,19 @@ struct ThreadListView: View {
                         } else {
                             ForEach(threads) { row($0) }
                         }
+                        // The last row: coming on screen, it brings in the next rows, and
+                        // older mail once everything loaded is shown.
+                        if model.canShowMore { ListEndRow(model: model, shown: threads.count) }
                     }
                     .padding(.horizontal, 6)
                     .padding(.bottom, Space.l)
                     .calmColumn(model.layout.isCalm)
                 }
                 .onChange(of: model.selectedThreadID) { _, id in
+                    guard let id else { return }
+                    proxy.scrollTo(id)
+                }
+                .onChange(of: model.selectionEnd) { _, id in
                     guard let id else { return }
                     proxy.scrollTo(id)
                 }
@@ -208,6 +236,7 @@ struct ThreadListView: View {
         .onTapGesture { tap(thread) }
         .contextMenu { ThreadContextMenu(model: model, thread: thread) }
         .rowSwipe(model: model, thread: thread)
+        .rowHoverActions(model: model, thread: thread)
     }
 
     /// ⌘-click adds to the selection, ⇧-click selects a range, a plain click opens.
@@ -219,12 +248,31 @@ struct ThreadListView: View {
         #endif
         model.selection = []
         model.select(thread.id)
-        if model.layout.opensOverList { model.isReaderOpen = true }
+        if model.opensOverList { model.isReaderOpen = true }
         model.focusRequest += 1
     }
 
     /// In combined views each row shows which mailbox it's in.
     private var showsAccounts: Bool { model.place.isCombined && model.accounts.count > 1 }
+}
+
+/// The row after the last conversation while the list can still grow. When it comes on screen
+/// the list shows its next rows, or asks for older mail. It's made anew whenever the list has
+/// grown, so staying on screen asks again.
+struct ListEndRow: View {
+    let model: MailModel
+    let shown: Int
+
+    var body: some View {
+        ProgressView()
+            .controlSize(.small)
+            .opacity(model.isLoadingOlder ? 1 : 0)
+            .frame(maxWidth: .infinity)
+            .frame(height: Look.gap(28))
+            .accessibilityHidden(!model.isLoadingOlder)
+            .onAppear { model.listReachedEnd() }
+            .id("list-end-\(shown)-\(model.listCount)")
+    }
 }
 
 /// Sender and date, subject, then a line of the message.
@@ -247,16 +295,20 @@ struct ThreadRow: View {
     @State private var isHovered = false
 
     var body: some View {
+        // A row can ask for sender, preview and count several times. Filter reaction notices
+        // once per redraw rather than rescanning every message for each label while scrolling.
+        let listed = MailReaction.withoutReactions(thread)
+        let names = senders(in: listed)
         if let marginNote {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 MarginNoteLabel(note: marginNote)
-                if compact { compactBody } else { fullBody }
+                if compact { compactBody(listed, senders: names) } else { fullBody(listed, senders: names) }
             }
-        } else if compact { compactBody } else { fullBody }
+        } else if compact { compactBody(listed, senders: names) } else { fullBody(listed, senders: names) }
     }
 
     /// One line: sender, subject and preview, date.
-    private var compactBody: some View {
+    private func compactBody(_ listed: MailThread, senders: String) -> some View {
         let unread = thread.isUnread
         return HStack(spacing: 10) {
             Circle().fill(unread ? accent : .clear).frame(width: 6, height: 6)
@@ -269,26 +321,26 @@ struct ThreadRow: View {
                 .font(TypeScale.row)
                 .lineLimit(1)
             Spacer(minLength: Space.s)
-            if isPinned { Image(systemName: "pin.fill").font(.system(size: 9)).foregroundStyle(Ink.tertiary) }
-            if thread.isStarred { Image(systemName: "star.fill").font(.system(size: 10)).foregroundStyle(Status.star) }
+            if isPinned { Image(systemName: "pin.fill").font(.system(size: Look.size(9))).foregroundStyle(Ink.tertiary) }
+            if thread.isStarred { Image(systemName: "star.fill").font(.system(size: Look.size(10))).foregroundStyle(Status.star) }
             if let account { AccountMark(account, size: 12) }
             Text(snoozedUntil.map { $0.formatted(.dateTime.weekday(.abbreviated).hour().minute()) } ?? RowDate.string(thread.date))
                 .font(TypeScale.label.monospacedDigit())
                 .foregroundStyle(snoozedUntil == nil ? Ink.tertiary : Status.star)
         }
         .padding(.horizontal, 10)
-        .frame(height: 34)
+        .frame(height: Look.gap(34))
         .background(isSelected ? Fill.two : (isHovered ? Fill.one : .clear), in: RoundedRectangle(cornerRadius: 7, style: .continuous))
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
         .accessibilityElement(children: .combine)
     }
 
-    private var fullBody: some View {
+    private func fullBody(_ listed: MailThread, senders: String) -> some View {
         let latest = listed.latest
         let unread = thread.isUnread
         return HStack(alignment: .top, spacing: 10) {
-            Avatar(showsRecipients ? (latest.to.first ?? latest.from) : latest.from, size: 28)
+            Avatar(showsRecipients ? (latest.to.first ?? latest.from) : latest.from, size: Look.gap(28))
                 .overlay(alignment: .topLeading) {
                     if unread {
                         Circle().fill(accent).frame(width: 10, height: 10)
@@ -308,13 +360,13 @@ struct ThreadRow: View {
                     }
                     Spacer(minLength: Space.xs)
                     if thread.hasAttachments {
-                        Image(systemName: "paperclip").font(.system(size: 10.5)).foregroundStyle(Ink.tertiary)
+                        Image(systemName: "paperclip").font(.system(size: Look.size(10.5))).foregroundStyle(Ink.tertiary)
                     }
                     if isPinned {
-                        Image(systemName: "pin.fill").font(.system(size: 9)).foregroundStyle(Ink.tertiary).accessibilityLabel("Pinned")
+                        Image(systemName: "pin.fill").font(.system(size: Look.size(9))).foregroundStyle(Ink.tertiary).accessibilityLabel("Pinned")
                     }
                     if thread.isStarred {
-                        Image(systemName: "star.fill").font(.system(size: 10)).foregroundStyle(Status.star)
+                        Image(systemName: "star.fill").font(.system(size: Look.size(10))).foregroundStyle(Status.star)
                     }
                     if let snoozedUntil {
                         Label(snoozedUntil.formatted(.dateTime.weekday(.abbreviated).hour().minute()), systemImage: "clock")
@@ -357,7 +409,7 @@ struct ThreadRow: View {
         #if os(iOS)
         .padding(.vertical, 7)
         #else
-        .padding(.vertical, 9)
+        .padding(.vertical, Look.gap(9))
         #endif
         .background(isSelected ? Fill.two : (isHovered ? Fill.one : .clear), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .contentShape(Rectangle())
@@ -366,12 +418,8 @@ struct ThreadRow: View {
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
-    /// The conversation without its reactions ("Jane reacted to your message"), which show on
-    /// their message in the reader instead. Only for what the row says.
-    private var listed: MailThread { MailReaction.withoutReactions(thread) }
-
     /// One name, or the first names of everyone who wrote (or, in Sent, who it went to).
-    private var senders: String {
+    private func senders(in listed: MailThread) -> String {
         if showsRecipients {
             let names = thread.latest.to.map(\.displayName)
             return names.isEmpty ? String(localized: "No recipients") : String(localized: "To \(names.joined(separator: ", "))")
@@ -442,7 +490,7 @@ struct QuickFilterToggles: View {
                     }
                 } label: {
                     Image(systemName: isOn ? filter.symbol + ".fill" : filter.symbol)
-                        .font(.system(size: 11, weight: .medium))
+                        .font(.system(size: Look.size(11), weight: .medium))
                         .foregroundStyle(isOn ? Ink.inverse : Ink.tertiary)
                         .frame(width: 24, height: 22)
                         .background(isOn ? Ink.primary : .clear, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
@@ -555,6 +603,7 @@ struct ThreadContextMenu: View {
         if model.unsubscribeMethod(for: thread) != nil {
             Button { model.unsubscribe(thread) } label: { Label("Unsubscribe", systemImage: "xmark.circle") }
         }
+        Button { model.startRule(for: thread) } label: { Label("Create Rule…", systemImage: "line.3.horizontal.decrease.circle") }
         Divider()
         Button(role: .destructive) { model.perform(.trash, on: thread) } label: { Label("Move to Trash", systemImage: "trash") }
     }
@@ -563,7 +612,7 @@ struct ThreadContextMenu: View {
     private func open(_ write: @escaping () -> Void) {
         model.selection = []
         model.select(thread.id)
-        if model.layout.opensOverList { model.isReaderOpen = true }
+        if model.opensOverList { model.isReaderOpen = true }
         write()
     }
 }

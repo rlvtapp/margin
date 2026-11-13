@@ -23,7 +23,8 @@ struct MarginApp: App {
     var body: some Scene {
         Window("Margin", id: "main") {
             MailRootView(model: delegate.model)
-                .frame(minWidth: 960, minHeight: 600)
+                // Small enough to sit beside another app; the columns give way as it narrows.
+                .frame(minWidth: 480, minHeight: 440)
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1480, height: 960)
@@ -47,15 +48,20 @@ struct MarginApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     let model: MailModel
     private let snapshot = SnapshotMode.fromArguments()
+    private let benchmark = BenchmarkMode.fromArguments()
 
     override init() {
-        model = MailModel(environment: snapshot == nil ? .standard : .preview())
+        // Before anything reads them: mailboxes and settings kept by the sandboxed Margin of
+        // earlier versions come over once (the container itself is left as it was).
+        if snapshot == nil && benchmark == nil { SandboxMigration.runIfNeeded() }
+        model = MailModel(environment: snapshot == nil && benchmark == nil ? .standard : (benchmark?.environment ?? .preview()))
         super.init()
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         snapshot?.run(model: model)
-        if snapshot == nil {
+        benchmark?.run(model: model)
+        if snapshot == nil, benchmark == nil {
             model.applyAppIcon()
             model.startConnectionIfEnabled()
             model.startClock()
@@ -117,8 +123,8 @@ struct MarginCommands: Commands {
             Divider()
             Button("Inbox") { model.go(to: .inbox(account: model.place.accountID, split: nil)) }
                 .keyboardShortcut("1")
-            ForEach(Array(InboxSplit.allCases.enumerated()), id: \.element) { index, split in
-                Button(split.title) { model.go(to: .inbox(account: model.place.accountID, split: split)) }
+            ForEach(Array(InboxSplit.tabs.enumerated()), id: \.element) { index, split in
+                Button(split.tabTitle) { model.go(to: .inbox(account: model.place.accountID, split: split)) }
                     .keyboardShortcut(KeyEquivalent(Character("\(index + 2)")))
             }
             Button("Starred") { model.go(to: .starred(account: model.place.accountID)) }
@@ -139,7 +145,7 @@ struct MarginCommands: Commands {
                 .keyboardShortcut("0")
         }
         CommandGroup(before: .toolbar) {
-            Button(model.isSidebarHidden ? "Show Sidebar" : "Hide Sidebar") { model.isSidebarHidden.toggle() }
+            Button(model.isSidebarHidden ? "Show Sidebar" : "Hide Sidebar") { model.toggleSidebar() }
                 .keyboardShortcut("s", modifiers: [.control, .command])
         }
         CommandMenu("Message") {
@@ -168,6 +174,9 @@ struct MarginCommands: Commands {
             Button("Welcome to Margin") { model.isShowingOnboarding = true }
             Button("Keyboard Shortcuts") { model.isShowingShortcuts = true }
                 .keyboardShortcut("/")
+            Divider()
+            Button("Margin Help…") { model.isShowingHelp = true }
+            Button("Send Feedback…") { model.startFeedback() }
         }
     }
 }

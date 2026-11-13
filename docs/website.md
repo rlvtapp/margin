@@ -91,7 +91,10 @@ pnpm types:check
   buttons at the top left are grey. The pictures have square corners; the page rounds them to
   the window's own corners (`.showcase-window`).
   `share.jpg` is the 1200×630 preview card for links, and `apple-touch-icon.png` the home-screen
-  icon.
+  icon. The card is dark: the icon, the hero headline and lead, "Open source" with the GitHub
+  repository, and the dark hero picture on the right. `.github/social-preview.png` is the same
+  card at 1280×640 for the repository's social preview on GitHub. When the hero picture is
+  retaken, redo both from it.
 - The icon (`site/public/icon.svg`) is the default app icon from `Apps/Shared/AppIcon.icon`.
 
 ## Keeping the privacy policy true

@@ -77,8 +77,8 @@ struct MailCommand: Identifiable {
                 $0.go(to: .inbox(account: $0.place.accountID, split: nil))
             },
         ]
-        for (index, split) in InboxSplit.allCases.enumerated() {
-            commands.append(.init(id: "go.\(split.rawValue)", title: "Go to \(split.title)", symbol: "line.3.horizontal.decrease", keys: ["⌘", "\(index + 2)"], needsThread: false) {
+        for (index, split) in InboxSplit.tabs.enumerated() {
+            commands.append(.init(id: "go.\(split.rawValue)", title: "Go to \(split.tabTitle)", symbol: "line.3.horizontal.decrease", keys: ["⌘", "\(index + 2)"], needsThread: false) {
                 $0.go(to: .inbox(account: $0.place.accountID, split: split))
             })
         }
@@ -163,9 +163,11 @@ struct MailCommand: Identifiable {
         commands += [
             .init(id: "addAccount", title: "Add account", symbol: "plus", keys: [], needsThread: false) { $0.isAddingAccount = true },
             .init(id: "sidebar", title: "Show or hide the sidebar", symbol: "sidebar.left", keys: ["⌃", "⌘", "S"], needsThread: false) {
-                $0.isSidebarHidden.toggle()
+                $0.toggleSidebar()
             },
             .init(id: "shortcuts", title: "Keyboard shortcuts", symbol: "keyboard", keys: ["?"], needsThread: false) { $0.isShowingShortcuts = true },
+            .init(id: "help", title: "Help and feedback", symbol: "questionmark.circle", keys: [], needsThread: false) { $0.isShowingHelp = true },
+            .init(id: "feedback", title: "Send feedback", symbol: "bubble.left.and.text.bubble.right", keys: [], needsThread: false) { $0.startFeedback() },
         ]
         return commands.filter { !$0.needsAssistant || model.isAssistantOn }
     }

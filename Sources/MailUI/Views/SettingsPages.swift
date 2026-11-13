@@ -113,7 +113,7 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
         case .rules: ["rules", "filters", "block", "blocked", "mute", "muted", "move", "auto archive"]
         case .connections: ["mcp", "agent", "cursor", "codex", "claude code", "vs code", "permissions"]
         case .backup: ["restore", "export", "recovery key", "icloud", "sync", "keychain", "link device", "another device", "automatic"]
-        case .experimental: ["labs", "beta", "block editor", "slash", "headings", "lists", "checklist", "formatting", "blocks"]
+        case .experimental: ["labs", "beta", "block editor", "slash", "headings", "lists", "checklist", "formatting", "blocks", "dictate", "dictation", "voice", "speak", "space bar", "microphone"]
         case .about: ["version", "made by", "welcome"]
         }
     }
@@ -178,7 +178,7 @@ struct SettingsHeader: View {
                 icon
                 VStack(alignment: .leading, spacing: 3) {
                     Text(verbatim: page == .about ? Self.appName : page.title)
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: Look.size(20), weight: .bold))
                         .foregroundStyle(Ink.primary)
                     Text(verbatim: page.blurb).font(.subheadline).foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -300,6 +300,11 @@ struct NotificationSettings: View {
                     Text("Off").tag(0)
                     ForEach([5, 10, 15, 30], id: \.self) { Text("\($0) minutes before").tag($0) }
                 } label: { SettingLabel("Meeting reminders", detail: "A heads-up before meetings from your invitations.") }
+                if model.eventReminderMinutes > 0 {
+                    Picker(selection: Binding(get: { model.reminderSound }, set: { model.reminderSound = $0 })) {
+                        ForEach(AlertSound.choices) { Text(verbatim: $0.title).tag($0) }
+                    } label: { SettingLabel("Reminder sound", detail: "Its own sound, so a meeting doesn't sound like an email.") }
+                }
             } footer: {
                 Text("Each mailbox can have its own setting: Mailboxes → Edit…. Workspaces you're not in stay quiet.")
             }
@@ -319,6 +324,9 @@ struct NotificationSettings: View {
                 }
                 Toggle(isOn: Binding(get: { model.showsMenuBarItem }, set: { model.showsMenuBarItem = $0 })) {
                     SettingLabel("Menu bar", detail: "Sign-in codes, links and the latest mail in the menu bar.")
+                }
+                Toggle(isOn: Binding(get: { model.showsDockBadge }, set: { model.showsDockBadge = $0 })) {
+                    SettingLabel("Unread count on the Dock icon", detail: "Drops as soon as you read your mail.")
                 }
             }
             #endif
@@ -383,7 +391,7 @@ struct ReadingSettings: View {
                 } label: { SettingLabel("Text size", detail: "For the mail you read; the rest of Margin stays the same.") }
                 // A line of mail at the chosen size.
                 Text("Hi Alex, the flat by the river is free in May. Shall I book it?")
-                    .font(.system(size: 15 * model.textScale))
+                    .font(.system(size: Look.size(15) * model.textScale))
                     .foregroundStyle(Ink.secondary)
                     .padding(.vertical, 2)
             } header: {
@@ -444,6 +452,9 @@ struct WritingSettings: View {
                     Text("Off").tag(0)
                     ForEach([5, 10, 20, 30], id: \.self) { Text("\($0) seconds").tag($0) }
                 } label: { SettingLabel("Undo send", detail: "How long you have to take a message back after Send.") }
+                Toggle(isOn: Binding(get: { model.remindsAboutAttachments }, set: { model.remindsAboutAttachments = $0 })) {
+                    SettingLabel("Forgotten attachment reminder", detail: "Asks before sending when a message mentions an attachment but has none.")
+                }
                 #if os(macOS)
                 LabeledContent("Email links") {
                     let _ = model.defaultAppRevision
@@ -455,6 +466,7 @@ struct WritingSettings: View {
                 }
                 #endif
             }
+            SentFromMarginSection(model: model)
             Section {
                 TextEditor(text: $instructions)
                     .frame(minHeight: 90)
@@ -510,14 +522,14 @@ struct ExperimentalSettings: View {
     var body: some View {
         Form {
             SettingsHeader(.experimental)
+            #if os(macOS)
             Section {
-                Toggle(isOn: Binding(get: { model.usesBlockComposer }, set: { model.usesBlockComposer = $0 })) {
-                    SettingLabel("Block editor in the composer",
-                                 detail: "Relevate's editor for new messages: type / for headings, lists, checklists, quotes, code and tables, and drag blocks by their handle.")
+                Toggle(isOn: Binding(get: { model.holdSpaceDictates }, set: { model.holdSpaceDictates = $0 })) {
+                    SettingLabel("Hold Space to dictate",
+                                 detail: "While writing, hold the space bar and speak. A short press is still a space.")
                 }
-            } footer: {
-                Text("Quick replies keep the simple editor. Needs a Mac with Apple silicon.")
             }
+            #endif
         }
         .formStyle(.grouped)
     }

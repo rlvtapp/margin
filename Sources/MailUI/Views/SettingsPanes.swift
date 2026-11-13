@@ -12,6 +12,7 @@ struct MailboxesSettings: View {
     @Bindable var model: MailModel
     @Binding var editing: UUID?
     @State private var removing: MailAccount?
+    @State private var signingIn: MailAccount?
 
     var body: some View {
         Form {
@@ -34,6 +35,10 @@ struct MailboxesSettings: View {
                                 .disabled(!model.canMoveAccount(account.id, by: -1))
                             Button("Move Down") { withAnimation(Motion.quick) { model.moveAccount(account.id, by: 1) } }
                                 .disabled(!model.canMoveAccount(account.id, by: 1))
+                            if model.canSignInAgain(account) {
+                                Divider()
+                                Button("Sign In Again…") { signingIn = account }
+                            }
                             Divider()
                             Button("Remove", role: .destructive) { removing = account }
                         } label: {
@@ -45,20 +50,75 @@ struct MailboxesSettings: View {
                 }
                 .onMove { model.moveAccounts(from: $0, to: $1) }
             } footer: {
-                if model.accounts.count > 1 {
-                    Text("Drag to change the order, here or in the account column.")
+                VStack(alignment: .leading, spacing: 4) {
+                    if model.accounts.count > 1 {
+                        Text("Drag to change the order, here or in the account column.")
+                    }
+                    if model.accounts.contains(where: model.canSignInAgain) {
+                        Text("If a mailbox stops signing in, choose Sign In Again from its menu. Your mail and settings stay as they are.")
+                    }
                 }
             }
             Section {
                 Button("Add Mailbox…") { model.isAddingAccount = true }
             }
+            SavedMailSection(model: model)
         }
         .formStyle(.grouped)
+        .signsInAgain(model: model, account: $signingIn, confirms: true)
         .confirmationDialog(Text("Remove this mailbox from Margin?"), isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
                             presenting: removing) { account in
             Button("Remove", role: .destructive) { model.remove(account.id) }
         } message: { _ in
             Text("Mail stays on the server. You can add the mailbox again later.")
+        }
+    }
+}
+
+/// How much older mail this device keeps, what that takes, and a way to take it out again.
+struct SavedMailSection: View {
+    @Bindable var model: MailModel
+    @State private var isClearing = false
+
+    var body: some View {
+        Section {
+            Picker("Keep on this device", selection: $model.keepMail) {
+                ForEach(KeepMail.allCases, id: \.self) { Text(verbatim: $0.title).tag($0) }
+            }
+            Picker(selection: $model.keepText) {
+                ForEach(KeepText.allCases, id: \.self) { Text(verbatim: $0.title).tag($0) }
+            } label: {
+                SettingLabel("Open recent mail instantly", detail: "Saves the text of mail from this stretch ahead of time.")
+            }
+            HStack {
+                // Room kept for both lines, so nothing moves when downloading starts or stops.
+                ZStack(alignment: .leading) {
+                    Text("Downloading older mail…").hidden()
+                    if let usage = model.savedMailUsage {
+                        let size = ByteCountFormatter.string(fromByteCount: Int64(usage.bytes), countStyle: .file)
+                        Text(model.isDownloadingOlder ? String(localized: "Downloading older mail…")
+                                                      : String(localized: "\(usage.messages) messages, \(size) on disk"))
+                    }
+                }
+                .foregroundStyle(.secondary)
+                Spacer()
+                Button("Clear Downloaded Mail") {
+                    isClearing = true
+                    Task {
+                        await model.clearDownloadedMail()
+                        isClearing = false
+                    }
+                }
+                .disabled(isClearing)
+            }
+        } footer: {
+            Text("Older mail's senders, subjects and previews are downloaded in the background, so it can be searched and scrolled without a connection. The text of recent mail is saved too, without its files, so opening it doesn't wait; older texts and all files come when a mail is opened. On iPhone and iPad only on Wi-Fi, and while charging or above 20% battery.")
+        }
+        .task {
+            while !Task.isCancelled {
+                await model.refreshSavedMailUsage()
+                try? await Task.sleep(for: .seconds(5))
+            }
         }
     }
 }
@@ -127,6 +187,15 @@ struct AppearanceSettings: View {
                 Text("Layout")
             }
             Section {
+                ChoiceTiles(options: Density.allCases, selection: $model.density,
+                            title: { $0 == .roomy ? String(localized: "Roomy") : String(localized: "Compact") },
+                            caption: { $0 == .roomy ? String(localized: "Bigger text and more room.") : String(localized: "Fits more on screen.") }) {
+                    DensityPreview(density: $0)
+                }
+            } header: {
+                Text("Size")
+            }
+            Section {
                 ChoiceTiles(options: [false, true], selection: $model.compactRows,
                             title: { $0 ? String(localized: "One line") : String(localized: "Three lines") },
                             caption: { $0 ? String(localized: "Fits the most mail on screen.") : String(localized: "Sender, subject and a preview.") }) {
@@ -137,6 +206,10 @@ struct AppearanceSettings: View {
                             title: { $0 ? String(localized: "Inset panel") : String(localized: "Edge to edge") },
                             caption: { $0 ? String(localized: "Mail sits in a rounded panel.") : String(localized: "Mail runs to the window's edges.") }) {
                     WindowStylePreview(inset: $0)
+                }
+                Toggle(isOn: Binding(get: { model.showsAccountRail }, set: { model.showsAccountRail = $0 })) {
+                    SettingLabel("Account column",
+                                 detail: "The column of mailboxes at the far left. Off, All inboxes, Home, the Calendar and your mailboxes move to the top of the sidebar.")
                 }
                 Toggle(isOn: $model.buttonNames) {
                     SettingLabel("Show button names",
@@ -467,7 +540,7 @@ struct BackupSettings: View {
             }
             Section {
                 LabeledContent {
-                    SecureField("Password", text: $password, prompt: Text("Optional")).labelsHidden().frame(maxWidth: 220)
+                    RevealableField(title: "Password", text: $password, prompt: Text("Optional")).frame(maxWidth: 220)
                 } label: { SettingLabel("Password") }
                 Toggle(isOn: $includeSecrets) { SettingLabel("Include mail passwords and API keys") }
                     .disabled(password.isEmpty)
@@ -556,8 +629,7 @@ struct BackupSettings: View {
                 }
                 #endif
                 LabeledContent {
-                    SecureField("Password", text: $autoPassword, prompt: Text(model.hasAutomaticBackupPassword ? "Saved in Keychain" : "Optional"))
-                        .labelsHidden()
+                    RevealableField(title: "Password", text: $autoPassword, prompt: Text(model.hasAutomaticBackupPassword ? "Saved in Keychain" : "Optional"))
                         .frame(maxWidth: 200)
                     Button("Save Password") {
                         model.setAutomaticBackupPassword(autoPassword)
@@ -695,7 +767,7 @@ struct AboutSettings: View {
                 AppIconPreview(choice: model.appIcon, dark: model.appIconDark, size: 84)
                     .shadow(color: .black.opacity(0.14), radius: 12, y: 6)
                 Text(verbatim: model.environment.appName)
-                    .font(.system(size: 26, weight: .bold))
+                    .font(.system(size: Look.size(26), weight: .bold))
                     .foregroundStyle(Ink.primary)
                     .padding(.top, 16)
                 Text("Version \(Self.version)")
@@ -711,7 +783,7 @@ struct AboutSettings: View {
                         RelevateLogo()
                             .fill(Ink.secondary)
                             .aspectRatio(RelevateLogo.aspect, contentMode: .fit)
-                            .frame(height: 22)
+                            .frame(height: Look.gap(22))
                     }
                     .contentShape(Rectangle())
                 }
@@ -745,13 +817,13 @@ private struct TellUsCard: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 14) {
                 Text(verbatim: "𝕏")
-                    .font(.system(size: 22, weight: .heavy))
+                    .font(.system(size: Look.size(22), weight: .heavy))
                     .foregroundStyle(Ink.inverse)
                     .frame(width: 40, height: 40)
                     .background(Ink.inverse.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Something broken?")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: Look.size(16), weight: .semibold))
                         .foregroundStyle(Ink.inverse)
                     Text("Because nothing is tracked, we won't know when something breaks until you tell us.")
                         .font(TypeScale.label)
@@ -781,12 +853,12 @@ private struct HandleRow: View {
         Link(destination: URL(string: url)!) {
             HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(verbatim: handle).font(.system(size: 14, weight: .semibold)).foregroundStyle(Ink.inverse)
+                    Text(verbatim: handle).font(.system(size: Look.size(14), weight: .semibold)).foregroundStyle(Ink.inverse)
                     Text(who).font(TypeScale.caption).foregroundStyle(Ink.inverse.opacity(0.6))
                 }
                 Spacer()
                 Image(systemName: "arrow.up.right")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: Look.size(12), weight: .bold))
                     .foregroundStyle(Ink.inverse.opacity(isHovered ? 1 : 0.6))
                     .offset(x: isHovered ? 2 : 0, y: isHovered ? -2 : 0)
             }

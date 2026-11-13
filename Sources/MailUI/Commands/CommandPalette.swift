@@ -12,7 +12,11 @@ struct CommandPalette: View {
         let all = MailCommand.all(for: model).filter { !$0.needsThread || model.selectedThread != nil }
         let trimmed = query.trimmingCharacters(in: .whitespaces).lowercased()
         guard !trimmed.isEmpty else { return all }
-        let matches = all.filter { Self.matches($0.title.lowercased(), trimmed) }
+        // Best fit first: the title's start, then a word's start, then anywhere, then initials.
+        let matches = all.enumerated()
+            .compactMap { index, command in Self.score(command.title, trimmed).map { (command, $0, index) } }
+            .sorted { $0.1 != $1.1 ? $0.1 > $1.1 : $0.2 < $1.2 }
+            .map(\.0)
         let search = MailCommand(id: "searchFor", title: "Search mail for “\(query)”", symbol: "magnifyingglass", keys: ["↩"], needsThread: false) { [query] model in
             model.searchText = query
         }
@@ -44,10 +48,10 @@ struct CommandPalette: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: Space.s) {
-                Image(systemName: "command").font(.system(size: 13)).foregroundStyle(Ink.tertiary)
+                Image(systemName: "command").font(.system(size: Look.size(13))).foregroundStyle(Ink.tertiary)
                 TextField("Type a command or search…", text: $query)
                     .textFieldStyle(.plain)
-                    .font(.system(size: 15))
+                    .font(.system(size: Look.size(15)))
                     .focused($focused)
                     .onSubmit(runHighlighted)
             }
@@ -87,7 +91,7 @@ struct CommandPalette: View {
     private func row(_ command: MailCommand, isHighlighted: Bool) -> some View {
         HStack(spacing: Space.m) {
             Image(systemName: command.symbol)
-                .font(.system(size: 12.5))
+                .font(.system(size: Look.size(12.5)))
                 .foregroundStyle(isHighlighted ? Ink.primary : Ink.tertiary)
                 .frame(width: 18)
             Text(command.title)
@@ -97,7 +101,7 @@ struct CommandPalette: View {
             if !command.keys.isEmpty { KeyCap(keys: command.keys) }
         }
         .padding(.horizontal, 10)
-        .frame(height: 34)
+        .frame(height: Look.gap(34))
         .background(isHighlighted ? Fill.two : .clear, in: RoundedRectangle(cornerRadius: Radius.row, style: .continuous))
         .contentShape(Rectangle())
     }
@@ -118,15 +122,37 @@ struct CommandPalette: View {
         model.focusRequest += 1
     }
 
-    /// Letters in order, so "mkd" finds "Mark done".
-    static func matches(_ text: String, _ query: String) -> Bool {
-        if text.contains(query) { return true }
-        var remaining = query[...]
-        for char in text where char == remaining.first {
-            remaining = remaining.dropFirst()
-            if remaining.isEmpty { return true }
+    static func matches(_ text: String, _ query: String) -> Bool { score(text, query) != nil }
+
+    /// How well a title fits what's typed, higher is better; nil when it doesn't. The start of
+    /// the title, the start of a word, every typed word starting a word, anywhere in it, the
+    /// words' initials ("md" for Mark done), and last letters in order close together ("mkd").
+    /// Letters scattered across a long title don't count: they matched nearly everything.
+    static func score(_ title: String, _ typed: String) -> Int? {
+        let text = title.lowercased()
+        let query = typed.lowercased().trimmingCharacters(in: .whitespaces)
+        guard !query.isEmpty else { return 0 }
+        if text == query { return 1000 }
+        if text.hasPrefix(query) { return 900 }
+        let words = text.split { !$0.isLetter && !$0.isNumber }.map(String.init)
+        if let index = words.firstIndex(where: { $0.hasPrefix(query) }) { return 800 - min(index, 50) }
+        let parts = query.split(separator: " ").map(String.init)
+        if parts.count > 1, parts.allSatisfy({ part in words.contains { $0.hasPrefix(part) } }) { return 700 }
+        if query.count >= 3, text.contains(query) { return 600 }
+        if query.count >= 2, !query.contains(" "), String(words.compactMap(\.first)).hasPrefix(query) { return 500 }
+        // Letters in order, starting a word and close together.
+        guard query.count >= 3, !query.contains(" ") else { return nil }
+        let characters = Array(text)
+        for start in characters.indices where characters[start] == query.first && (start == 0 || !characters[start - 1].isLetter) {
+            var remaining = query.dropFirst()[...]
+            var end = start
+            while let next = remaining.first, end + 1 < characters.count, end - start < query.count + 4 {
+                end += 1
+                if characters[end] == next { remaining = remaining.dropFirst() }
+            }
+            if remaining.isEmpty { return 300 }
         }
-        return remaining.isEmpty
+        return nil
     }
 }
 
@@ -141,7 +167,7 @@ struct ShortcutsView: View {
                 CloseKeyCap { model.isShowingShortcuts = false }
             }
             .padding(.horizontal, Space.l)
-            .frame(height: 44)
+            .frame(height: Look.gap(44))
             Rectangle().fill(Line.hairline).frame(height: 1)
             ScrollView {
                 VStack(spacing: 2) {
@@ -163,6 +189,6 @@ struct ShortcutsView: View {
             Spacer()
             KeyCap(keys: keys)
         }
-        .frame(height: 28)
+        .frame(height: Look.gap(28))
     }
 }

@@ -11,6 +11,8 @@ public struct MailSettingsView: View {
     @State private var selection: SettingsPage? = .mailboxes
     @State private var search = ""
     @State private var editingAccount: UUID?
+    /// Pages visited, for Back and Forward in the toolbar, as in a browser.
+    @State private var history = SettingsHistory()
 
     public init(model: MailModel) { self.model = model }
 
@@ -40,6 +42,21 @@ public struct MailSettingsView: View {
                 if !page.matches(query), let first = SettingsPage.sections(matching: query).first?.first { selection = first }
             }
             .onChange(of: selection) { _, new in if let new { page = new } }
+            .onChange(of: page) { old, new in history.visited(from: old, to: new) }
+            // Another part of Margin asked for a page (the Help panel).
+            .onChange(of: model.settingsPageRequest) { _, request in
+                guard let request, let wanted = SettingsPage(rawValue: request) else { return }
+                model.settingsPageRequest = nil
+                search = ""
+                selection = wanted
+            }
+            .onAppear {
+                if let request = model.settingsPageRequest, let wanted = SettingsPage(rawValue: request) {
+                    model.settingsPageRequest = nil
+                    page = wanted
+                    selection = wanted
+                }
+            }
             .toolbar(removing: .sidebarToggle)
             .navigationSplitViewColumnWidth(215)
         } detail: {
@@ -51,12 +68,33 @@ public struct MailSettingsView: View {
                 .toolbar(removing: .title)
                 .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
                 #endif
+                .toolbar {
+                    ToolbarItemGroup(placement: .navigation) {
+                        Button { go(history.back(from: page)) } label: { Image(systemName: "chevron.backward") }
+                            .disabled(!history.canGoBack)
+                            .keyboardShortcut("[", modifiers: .command)
+                            .help(Text("Back"))
+                        Button { go(history.forward(from: page)) } label: { Image(systemName: "chevron.forward") }
+                            .disabled(!history.canGoForward)
+                            .keyboardShortcut("]", modifiers: .command)
+                            .help(Text("Forward"))
+                    }
+                }
         }
         .frame(width: 780, height: 580)
         .sheet(isPresented: $model.isAddingAccount) { AccountSetupView(model: model) }
         .sheet(item: Binding(get: { editingAccount.map(IdentifiedID.init) }, set: { editingAccount = $0?.id })) { item in
             SignatureEditor(model: model, accountID: item.id)
         }
+    }
+
+    /// Goes to a page from history without recording the move as a new visit.
+    private func go(_ target: SettingsPage?) {
+        guard let target else { return }
+        history.isMoving = true
+        search = ""
+        page = target
+        selection = target
     }
 
     @ViewBuilder
@@ -83,3 +121,34 @@ public struct MailSettingsView: View {
 }
 
 private struct IdentifiedID: Identifiable { let id: UUID }
+
+/// Settings pages visited, so Back and Forward work as in a browser.
+struct SettingsHistory: Equatable {
+    var backStack: [SettingsPage] = []
+    var forwardStack: [SettingsPage] = []
+    /// Set while Back or Forward moves, so that move isn't a new visit.
+    var isMoving = false
+
+    var canGoBack: Bool { !backStack.isEmpty }
+    var canGoForward: Bool { !forwardStack.isEmpty }
+
+    mutating func visited(from old: SettingsPage, to new: SettingsPage) {
+        if isMoving { isMoving = false; return }
+        guard old != new else { return }
+        backStack.append(old)
+        if backStack.count > 50 { backStack.removeFirst() }
+        forwardStack = []
+    }
+
+    mutating func back(from current: SettingsPage) -> SettingsPage? {
+        guard let target = backStack.popLast() else { return nil }
+        forwardStack.append(current)
+        return target
+    }
+
+    mutating func forward(from current: SettingsPage) -> SettingsPage? {
+        guard let target = forwardStack.popLast() else { return nil }
+        backStack.append(current)
+        return target
+    }
+}

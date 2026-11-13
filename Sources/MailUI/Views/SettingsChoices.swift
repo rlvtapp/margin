@@ -67,7 +67,7 @@ struct ChoiceList<Value: Hashable>: View {
                 Button { selection = option } label: {
                     HStack(alignment: .top, spacing: Space.m) {
                         Image(systemName: symbol(option))
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.system(size: Look.size(14), weight: .medium))
                             .foregroundStyle(isOn ? Palette.accent : Ink.tertiary)
                             .frame(width: 22)
                             .padding(.top, 1)
@@ -78,7 +78,7 @@ struct ChoiceList<Value: Hashable>: View {
                         }
                         Spacer(minLength: Space.s)
                         Image(systemName: isOn ? "checkmark.circle.fill" : "circle")
-                            .font(.system(size: 16))
+                            .font(.system(size: Look.size(16)))
                             .foregroundStyle(isOn ? Palette.accent : Ink.quaternary)
                     }
                     .padding(10)
@@ -248,6 +248,28 @@ struct LayoutPreview: View {
         }
         .padding(6)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+}
+
+/// Roomy against compact: the same rows, bigger with more air, or smaller and closer.
+struct DensityPreview: View {
+    let density: Density
+
+    var body: some View {
+        let roomy = density == .roomy
+        VStack(alignment: .leading, spacing: roomy ? 10 : 5) {
+            ForEach(0..<(roomy ? 3 : 5), id: \.self) { index in
+                HStack(spacing: roomy ? 6 : 4) {
+                    Circle().fill(index == 0 ? Palette.accent : Ink.quaternary)
+                        .frame(width: roomy ? 11 : 7, height: roomy ? 11 : 7)
+                    Capsule().fill(Ink.secondary.opacity(0.7)).frame(width: roomy ? 34 : 22, height: roomy ? 5 : 3)
+                    Capsule().fill(Ink.tertiary.opacity(0.5)).frame(height: roomy ? 5 : 3)
+                }
+            }
+        }
+        .padding(roomy ? 10 : 7)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(Paper.panel)
     }
 }
 

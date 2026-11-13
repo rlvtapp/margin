@@ -115,14 +115,29 @@ struct IMAPTextPart: Hashable, Sendable {
 
     /// A one-line preview from the start of the part.
     func preview(from bytes: [UInt8]) -> String {
+        let text = text(from: bytes)
+        // `snippet` also catches HTML sent as plain text, before entities are decoded into it.
+        return HTMLText.snippet(isHTML || HTMLText.looksLikeHTML(text) ? HTMLText.plain(text) : HTMLText.decodeEntities(text))
+    }
+
+    /// The start of the part as text.
+    func text(from bytes: [UInt8]) -> String {
         var raw = bytes
         if encoding?.lowercased() == "base64" {
             // A cut-off base64 run only decodes in whole groups of four.
             let compact = bytes.filter { !($0 == 10 || $0 == 13 || $0 == 32 || $0 == 9) }
             raw = Array(compact.prefix(compact.count / 4 * 4))
         }
-        let text = Charset.string(from: MIMEMessage.decode(raw, encoding: encoding), charset: charset)
-        return HTMLText.snippet(isHTML ? HTMLText.plain(text) : HTMLText.decodeEntities(text))
+        return Charset.string(from: MIMEMessage.decode(raw, encoding: encoding), charset: charset)
+    }
+
+    /// A plain part that turned out to be HTML, fetched again with HTML's longer start, since
+    /// its first bytes are often only style code.
+    func againAsHTML(after bytes: [UInt8], preview: String) -> IMAPTextPart? {
+        guard !isHTML, preview.isEmpty, HTMLText.looksLikeHTML(text(from: bytes)) else { return nil }
+        var part = self
+        part.isHTML = true
+        return part
     }
 }
 

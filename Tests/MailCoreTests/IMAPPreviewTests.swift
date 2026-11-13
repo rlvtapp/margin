@@ -28,6 +28,28 @@ import Testing
         #expect(try #require(IMAPTextPart.find(in: leaf("TEXT", "PLAIN"))).section == "1")
     }
 
+    @Test func htmlSentAsPlainTextPreviewsAsText() {
+        // Some senders label HTML as text/plain; its style code must not become the preview.
+        let html = "<style type=\"text/css\"> html { height: 100%; } body { width: 100% !important; }</style><table><tr><td>Nieuwe zoekresultaten: 3 nieuwe advertenties</td></tr></table>"
+        let part = IMAPTextPart(section: "1", isHTML: false, encoding: "7BIT", charset: "utf-8")
+        #expect(part.preview(from: Array(html.utf8)) == "Nieuwe zoekresultaten: 3 nieuwe advertenties")
+
+        // Cut off inside the style block: nothing to show yet, so it's read again as HTML, longer.
+        let start = Array(html.utf8.prefix(40))
+        let cut = part.preview(from: start)
+        #expect(cut.isEmpty)
+        #expect(part.againAsHTML(after: start, preview: cut)?.previewBytes == 6144)
+        #expect(IMAPTextPart(section: "1", isHTML: false, encoding: nil, charset: nil).againAsHTML(after: Array("Hello".utf8), preview: "") == nil)
+    }
+
+    @Test func previewsSavedAsStyleCodeAreCleanedWhenRead() {
+        #expect(HTMLText.cleanedPreview("<style type=\"text/css\"> html { height: 100%; width: 100%; margin: 0; padding: 0; } body { width: 100% !important; height: 10…") == "")
+        #expect(HTMLText.cleanedPreview("Lunch on Friday? ------ See you") == "Lunch on Friday? See you")
+        #expect(!HTMLText.looksLikeHTML("<3 thanks for lunch"))
+        #expect(!HTMLText.looksLikeHTML("Use <b> for bold"))
+        #expect(HTMLText.looksLikeHTML("  <!DOCTYPE html><html>"))
+    }
+
     @Test func decodesACutOffBase64HTMLStart() {
         let html = "<html><head><style>p{}</style></head><body><p>Hi Kaan,</p><p>Dinner on Friday?</p></body></html>"
         var encoded = Array(Data(html.utf8).base64EncodedString(options: .lineLength76Characters).utf8)

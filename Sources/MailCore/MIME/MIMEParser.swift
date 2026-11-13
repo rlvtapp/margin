@@ -279,10 +279,26 @@ public enum HTMLText {
     }
 
     public static func snippet(_ text: String, length: Int = 160) -> String {
+        // Some senders put HTML in the part marked plain text; its style code is no preview.
+        let text = looksLikeHTML(text) ? plain(text) : text
         let lines = text.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
             .filter { !$0.isEmpty && !$0.hasPrefix(">") }
         let joined = tidyPreview(lines.joined(separator: " "))
         return joined.count > length ? String(joined.prefix(length)) + "…" : joined
+    }
+
+    /// Whether "plain" text is really HTML: it starts with a document or layout tag.
+    public static func looksLikeHTML(_ text: String) -> Bool {
+        let start = text.drop { $0.isWhitespace || $0 == "\u{FEFF}" }.prefix(200)
+        guard start.first == "<" else { return false }
+        return start.range(of: #"^<(!doctype|html|head|body|style|meta|title|table|div|center|font|span|p|link|o:|xml|!--)[\s>/:]"#,
+                           options: [.regularExpression, .caseInsensitive]) != nil
+    }
+
+    /// A saved preview made clean: one that is HTML (saved before Margin checked) becomes its
+    /// text, or nothing when only style code was saved; dividers are tidied away.
+    public static func cleanedPreview(_ preview: String) -> String {
+        looksLikeHTML(preview) ? snippet(preview) : tidyPreview(preview)
     }
 
     /// A preview without the dividers plain-text mail draws with characters ("-------",

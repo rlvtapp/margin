@@ -27,6 +27,21 @@ public enum NewsletterReport {
     /// Groups newsletter messages by list and counts how many were opened. A message counts as
     /// opened when it's read on the server or its id is in `openedIDs` (opened in Margin).
     public static func senders(from threads: [MailThread], openedIDs: Set<String> = []) -> [NewsletterSender] {
+        senders(from: lists(in: threads), openedIDs: openedIDs)
+    }
+
+    /// One mailing list's mail, as found in the conversations given.
+    public struct MailingList: Sendable {
+        public var key: String
+        public var messages: [MailMessage]
+        public var latest: MailThread
+        public var newest: MailMessage
+    }
+
+    /// The first half of `senders`: going through every conversation and grouping what's from
+    /// mailing lists. It depends only on the mail, so it can be kept while newsletters are being
+    /// opened one after another (which changes only the counts below).
+    public static func lists(in threads: [MailThread]) -> [MailingList] {
         var groups: [String: (messages: [MailMessage], threads: [MailThread])] = [:]
         var seen = Set<String>()
         for thread in threads {
@@ -44,10 +59,17 @@ public enum NewsletterReport {
             // A list that people write to (a team's or club's group, a discussion list) carries
             // one List-Id for everyone's mail: that's not a newsletter to unsubscribe from.
             if Set(group.messages.map { $0.from.address.lowercased() }).count >= 3 { return nil }
-            let opened = group.messages.filter { !$0.isUnread || openedIDs.contains(identity($0)) }.count
+            return MailingList(key: key, messages: group.messages, latest: latest, newest: newest)
+        }
+    }
+
+    /// The second half: how much of each list was opened.
+    public static func senders(from lists: [MailingList], openedIDs: Set<String>) -> [NewsletterSender] {
+        lists.map { list in
+            let opened = list.messages.filter { !$0.isUnread || openedIDs.contains(identity($0)) }.count
             return NewsletterSender(
-                id: key, name: listName(newest) ?? newest.from.displayName, address: newest.from.address,
-                received: group.messages.count, opened: opened, lastReceived: newest.date, latest: latest
+                id: list.key, name: listName(list.newest) ?? list.newest.from.displayName, address: list.newest.from.address,
+                received: list.messages.count, opened: opened, lastReceived: list.newest.date, latest: list.latest
             )
         }
         .sorted { $0.openRate == $1.openRate ? $0.received > $1.received : $0.openRate < $1.openRate }

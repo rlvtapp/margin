@@ -37,10 +37,14 @@ public enum HTMLSanitizer {
         html = html.replacing(pattern: "<base\\b[^>]*>", with: "")
         // Forms could post what you type to anywhere; keep their content, drop the form.
         html = html.replacing(pattern: "</?form\\b[^>]*>", with: "")
-        // Event handlers: onclick=, onload=, onerror=…
-        html = html.replacing(pattern: "\\s+on[a-z]+\\s*=\\s*(\"[^\"]*\"|'[^']*'|[^\\s>]+)", with: "")
-        // Script URLs in links and sources.
-        html = html.replacing(pattern: "(href|src|action|background)\\s*=\\s*([\"']?)\\s*(javascript|vbscript|livescript):[^\"'\\s>]*", with: "$1=$2#")
+        // Event handlers: onclick=, onload=, onerror=… Also right after a slash or a quote
+        // (<svg/onload=…>, src="x"onerror=…), which browsers accept as well.
+        html = html.replacing(pattern: "(<[a-z][a-z0-9-]*)/+on[a-z]+\\s*=\\s*(\"[^\"]*\"|'[^']*'|[^\\s>]+)", with: "$1 ")
+        html = html.replacing(pattern: "(?<=[\\s\"'])on[a-z]+\\s*=\\s*(\"[^\"]*\"|'[^']*'|[^\\s>]+)", with: " ")
+        // An inline page instead of the mail.
+        html = html.replacing(pattern: "\\s+srcdoc\\s*=\\s*(\"[^\"]*\"|'[^']*'|[^\\s>]+)", with: "")
+        // Script and page URLs in links and sources, however they're disguised.
+        html = neutralizingURLs(html)
 
         let remote = count(in: html, pattern: "(src|background|srcset)\\s*=\\s*[\"']?\\s*https?://")
             + count(in: html, pattern: "url\\(\\s*[\"']?\\s*https?://")
@@ -64,6 +68,47 @@ public enum HTMLSanitizer {
                 + count(in: cleaned.html, pattern: "<link\\b[^>]*href\\s*=\\s*[\"']?https?://")
         }
         return safe
+    }
+
+    /// Attributes that point somewhere. A value that turns out to be a script (`javascript:`),
+    /// or a whole page (`data:text/html`), once its character references, spaces and control
+    /// characters are undone, becomes "#". Pictures as data stay.
+    private static let urlAttribute = try? NSRegularExpression(
+        pattern: "(\\b(?:href|src|action|formaction|background|poster|xlink:href|dynsrc|lowsrc)\\s*=\\s*)(\"[^\"]*\"|'[^']*'|[^\\s>]+)",
+        options: [.caseInsensitive])
+
+    static func neutralizingURLs(_ html: String) -> String {
+        guard let regex = urlAttribute else { return html }
+        let text = html as NSString
+        var result = ""
+        var last = 0
+        for match in regex.matches(in: html, range: NSRange(location: 0, length: text.length)) {
+            let valueRange = match.range(at: 2)
+            var value = text.substring(with: valueRange)
+            let quote = value.first.flatMap { $0 == "\"" || $0 == "'" ? String($0) : nil } ?? ""
+            if !quote.isEmpty { value = String(value.dropFirst().dropLast()) }
+            guard isDangerousURL(value) else { continue }
+            result += text.substring(with: NSRange(location: last, length: match.range.location - last))
+            result += text.substring(with: match.range(at: 1)) + quote + "#" + quote
+            last = match.range.location + match.range.length
+        }
+        guard last > 0 else { return html }
+        return result + text.substring(from: last)
+    }
+
+    /// Whether a link or source runs script or replaces the mail with another page.
+    static func isDangerousURL(_ raw: String) -> Bool {
+        // Browsers ignore spaces, tabs, newlines and control characters inside the scheme, and
+        // decode references like &#x6A; or &colon; first.
+        let decoded = HTMLText.decodeEntities(raw.replacingOccurrences(of: "&colon;", with: ":", options: .caseInsensitive)
+            .replacingOccurrences(of: "&tab;", with: "", options: .caseInsensitive)
+            .replacingOccurrences(of: "&newline;", with: "", options: .caseInsensitive))
+        let compact = String(decoded.unicodeScalars.filter { !CharacterSet.whitespacesAndNewlines.contains($0) && !CharacterSet.controlCharacters.contains($0) })
+            .lowercased()
+        for scheme in ["javascript:", "vbscript:", "livescript:", "data:text/html", "data:application/xhtml", "data:image/svg+xml"] where compact.hasPrefix(scheme) {
+            return true
+        }
+        return false
     }
 
     private static func count(in text: String, pattern: String) -> Int {

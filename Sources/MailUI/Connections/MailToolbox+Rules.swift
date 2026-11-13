@@ -16,8 +16,8 @@ enum RuleTools {
     """#
 
     private static let action = #"""
-    "action":{"type":"string","enum":["archive","trash","mark_read","star","label","group","move"],"description":"What to do with matching new mail: archive, trash, mark_read, star (Margin's way to mark mail important), label (adds a label), group (puts it in one of Home's groups from list_groups), move (to a folder from list_folders)."},
-    "target":{"type":"string","description":"The label, group or folder name, for label, group and move."}
+    "action":{"type":"string","enum":["archive","trash","mark_read","star","label","group","move","forward","answer","quiet"],"description":"What to do with matching new mail: archive, trash, mark_read, star (Margin's way to mark mail important), label (adds a label), group (puts it in one of Home's groups from list_groups), move (to a folder from list_folders), forward (to an address), answer (replies to the sender with a text, at most every 4 days per sender, never to lists), quiet (no alert). forward and answer send mail by themselves and need the person's permission to send."},
+    "target":{"type":"string","description":"The label, group or folder name for label, group and move; the address for forward; the reply text for answer."}
     """#
 
     static func tools(allowChanges: Bool) -> [MCPTool] {
@@ -111,7 +111,7 @@ extension MailModel {
 
     /// Inbox conversations whose newest message the rule matches, as it would on arrival.
     func ruleMatches(_ rule: MailRule) -> [MailThread] {
-        inboxThreads(rule.accountID).filter { isVisible($0) && rule.matches($0.latest) }
+        inboxMatches(rule).filter(isVisible)
     }
 
     /// A rule from tool arguments, checked: a known field, some text, a known mailbox, and a
@@ -153,7 +153,7 @@ extension MailModel {
             let kind = ruleActionKind(base.action)
             action = try ruleAction(kind, target: target ?? ruleTarget(base.action), accountID: accountID)
         } else if needsAction {
-            throw MCPToolError("“action” is needed: archive, trash, mark_read, star, label, group or move.")
+            throw MCPToolError("“action” is needed: archive, trash, mark_read, star, label, group, move, forward, answer or quiet.")
         } else {
             action = .archive
         }
@@ -193,8 +193,22 @@ extension MailModel {
                 throw MCPToolError("No folder “\(target)” in \(place). Use list_folders, or create_folder first.")
             }
             return .move(found.name)
+        case "forward", "answer":
+            // These send mail with nobody looking, so they need the permission to send.
+            guard connectionSettings.allowSending else {
+                throw MCPToolError("Rules that forward or answer send mail by themselves, so they need “Allow sending” in Margin's settings.")
+            }
+            let text = (target ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            if kind == "forward" {
+                guard EmailAddress.isValid(text) else { throw MCPToolError("“target” must be the address to forward to.") }
+                return .forward(text)
+            }
+            guard !text.isEmpty, text.count <= 2_000 else { throw MCPToolError("“target” must be the answer's text, up to 2000 characters.") }
+            return .answer(text)
+        case "quiet", "mute", "silence":
+            return .quiet
         default:
-            throw MCPToolError("“action” must be archive, trash, mark_read, star, label, group or move.")
+            throw MCPToolError("“action” must be archive, trash, mark_read, star, label, group, move, forward, answer or quiet.")
         }
     }
 
@@ -206,12 +220,15 @@ extension MailModel {
         case .star: "star"
         case .label(let name): emailGroups.contains { $0.name.caseInsensitiveCompare(name) == .orderedSame } ? "group" : "label"
         case .move: "move"
+        case .forward: "forward"
+        case .answer: "answer"
+        case .quiet: "quiet"
         }
     }
 
     private func ruleTarget(_ action: MailRule.Action) -> String? {
         switch action {
-        case .label(let name), .move(let name): name
+        case .label(let name), .move(let name), .forward(let name), .answer(let name): name
         default: nil
         }
     }
@@ -246,6 +263,9 @@ extension MailModel {
         case .star: "star"
         case .label(let name): "label “\(name)”"
         case .move(let folder): "move to “\(folder)”"
+        case .forward(let address): "forward to \(address)"
+        case .answer(let text): "answer “\(text.prefix(60))”"
+        case .quiet: "no alert"
         }
         return "When \(rule.field.rawValue.capitalized) contains “\(rule.contains)”: \(action) (\(mailbox))"
     }

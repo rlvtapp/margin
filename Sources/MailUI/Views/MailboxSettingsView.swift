@@ -26,6 +26,15 @@ struct SignatureEditor: View {
             Form {
                 if let account = Binding($account) {
                     Section {
+                        TextField("Mailbox name", text: Binding(
+                            get: { account.wrappedValue.label },
+                            set: { account.wrappedValue.label = $0 }
+                        ), prompt: Text(verbatim: account.wrappedValue.address.address))
+                    } footer: {
+                        Text("What Margin calls this mailbox, like Work or Personal. Only you see it.")
+                    }
+
+                    Section {
                         TextField("Sender name", text: Binding(
                             get: { account.wrappedValue.address.name ?? "" },
                             set: { account.wrappedValue.address.name = $0.isEmpty ? nil : $0 }
@@ -57,6 +66,14 @@ struct SignatureEditor: View {
                     Section {
                         HStack(spacing: Space.m) {
                             AccountMark(account.wrappedValue, size: 44)
+                                // Drop a picture on it to use it.
+                                .dropDestination(for: Data.self) { items, _ in
+                                    guard let data = items.first else { return false }
+                                    model.setPicture(data, for: accountID)
+                                    account.wrappedValue.picture = model.account(accountID)?.picture
+                                    return true
+                                }
+                                .help(Text("Drop a picture here, or choose one"))
                             Button("Choose Picture…") { choosingPicture = true }
                             if account.wrappedValue.picture != nil {
                                 Button("Remove", role: .destructive) {
@@ -114,6 +131,14 @@ struct SignatureEditor: View {
                                 .textFieldStyle(.plain)
                                 .frame(maxWidth: 170)
                                 .accessibilityLabel(Text("Name for \(alias.address)"))
+                                AliasSignatureButton(signature: Binding(
+                                    get: { account.wrappedValue.aliasSignatures?[alias.address.lowercased()] ?? "" },
+                                    set: { value in
+                                        var all = account.wrappedValue.aliasSignatures ?? [:]
+                                        all[alias.address.lowercased()] = value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : value
+                                        account.wrappedValue.aliasSignatures = all.isEmpty ? nil : all
+                                    }
+                                ), address: alias.address)
                                 Button(role: .destructive) { account.wrappedValue.aliases?.remove(at: index) } label: {
                                     Image(systemName: "minus.circle")
                                 }
@@ -424,7 +449,7 @@ struct SignatureMenu: View {
                 Button("No signature") { state.use(signature: nil) }
             } label: {
                 Image(systemName: "signature")
-                    .font(.system(size: 12.5))
+                    .font(.system(size: Look.size(12.5)))
                     .foregroundStyle(Ink.tertiary)
                     .frame(width: 28, height: 28)
                     .accessibilityLabel(Text("Signature"))
@@ -467,5 +492,35 @@ public struct MailboxSettingsSnapshot: View {
 
     public var body: some View {
         if let id = model.accounts.first?.id { SignatureEditor(model: model, accountID: id) }
+    }
+}
+
+/// A send-as address's own signature, in a popover from its row; empty uses the mailbox's.
+struct AliasSignatureButton: View {
+    @Binding var signature: String
+    let address: String
+    @State private var isOpen = false
+
+    var body: some View {
+        Button { isOpen = true } label: {
+            Image(systemName: signature.isEmpty ? "signature" : "signature.fill")
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(signature.isEmpty ? Ink.tertiary : Ink.primary)
+        .help(Text("Signature for \(address)"))
+        .popover(isPresented: $isOpen) {
+            VStack(alignment: .leading, spacing: Space.s) {
+                Text("Signature for \(address)").font(TypeScale.rowStrong)
+                TextEditor(text: $signature)
+                    .font(.system(size: 13))
+                    .frame(width: 320, height: 120)
+                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Line.edge))
+                Text("Mail sent as this address uses it. Leave it empty to use the mailbox's signature.")
+                    .font(TypeScale.caption).foregroundStyle(Ink.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(Space.m)
+            .frame(width: 352)
+        }
     }
 }

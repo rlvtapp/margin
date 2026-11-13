@@ -13,6 +13,7 @@ struct MarginTouchApp: App {
         environment: ProcessInfo.processInfo.arguments.contains("-sample-mail") ? .preview() : .standard
     )
     @Environment(\.scenePhase) private var scenePhase
+    @State private var wasPutAway = false
     @UIApplicationDelegateAdaptor private var pushes: PushDelegate
 
     /// The background check iOS runs now and then, as permitted in the Info.plist.
@@ -33,13 +34,23 @@ struct MarginTouchApp: App {
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .background:
+                wasPutAway = true
                 // A Done or Trash still inside its undo window is sent before the app is put away.
                 Task { await model.flushPendingChange() }
                 // Open connections are suspended in the background; iOS wakes us instead.
                 model.stopWatching()
+                // The background download of older mail stops too; it carries on when back.
+                model.stopDownloading()
                 Self.scheduleRefresh()
             case .active:
+                // Connections don't survive being put away: coming back, they're made anew and
+                // mail is fetched, instead of the first requests failing on dead ones.
+                if wasPutAway {
+                    wasPutAway = false
+                    Task { await model.reconnect() }
+                }
                 model.startWatching()
+                if !model.environment.isPreview { model.startDownloading() }
                 Task { await model.refreshPushSubscriptions() }
             default:
                 break

@@ -34,6 +34,10 @@ extension MailModel {
     }
 
     func rebuildIntelligence() {
+        guard usesAI else {
+            intelligence = nil
+            return
+        }
         let key = environment.keychain.read(key: assistantSettings.provider.keychainKey)
         intelligence = assistantSettings.makeModel(apiKey: key).map(MailIntelligence.init(model:))
     }
@@ -49,6 +53,7 @@ extension MailModel {
             defer { assistantWork.remove(key) }
             do {
                 summaries[thread.id] = try await intelligence.summarize(thread, bodies: bodies(of: thread), me: account.address)
+                saveSummaries()
             } catch {
                 show(error)
             }
@@ -57,6 +62,35 @@ extension MailModel {
 
     public func dismissSummary(of thread: MailThread) {
         summaries[thread.id] = nil
+        saveSummaries()
+    }
+
+    // Kept across launches, so a conversation is never summarised twice, but only while its
+    // newest email is still the one the summary read.
+
+    private struct SavedSummary: Codable {
+        var threadID: String
+        var latestMessageID: String
+        var summary: ThreadSummary
+    }
+
+    private var summariesFile: JSONFile<[SavedSummary]> { JSONFile(url: environment.folder.appending(path: "summaries.json")) }
+
+    private func saveSummaries() {
+        guard !environment.isPreview else { return }
+        let threads = Dictionary((inboxThreads(nil) + folder).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let saved = summaries.compactMap { id, summary in threads[id].map { SavedSummary(threadID: id, latestMessageID: $0.latest.id, summary: summary) } }
+        summariesFile.save(Array(saved.suffix(300)))
+    }
+
+    /// Puts back saved summaries whose conversation hasn't had new mail since.
+    func restoreSummariesIfNeeded() {
+        guard !summariesRestored, !environment.isPreview else { return }
+        summariesRestored = true
+        let latest = Dictionary(inboxThreads(nil).map { ($0.id, $0.latest.id) }, uniquingKeysWith: { first, _ in first })
+        for saved in summariesFile.load() ?? [] where latest[saved.threadID] == saved.latestMessageID && summaries[saved.threadID] == nil {
+            summaries[saved.threadID] = saved.summary
+        }
     }
 
     // MARK: Labels
@@ -94,7 +128,7 @@ extension MailModel {
     }
 
     public func suggestLabelsForSelected() {
-        guard let thread = selectedThread, let intelligence else { return }
+        guard let thread = selectedThread, let intelligence = quickIntelligence else { return }
         let key = "labels|\(thread.id)"
         guard !assistantWork.contains(key) else { return }
         assistantWork.insert(key)
@@ -133,10 +167,17 @@ extension MailModel {
             defer { assistantWork.remove("reply") }
             do {
                 let recipient = reply.flatMap { EmailAddress.parseList($0.to)?.first }
-                let style = writingStyle(for: recipient, account: account, language: languageOf(thread))
+                let style = writingStyle(for: recipient, account: account, language: languageOf(thread), theirText: theirLatestText(in: thread))
+                // The draft fills in as it's written, instead of appearing all at once at the end.
                 let text = try await intelligence.write(resolved, thread: thread, bodies: bodies(of: thread), me: account.address,
-                                                        draft: typed, style: style)
-                if reply != nil { reply?.draft.text = inYourStyle(text, language: languageOf(thread)) }
+                                                        draft: typed, style: style) { [weak self] written in
+                    await MainActor.run {
+                        guard let self, self.reply != nil, !written.isEmpty else { return }
+                        // "Sent from Margin" stays under what's written.
+                        self.reply?.draft.text = written + (self.reply?.sentFrom ?? "")
+                    }
+                }
+                if reply != nil { reply?.draft.text = inYourStyle(text, language: languageOf(thread)) + (reply?.sentFrom ?? "") }
             } catch {
                 show(error)
             }
@@ -163,6 +204,9 @@ extension MailModel {
             "have", "has", "had", "any", "anything", "something", "what", "when", "where", "who", "why", "how", "which",
             "to", "of", "in", "on", "at", "for", "from", "with", "about", "and", "or", "can", "could", "should", "will",
             "would", "there", "this", "that", "it", "be", "show", "find", "tell", "give", "list", "please", "soon", "some",
+            // Words of the question itself, not of the mail it's about: "reply" alone finds every no-reply sender.
+            "need", "needs", "reply", "replies", "answer", "mail", "mails", "email", "emails", "message", "messages",
+            "today", "now", "new", "get", "got", "still",
             "de", "het", "een", "ik", "mijn", "heb", "is", "er", "wat", "wanneer", "waar", "wie", "hoe", "van", "voor", "met",
             "der", "die", "das", "ein", "eine", "ich", "mein", "habe", "ist", "was", "wann", "wo", "wer", "wie", "für", "mit",
             "le", "la", "les", "un", "une", "je", "mon", "ma", "est", "quand", "où", "qui", "quoi", "pour", "avec",
@@ -192,17 +236,23 @@ extension MailModel {
                 lines.append("- \(event.title), \(when)\(place)")
             }
         }
+        // Every heading is always there, with "none" when it's empty: a model that isn't told
+        // nothing needs a reply answers the question with whatever else it was given.
         let bills = unopenedBills.prefix(5)
-        if !bills.isEmpty {
+        if bills.isEmpty {
+            lines.append("Bills not opened yet: none.")
+        } else {
             lines.append("Bills not opened yet:")
             for bill in bills { lines.append("- \(bill.subject) from \(bill.latest.from.displayName), \(bill.date.formatted(date: .abbreviated, time: .omitted))\(cite(bill))") }
         }
         let owed = allInboxesThreads(nil).filter { !isSnoozed($0) && owesReply($0, now: now) }.prefix(8)
-        if !owed.isEmpty {
+        if owed.isEmpty {
+            lines.append("Mail that needs a reply: none.")
+        } else {
             lines.append("Mail that needs a reply:")
             for thread in owed { lines.append("- \(thread.latest.from.displayName) <\(thread.latest.from.address)>: \(thread.subject)\(cite(thread))") }
         }
-        if waitingCount > 0 { lines.append("Sent mail still waiting for an answer: \(waitingCount).") }
+        lines.append(waitingCount > 0 ? "Sent mail still waiting for an answer: \(waitingCount)." : "Sent mail still waiting for an answer: none.")
         return lines.joined(separator: "\n")
     }
 
@@ -216,15 +266,25 @@ extension MailModel {
         askProgress = .searching
         Task {
             defer { assistantWork.remove("ask"); askProgress = nil }
-            await refreshCalendar()
-            let threads = await askConversations(for: question)
+            // The calendar gets a moment to catch up; after that the answer uses what's known,
+            // and the refresh finishes for next time.
+            let refresh = Task { await refreshCalendar() }
+            await Self.wait(for: refresh, upTo: .milliseconds(1500))
+            // Questions the facts answer (the calendar, bills, replies owed) skip the search
+            // and the download of whole conversations: those made them slow.
+            let topic = Self.askTopic(question)
+            let threads = switch topic {
+            case .schedule: askScope(scheduleConversations())
+            case .general: askScope(await askConversations(for: question))
+            case .bills, .replies: askScope(await askConversations(for: question, searches: false))
+            }
             askProgress = .reading(threads.count)
-            let context = await askContext(threads)
+            let context = await askContext(threads, fetchMissing: topic == .general)
             let numbers = Dictionary(threads.enumerated().map { ($1.id, $0 + 1) }, uniquingKeysWith: { first, _ in first })
             let me = accounts.first?.address ?? EmailAddress(address: "me@example.com")
             do {
                 let answer = try await intelligence.ask(AskAttachment.prompt(question, with: files), about: context, me: me,
-                                                        facts: askFacts(numbers: numbers)) { [weak self] text in
+                                                        facts: askFacts(numbers: numbers), style: askPreferences.style) { [weak self] text in
                     await MainActor.run { self?.askProgress = .writing(text) }
                 }
                 askAnswer = answer
@@ -239,7 +299,7 @@ extension MailModel {
     /// The conversations an answer may draw on, numbered in this order: what Home already
     /// knows needs you (replies owed, bills, today's mail from people), then saved mail that
     /// matches the question. Junk, Trash and accounts no longer here are left out.
-    func askConversations(for question: String, now: Date = Date(), limit: Int = 10) async -> [MailThread] {
+    func askConversations(for question: String, now: Date = Date(), limit: Int = 10, searches: Bool = true) async -> [MailThread] {
         var threads: [MailThread] = []
         var seen = Set<String>()
         func add(_ thread: MailThread) {
@@ -254,7 +314,7 @@ extension MailModel {
         for thread in inbox.filter({ $0.date >= today && InboxSplit.classify($0.latest) == .people }).prefix(3) {
             add(thread)
         }
-        let terms = Self.searchTerms(in: question)
+        let terms = searches ? Self.searchTerms(in: question) : ""
         var hits = terms.isEmpty ? [] : await environment.cache.search(terms, limit: 80, anyWord: true)
         let current = Set(accounts.map(\.id))
         hits = hits.filter { hit in
@@ -275,7 +335,7 @@ extension MailModel {
 
     /// Each conversation with its message bodies: from memory or this device first, and the
     /// rest fetched from the server all at once rather than one after another.
-    func askContext(_ threads: [MailThread]) async -> [(MailThread, [String: MessageBody])] {
+    func askContext(_ threads: [MailThread], fetchMissing: Bool = true) async -> [(MailThread, [String: MessageBody])] {
         var context: [(MailThread, [String: MessageBody])] = []
         for thread in threads {
             var found = bodies(of: thread)
@@ -287,6 +347,8 @@ extension MailModel {
             }
             context.append((thread, found))
         }
+        // Without the download, a message not on this device is read from its preview.
+        guard fetchMissing else { return context }
         struct Missing: Sendable { var index: Int; var message: MailMessage; var account: UUID; var provider: any MailProvider }
         var missing: [Missing] = []
         for (index, item) in context.enumerated() {
@@ -296,20 +358,79 @@ extension MailModel {
             }
         }
         let cache = environment.cache
-        let fetched = await withTaskGroup(of: (Int, String, MessageBody?).self) { group in
-            for item in missing.prefix(24) {
-                group.addTask {
-                    let body = try? await item.provider.body(of: item.message)
-                    if let body { await cache.saveBody(body, of: item.message, account: item.account) }
-                    return (item.index, item.message.id, body)
+        // What the servers send within two seconds is used; the rest is read from its preview,
+        // and arrives in the cache for the next question.
+        let collected = FetchedBodies()
+        let download = Task {
+            await withTaskGroup(of: Void.self) { group in
+                for item in missing.prefix(24) {
+                    group.addTask {
+                        guard let body = try? await item.provider.body(of: item.message) else { return }
+                        await cache.saveBody(body, of: item.message, account: item.account)
+                        await collected.add(item.index, item.message.id, body)
+                    }
                 }
             }
-            var results: [(Int, String, MessageBody?)] = []
-            for await result in group { results.append(result) }
-            return results
         }
-        for (index, id, body) in fetched { if let body { context[index].1[id] = body } }
+        await Self.wait(for: download, upTo: .seconds(2))
+        for (index, id, body) in await collected.all { context[index].1[id] = body }
         return context
+    }
+
+    /// Bodies as they arrive from the servers, read when Ask stops waiting.
+    actor FetchedBodies {
+        private(set) var all: [(Int, String, MessageBody)] = []
+        func add(_ index: Int, _ id: String, _ body: MessageBody) { all.append((index, id, body)) }
+    }
+
+    /// What a question is about, so Ask reads no more mail than the answer needs.
+    enum AskTopic: Equatable { case schedule, bills, replies, general }
+
+    /// Words that mark a question about the calendar, bills or replies, in the languages Margin
+    /// speaks most. Anything else searches mail as before.
+    static func askTopic(_ question: String) -> AskTopic {
+        let text = question.lowercased()
+        func has(_ words: [String]) -> Bool { words.contains { text.contains($0) } }
+        // A question that names someone or something else still searches ("meeting with Noor about…").
+        if text.contains(" about ") || text.contains(" over ") || text.contains(" with ") { return .general }
+        if has(["calendar", "agenda", "meeting", "appointment", "schedule", "my week", "kalender", "afspraak", "vergader",
+                "termin", "besprechung", "réunion", "rendez-vous", "reunión", "cita", "riunione", "calendario", "reunião"]) { return .schedule }
+        if has(["bill", "invoice", "pay", "rekening", "factuur", "betalen", "rechnung", "facture", "factura", "fattura"]) { return .bills }
+        if has(["needs a reply", "need a reply", "reply to", "answer to", "owe", "beantwoorden", "antwoorden", "antworten", "répondre", "responder"]) { return .replies }
+        return .general
+    }
+
+    /// For a calendar question: the conversations behind the meetings coming up, from what's
+    /// already loaded.
+    func scheduleConversations(now: Date = Date()) -> [MailThread] {
+        let soon = Set(calendarEntries.filter { !$0.cancelled && $0.finish > now && $0.start < now.addingTimeInterval(14 * 86_400) }
+            .map(\.threadID))
+        return allInboxesThreads(nil).filter { soon.contains($0.id) }.prefix(4).map { $0 }
+    }
+
+    /// Waits for a task, but no longer than `limit`; it carries on after that. (A task group
+    /// can't do this: it waits for every child, and waiting on a task can't be cut short.)
+    static func wait(for task: Task<Void, Never>, upTo limit: Duration) async {
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            let once = ResumeOnce(continuation)
+            // Off the main thread, so a busy window can't hold the limit up.
+            Task.detached { await task.value; once.resume() }
+            Task.detached { try? await Task.sleep(for: limit); once.resume() }
+        }
+    }
+
+    /// Resumes a continuation the first time it's asked, and ignores the rest.
+    final class ResumeOnce: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<Void, Never>?
+        init(_ continuation: CheckedContinuation<Void, Never>) { self.continuation = continuation }
+        func resume() {
+            let pending = lock.withLock { () -> CheckedContinuation<Void, Never>? in
+                defer { continuation = nil }
+                return continuation
+            }
+            pending?.resume()
+        }
     }
 
     /// Opens conversations from an answer in the list.

@@ -233,7 +233,7 @@ extension MailModel {
     /// Settings first, then hosted ones, then local ones, then Apple's model. Ones known not to
     /// support tools, or missing a key or model, are left out.
     public var actionProviders: [AssistantSettings] {
-        guard assistantSettings.provider != .off else { return [] }
+        guard usesAI, assistantSettings.provider != .off else { return [] }
         let profiles = assistantProfiles
         var ordered = AssistantProvider.actionOrder.compactMap { profiles[$0] }.filter { settings in
             canTakeActions(settings) != false && settings.makeAgent(apiKey: apiKey(for: settings)) != nil
@@ -258,7 +258,7 @@ extension MailModel {
 
     var noActionProviderMessage: String {
         let setUp = String(localized: "To take actions, set up Claude, ChatGPT, Gemini or Grok in Settings → Assistant.")
-        guard assistantSettings.provider != .off else { return String(localized: "Turn on the assistant in Settings first.") }
+        guard usesAI, assistantSettings.provider != .off else { return String(localized: "Turn on the assistant in Settings first.") }
         return AssistantError.toolsUnsupported(assistantSettings.displayName).localizedDescription + " " + setUp
     }
 

@@ -11,6 +11,8 @@ struct WritingProfileView: View {
     @State private var tryResult: (reply: String, about: String, instructions: String)?
     @State private var tryError: String?
     @State private var isTrying = false
+    @State private var isStudying = false
+    @State private var studyError: String?
 
     /// Sections for a Settings form: the switches, then what was learned.
     var body: some View {
@@ -27,6 +29,9 @@ struct WritingProfileView: View {
         } header: {
             Text("Your writing")
         }
+        // Read from disk the first time something needs it; this page needs it at once.
+        .onAppear { model.loadWritingProfileIfNeeded() }
+        if model.learnsWriting && model.isAssistantOn { voiceSection(profile) }
         if model.learnsWriting {
             Section {
                 if profile.isEmpty {
@@ -63,6 +68,55 @@ struct WritingProfileView: View {
                 }
             }
             tryItSection
+        }
+    }
+
+    /// What the assistant found when it read your sent mail, and the button to have it read again.
+    @ViewBuilder
+    private func voiceSection(_ profile: WritingProfile) -> some View {
+        let voices = profile.voices.sorted { $0.value.emails > $1.value.emails }
+        let assistant = model.studyAssistant.map(AssistantRow.label) ?? ""
+        Section {
+            if voices.isEmpty {
+                SettingsEmptyRow(isStudying ? "Reading your sent mail…" : "Not studied yet. Margin's own learning below already shapes drafts; a study adds how you sound.")
+            }
+            ForEach(voices, id: \.key) { language, voice in
+                VStack(alignment: .leading, spacing: 6) {
+                    if voices.count > 1 {
+                        Text(verbatim: Locale.current.localizedString(forLanguageCode: language) ?? language)
+                            .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    }
+                    Text(verbatim: voice.text)
+                        .font(.callout)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("Studied by \(voice.by) from \(voice.emails) emails, \(voice.date.formatted(date: .abbreviated, time: .omitted)).")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 2)
+            }
+            HStack {
+                Button(isStudying ? String(localized: "Studying…") : voices.isEmpty ? String(localized: "Study My Writing") : String(localized: "Study Again")) {
+                    isStudying = true
+                    studyError = nil
+                    Task {
+                        defer { isStudying = false }
+                        do { try await model.studyWriting() } catch { studyError = error.localizedDescription }
+                    }
+                }
+                .disabled(isStudying)
+                if !voices.isEmpty && !isStudying {
+                    Button("Forget") { model.forgetStudiedVoice() }
+                }
+                if isStudying { ProgressView().controlSize(.small) }
+            }
+            if let studyError {
+                Text(verbatim: studyError).font(.caption).foregroundStyle(.red)
+            }
+        } header: {
+            Text("Your voice")
+        } footer: {
+            Text("\(assistant) reads up to 40 of your recent sent emails per language, once, and describes how you write: tone, sentence length, words you use. Only the description is kept, and every draft follows it.")
         }
     }
 
@@ -121,7 +175,10 @@ struct WritingProfileView: View {
         if let greeting = habits.usualGreeting { parts.append("“\(greeting.replacingOccurrences(of: "{name}", with: "…"))”") }
         if let signOff = habits.usualSignOff { parts.append("“\(signOff)”") }
         if let length = habits.typicalLength { parts.append(String(localized: "about \(length) words")) }
-        parts.append(habits.isCasual ? String(localized: "casual") : String(localized: "polished"))
+        if let sentence = habits.typicalSentence { parts.append(String(localized: "sentences of about \(sentence) words")) }
+        if let formal = habits.addressesFormally { parts.append(formal ? String(localized: "formal") : String(localized: "informal")) }
+        // Formal or informal address says it better where a language has it.
+        if habits.addressesFormally == nil { parts.append(habits.isCasual ? String(localized: "casual") : String(localized: "polished")) }
         parts.append(habits.messages == 1 ? String(localized: "1 email") : String(localized: "\(habits.messages) emails"))
         return VStack(alignment: .leading, spacing: 2) {
             title

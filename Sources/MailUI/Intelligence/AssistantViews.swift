@@ -36,7 +36,7 @@ struct SummaryBlock: View {
                 Text(attribution).font(TypeScale.label).foregroundStyle(Ink.quaternary)
                 Spacer()
                 Button(action: onClose) {
-                    Image(systemName: "xmark").font(.system(size: 9, weight: .semibold)).foregroundStyle(Ink.tertiary)
+                    Image(systemName: "xmark").font(.system(size: Look.size(9), weight: .semibold)).foregroundStyle(Ink.tertiary)
                 }
                 .buttonStyle(.plain)
                 .opacity(isHovered ? 1 : 0)
@@ -101,7 +101,7 @@ struct LabelRow: View {
                         .onKeyPress(.escape) { isAdding = false; return .handled }
                 } else {
                     Button { isAdding = true } label: {
-                        Image(systemName: "plus").font(.system(size: 9, weight: .semibold)).foregroundStyle(Ink.tertiary)
+                        Image(systemName: "plus").font(.system(size: Look.size(9), weight: .semibold)).foregroundStyle(Ink.tertiary)
                             .frame(width: 22, height: 22)
                             .background(Fill.one, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
                     }
@@ -134,9 +134,9 @@ struct LabelChip: View {
 
     private var chip: some View {
         HStack(spacing: 4) {
-            if style == .suggested { Image(systemName: "plus").font(.system(size: 8, weight: .bold)) }
+            if style == .suggested { Image(systemName: "plus").font(.system(size: Look.size(8), weight: .bold)) }
             Text(text).lineLimit(1)
-            if style == .applied && isHovered { Image(systemName: "xmark").font(.system(size: 7, weight: .bold)) }
+            if style == .applied && isHovered { Image(systemName: "xmark").font(.system(size: Look.size(7), weight: .bold)) }
         }
         .font(style == .compact ? TypeScale.caption : TypeScale.label)
         // A label wears its colour: tinted ground, text in a deeper shade of it (AA).
@@ -175,7 +175,7 @@ struct ReplyAssistantBar: View {
                 }
                 Spacer()
             }
-            .frame(height: 22)
+            .frame(height: Look.gap(22))
         }
     }
 }
@@ -203,7 +203,7 @@ struct TextAction: View {
                 if isBusy {
                     ProgressView().controlSize(.mini)
                 } else if let symbol {
-                    Image(systemName: symbol).font(.system(size: 10.5))
+                    Image(systemName: symbol).font(.system(size: Look.size(10.5)))
                 }
                 Text(title)
             }

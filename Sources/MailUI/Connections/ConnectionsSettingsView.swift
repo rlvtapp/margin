@@ -18,9 +18,19 @@ struct ConnectionsSettingsView: View {
                     SettingLabel("Let AI apps use Margin",
                                  detail: "Claude, ChatGPT and other apps that support MCP can search and read your mail through Margin, on this Mac only.")
                 }
-                if settings.enabled { status }
+                .disabled(!model.usesAI)
+                if !model.usesAI {
+                    HStack {
+                        Text("AI is off in Settings → Assistant, so AI apps can't connect.")
+                            .font(.callout).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Turn On AI") { model.usesAI = true }
+                    }
+                } else if settings.enabled {
+                    status
+                }
             }
-            if settings.enabled {
+            if settings.enabled && model.usesAI {
                 Section {
                     Toggle(isOn: binding(\.allowChanges)) {
                         SettingLabel("Allow changes",
@@ -140,7 +150,7 @@ struct ConnectionsSettingsView: View {
                 Button(copied == title ? "Copied" : "Copy") { copy(text, title) }.buttonStyle(.borderless)
             }
             Text(verbatim: text)
-                .font(.system(size: 11, design: .monospaced))
+                .font(.system(size: Look.size(11), design: .monospaced))
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }

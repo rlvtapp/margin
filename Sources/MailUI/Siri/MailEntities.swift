@@ -47,7 +47,7 @@ public enum SiriBridge {
     @available(iOS 18.0, macOS 15.0, *)
     static func index(_ model: MailModel) async {
         guard !model.environment.isPreview else { return }
-        let entities = model.inboxThreads(nil).prefix(300).compactMap { entity(for: $0, in: model) }
+        let entities = model.newestInInboxes(300).compactMap { entity(for: $0, in: model) }
         try? await CSSearchableIndex.default().indexAppEntities(Array(entities))
     }
 }
@@ -164,7 +164,7 @@ public struct MailMessageQuery: EntityQuery {
     }
     @MainActor public func suggestedEntities() async throws -> [MailMessageEntity] {
         guard let model = SiriBridge.model else { return [] }
-        return model.inboxThreads(nil).prefix(20).compactMap { SiriBridge.entity(for: $0, in: model) }
+        return model.newestInInboxes(20).compactMap { SiriBridge.entity(for: $0, in: model) }
     }
 }
 

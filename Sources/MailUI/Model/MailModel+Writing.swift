@@ -15,10 +15,12 @@ extension MailModel {
 
     /// Instructions for the assistant to write like this person to `recipient`, when learning is on
     /// and enough is known. `language` is the conversation's; `languageOf` works it out from one.
-    func writingStyle(for recipient: EmailAddress?, account: MailAccount, language: String? = nil) -> String? {
+    /// `theirText` is what the other person last wrote, to match how they address you (je or u).
+    func writingStyle(for recipient: EmailAddress?, account: MailAccount, language: String? = nil, theirText: String? = nil) -> String? {
         loadWritingProfileIfNeeded()
+        let theirs = theirText.flatMap { WritingProfile.formality(WritingProfile.ownWriting($0, signature: nil), language: language) }
         let learned = learnsWriting
-            ? writingProfile.styleGuide(for: recipient, myName: EmailAddress.firstName(of: account.address), language: language)
+            ? writingProfile.styleGuide(for: recipient, myName: EmailAddress.firstName(of: account.address), language: language, theirs: theirs)
             : nil
         // The person's own rules come last, so they win over what was learned.
         let rules = writingInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -70,12 +72,76 @@ extension MailModel {
         saveWritingProfile()
     }
 
+    /// The assistant that studies how the person writes: the Ask and writing one, on a stronger
+    /// model where it has one (Sonnet rather than Haiku), since it runs once and is kept.
+    var studyAssistant: AssistantSettings? {
+        guard isAssistantOn else { return nil }
+        var settings = assistantSettings
+        if let stronger = settings.provider.studyModel { settings.model = stronger }
+        return settings
+    }
+
+    /// Has the study assistant read up to 40 recent sent emails per language (the two most
+    /// written in) and describe how the person writes; the descriptions are kept with the
+    /// profile and go along with every draft. Returns how many were written.
+    @discardableResult
+    public func studyWriting() async throws -> Int {
+        loadWritingProfileIfNeeded()
+        guard let settings = studyAssistant else { throw AssistantError.unavailable }
+        let intelligence = settings.makeModel(apiKey: apiKey(for: settings)).map(MailIntelligence.init(model:)) ?? self.intelligence
+        guard let intelligence else { throw AssistantError.unavailable }
+        var byLanguage: [String: [String]] = [:]
+        var name = ""
+        for account in accounts {
+            guard let sent = mailboxes[account.id]?.first(where: { $0.role == .sent }),
+                  let provider = try? provider(for: account),
+                  let threads = try? await provider.threads(in: sent, limit: Self.sentMailToLearn) else { continue }
+            if name.isEmpty { name = EmailAddress.firstName(of: account.address) }
+            let mine = threads.flatMap(\.messages)
+                .filter { $0.from.address.caseInsensitiveCompare(account.address.address) == .orderedSame }
+                .sorted { $0.date > $1.date }
+            for message in mine.prefix(Self.sentMailToLearn) {
+                let text: String = if let body = message.body?.text { body } else { (try? await provider.body(of: message).text) ?? "" }
+                let own = WritingProfile.ownWriting(text, signature: account.signature)
+                // A line or two says little about a voice.
+                guard own.split(whereSeparator: \.isWhitespace).count >= 12 else { continue }
+                let language = WritingProfile.language(of: own) ?? ""
+                if byLanguage[language, default: []].count < 40 { byLanguage[language, default: []].append(own) }
+            }
+        }
+        let languages = byLanguage.filter { $0.value.count >= 5 }.sorted { $0.value.count > $1.value.count }.prefix(2)
+        guard !languages.isEmpty else { throw WritingStudyError.tooLittle }
+        let by = AssistantRow.label(settings)
+        var written = 0
+        for (language, samples) in languages {
+            let text = try await intelligence.studyWriting(samples, name: name, language: language.isEmpty ? nil : language)
+            guard !text.isEmpty else { continue }
+            writingProfile.voices[language] = WritingProfile.Voice(text: text, by: by, emails: samples.count)
+            written += 1
+        }
+        saveWritingProfile()
+        return written
+    }
+
+    public func forgetStudiedVoice() {
+        loadWritingProfileIfNeeded()
+        writingProfile.voices = [:]
+        saveWritingProfile()
+    }
+
     /// A draft as the person would write it: without dashes when they never use them, since
     /// models add them even when asked not to.
     func inYourStyle(_ text: String, language: String?) -> String {
         loadWritingProfileIfNeeded()
         guard learnsWriting, writingProfile.avoidsDashes(language: language) else { return text }
         return WritingProfile.withoutDashes(text)
+    }
+
+    /// What the other side last wrote in a conversation, for how they address you.
+    func theirLatestText(in thread: MailThread) -> String? {
+        let mine = Set(accounts.flatMap { [$0.address] + ($0.aliases ?? []) }.map { $0.address.lowercased() })
+        guard let message = thread.messages.last(where: { !mine.contains($0.from.address.lowercased()) }) else { return nil }
+        return body(of: message, in: thread)?.text ?? message.snippet
     }
 
     /// The language a conversation is in, from its newest message's words.
@@ -95,9 +161,10 @@ extension MailModel {
         replySuggestionsFor[thread.id] = thread.latest.id
         replySuggestions[thread.id] = []
         let mine = Set(accounts.flatMap { [$0.address] + ($0.aliases ?? []) }.map { $0.address.lowercased() })
-        guard suggestsReplies, let intelligence, thread.split == .people, let account = account(thread.accountID),
+        // The quick assistant: Apple's model on this Mac by default, so the bubbles are fast and free.
+        guard suggestsReplies, let intelligence = quickIntelligence, thread.split == .people, let account = account(thread.accountID),
               !mine.contains(thread.latest.from.address.lowercased()) else { return }
-        let style = writingStyle(for: thread.latest.from, account: account, language: languageOf(thread))
+        let style = writingStyle(for: thread.latest.from, account: account, language: languageOf(thread), theirText: theirLatestText(in: thread))
         let suggestions = (try? await intelligence.suggestReplies(thread, bodies: bodies(of: thread), me: account.address, style: style)) ?? []
         replySuggestions[thread.id] = suggestions.map { inYourStyle($0, language: languageOf(thread)) }
     }
@@ -127,7 +194,10 @@ extension MailModel {
         // Loaded once at start; reading the property later doesn't change state mid-draw.
         guard !writingProfileLoaded else { return }
         writingProfileLoaded = true
-        if let saved = writingFile.load() { writingProfile = saved }
+        guard let saved = writingFile.load() else { return }
+        // Learned before Margin read sentence length, phrases and address: counted again from
+        // sent mail on the next start (`learnFromSentMailIfNew`), keeping the studied voices.
+        writingProfile = saved.version < WritingProfile.currentVersion ? saved.startedAgain : saved
     }
 
     private func saveWritingProfile() {
@@ -151,7 +221,7 @@ extension MailModel {
                                   subject: "", date: Date(), snippet: String(text.prefix(160)))
         let thread = MailThread(id: "try", messages: [message], accountID: account.id)
         let language = WritingProfile.language(of: text)
-        let style = writingStyle(for: from, account: account, language: language)
+        let style = writingStyle(for: from, account: account, language: language, theirText: text)
         var trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
         if from == nil { trimmedNote += (trimmedNote.isEmpty ? "" : " ") + "The sender's name isn't known: don't address them by name." }
         let written = try await intelligence.write(.draft(note: trimmedNote.isEmpty ? nil : trimmedNote), thread: thread,
@@ -179,5 +249,14 @@ extension MailModel {
         let words = last.split(separator: " ")
         guard (1...3).contains(words.count), words.allSatisfy({ $0.first?.isUppercase == true && $0.allSatisfy { $0.isLetter || $0 == "-" || $0 == "'" } }) else { return nil }
         return last
+    }
+}
+
+/// Why a study of someone's writing couldn't be made.
+enum WritingStudyError: LocalizedError {
+    case tooLittle
+
+    var errorDescription: String? {
+        String(localized: "There isn't enough sent mail to study yet: Margin needs at least 5 emails of a few sentences each.")
     }
 }

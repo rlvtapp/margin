@@ -14,7 +14,8 @@ struct AskView: View {
     @FocusState private var focused: Bool
     @State private var dictation = Dictation()
     @State private var attaching = false
-    @State private var models: [String] = []
+    /// Every ready assistant's models, for the picker in the header.
+    @State private var choices: [(settings: AssistantSettings, models: [ModelChoice])] = []
 
     /// The chat keeps to a comfortable reading width, however wide the pane.
     private let column: CGFloat = 680
@@ -93,7 +94,7 @@ struct AskView: View {
                     Button(chat.title) { model.openAskChat(chat) }
                 }
             } label: {
-                Image(systemName: "clock.arrow.circlepath").font(.system(size: 13)).foregroundStyle(Ink.tertiary)
+                Image(systemName: "clock.arrow.circlepath").font(.system(size: Look.size(13))).foregroundStyle(Ink.tertiary)
                     .frame(width: 28, height: 28)
             }
             .menuStyle(.button)
@@ -119,48 +120,80 @@ struct AskView: View {
         .overlay(alignment: .bottom) { Rectangle().fill(Line.hairline).frame(height: 1) }
     }
 
-    /// Which model answers, switchable here.
+    /// Which assistant and model answers: every ready one you've added, each with its models,
+    /// switchable here. The choice is the same one as Settings → Assistant → Ask and writing.
     @ViewBuilder
     private var modelPicker: some View {
-        let current = model.assistantSettings.model
-        if !current.isEmpty || !models.isEmpty {
-            Menu {
-                ForEach(models, id: \.self) { name in
-                    Button { model.useModel(name) } label: {
-                        if name == current { Label(name, systemImage: "checkmark") } else { Text(verbatim: name) }
+        let current = model.assistantSettings
+        Menu {
+            ForEach(choices, id: \.settings.provider) { choice in
+                let isCurrent = choice.settings.provider == current.provider
+                if choice.models.isEmpty {
+                    Button { model.useAssistant(choice.settings.provider, model: nil) } label: {
+                        Label { Text(verbatim: choice.settings.provider.shortName + (isCurrent ? "  ✓" : "")) } icon: { icon(choice.settings.provider) }
+                    }
+                } else {
+                    Section(choice.settings.provider.shortName + " · " + AssistantRow.connection(choice.settings)) {
+                        ForEach(choice.models) { option in
+                            Button { model.useAssistant(choice.settings.provider, model: option.id) } label: {
+                                let title = option.detail.isEmpty ? option.name : "\(option.name) · \(option.detail)"
+                                Label { Text(verbatim: title + (isCurrent && option.id == current.model ? "  ✓" : "")) } icon: {
+                                    icon(choice.settings.provider)
+                                }
+                            }
+                        }
                     }
                 }
-            } label: {
-                Text(verbatim: current.isEmpty ? model.assistantAttribution : current)
-                    .font(TypeScale.label).foregroundStyle(Ink.tertiary).lineLimit(1)
             }
-            .fixedSize()
-            .task { models = await model.availableModels() }
+        } label: {
+            HStack(spacing: 5) {
+                ProviderIcon(provider: current.provider, size: 16)
+                Text(verbatim: AssistantRow.label(current)).lineLimit(1)
+                Image(systemName: "chevron.down").font(.system(size: Look.size(8), weight: .semibold))
+            }
+            .font(TypeScale.label).foregroundStyle(Ink.tertiary)
         }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        #if os(macOS)
+        .menuIndicator(.hidden)
+        #endif
+        .fixedSize()
+        .help(Text("Which assistant and model answers"))
+        .task(id: model.assistantSettings) { choices = await model.askChoices() }
+    }
+
+    /// An assistant's icon in the menu: its app's own where it's installed.
+    private func icon(_ provider: AssistantProvider) -> Image {
+        #if os(macOS)
+        ProviderIcon.menuIcon(provider)
+        #else
+        Image(systemName: AssistantRow.symbol(provider))
+        #endif
     }
 
     /// A fresh chat: what Ask is for, and a few questions to start with.
     private var empty: some View {
         VStack(spacing: Space.l) {
             Image(systemName: "sparkles")
-                .font(.system(size: 26, weight: .light))
+                .font(.system(size: Look.size(26), weight: .light))
                 .foregroundStyle(Ink.tertiary)
                 .padding(.top, 60)
             VStack(spacing: 6) {
-                Text("Ask about your mail").font(.system(size: 22, weight: .semibold)).foregroundStyle(Ink.primary)
+                Text("Ask about your mail").font(.system(size: Look.size(22), weight: .semibold)).foregroundStyle(Ink.primary)
                 Text("Your meetings, bills and conversations, answered from what's on this device.")
                     .font(TypeScale.row).foregroundStyle(Ink.secondary).multilineTextAlignment(.center)
             }
             VStack(spacing: Space.s) {
-                ForEach(starters, id: \.self) { text in
+                ForEach(model.askPreferences.showsSuggestions ? starters : [], id: \.self) { text in
                     Button { send(text) } label: {
                         HStack {
                             Text(verbatim: text).font(TypeScale.row).foregroundStyle(Ink.primary)
                             Spacer()
-                            Image(systemName: "arrow.up.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(Ink.tertiary)
+                            Image(systemName: "arrow.up.right").font(.system(size: Look.size(10), weight: .semibold)).foregroundStyle(Ink.tertiary)
                         }
                         .padding(.horizontal, 14)
-                        .frame(height: 40)
+                        .frame(height: Look.gap(40))
                         .background(Fill.one, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                         .contentShape(Rectangle())
                     }
@@ -195,7 +228,7 @@ struct AskView: View {
                             Spacer()
                         }
                         .padding(.horizontal, Space.l)
-                        .frame(height: 32)
+                        .frame(height: Look.gap(32))
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
@@ -237,26 +270,26 @@ struct AskView: View {
     private var inputRow: some View {
         HStack(alignment: .bottom, spacing: Space.s) {
             Button { attaching = true } label: {
-                Image(systemName: "paperclip").font(.system(size: 13)).foregroundStyle(Ink.tertiary).frame(width: 26, height: 30)
+                Image(systemName: "paperclip").font(.system(size: Look.size(13))).foregroundStyle(Ink.tertiary).frame(width: 26, height: 30)
             }
             .buttonStyle(.plain).accessibilityLabel("Attach a picture or PDF")
             TextField("Ask about your mail…", text: $question, axis: .vertical)
                 .textFieldStyle(.plain)
-                .font(.system(size: 15))
+                .font(.system(size: Look.size(15)))
                 .lineLimit(1...6)
                 .focused($focused)
                 .onSubmit(submit)
                 .padding(.vertical, 6)
             Button { dictation.toggle { question = $0 } } label: {
                 Image(systemName: dictation.isListening ? "mic.fill" : "mic")
-                    .font(.system(size: 13))
+                    .font(.system(size: Look.size(13)))
                     .foregroundStyle(dictation.isListening ? Status.danger : Ink.tertiary)
                     .frame(width: 26, height: 30)
             }
             .buttonStyle(.plain).accessibilityLabel(dictation.isListening ? "Stop dictating" : "Dictate")
             Button(action: submit) {
                 Image(systemName: "arrow.up")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: Look.size(13), weight: .bold))
                     .foregroundStyle(Ink.inverse)
                     .frame(width: 30, height: 30)
                     .background(canSend ? Ink.primary : Ink.quaternary, in: Circle())
@@ -327,7 +360,7 @@ private struct TurnView: View {
                     }
                     Button("Mark read") { model.markRead(turn.sources) }
                 } label: {
-                    Image(systemName: "ellipsis").font(.system(size: 11, weight: .semibold)).foregroundStyle(Ink.tertiary)
+                    Image(systemName: "ellipsis").font(.system(size: Look.size(11), weight: .semibold)).foregroundStyle(Ink.tertiary)
                         .frame(width: 24, height: 20)
                 }
                 .menuStyle(.button)
@@ -374,7 +407,7 @@ private struct QuestionBubble: View {
 
     var body: some View {
         Text(verbatim: text)
-            .font(.system(size: 15))
+            .font(.system(size: Look.size(15)))
             .foregroundStyle(Ink.inverse)
             .padding(.horizontal, 14)
             .padding(.vertical, 9)
@@ -474,7 +507,7 @@ struct AnswerText: View {
 
     private func styled(_ line: String) -> some View {
         Text(TurnView.formatted(line))
-            .font(.system(size: 15))
+            .font(.system(size: Look.size(15)))
             .lineSpacing(3)
             .foregroundStyle(Ink.primary)
             .fixedSize(horizontal: false, vertical: true)

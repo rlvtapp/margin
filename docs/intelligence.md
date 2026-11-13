@@ -13,6 +13,7 @@ Margin has two optional ways to use AI. Both are off unless you turn them on, an
 | --- | --- | --- |
 | On this Mac | Nowhere: Apple's on-device model (Apple Intelligence) | macOS 26+, Apple Intelligence turned on |
 | Ollama, LM Studio | Nowhere: a model running on this computer | The app running, a model downloaded |
+| Claude Code, ChatGPT (your subscription) | Anthropic or OpenAI, through the tool's own sign-in | Claude Code, or the ChatGPT app (it carries Codex), on this Mac and signed in (Mac only) |
 | Claude | Anthropic, with your API key | An Anthropic API key |
 | ChatGPT | OpenAI, with your API key | An OpenAI API key |
 | Gemini | Google, with your API key | A Google AI Studio key |
@@ -29,6 +30,16 @@ Nothing runs by itself. Each request starts with something you did: **Summarize*
 - `MailLanguageModel` is the seam each provider implements, and what the tests replace with a fake.
 - `OnDeviceModel` uses `FoundationModels` with guided generation (`@Generable`). Its budget is small (6,000 characters of conversation) because the on-device context window is small.
 - `AnthropicModel` calls the Messages API (`anthropic-version: 2026-10-21`). It uses structured output (`output_config.format` with a JSON Schema) at low effort. It defaults to Claude Opus 5.5; the model list comes from the API, so Sonnet and Haiku can be picked. On models that support it, server-side fallback (`fallbacks: "default"`) is on: if Claude declines a request for safety reasons, Anthropic retries it on a model chosen for that case.
+- `CommandLineModel` runs Claude Code (`claude -p --tools "" --strict-mcp-config --no-session-persistence --system-prompt … --model haiku`, the mail on standard input) or Codex (`codex exec --ephemeral --sandbox read-only -c model_reasoning_effort=low -c mcp_servers={} --output-last-message …`) once per request, in an empty temporary folder so no project's instructions apply, and reads the same JSON shapes as the hosted models. It uses the person's own subscription and sign-in; Margin stores nothing.
+  - **Speed:** Claude Code's start was most of the wait. With no MCP servers or connectors (`--strict-mcp-config`) and no update checks or telemetry (`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`, `DISABLE_AUTOUPDATER`) a request went from about 4.4 s to about 1 s; a whole draft on Haiku takes about 2.5 s. `--bare` would be faster still but only takes an API key, not a subscription sign-in. Codex takes about 4 s, mostly the model; its tool servers are turned off for these requests (one of them can be Margin itself).
+  - **Streaming:** Claude Code runs with `--output-format stream-json --include-partial-messages` for Ask and drafts, and the text of the answer or draft is shown as it arrives (`CommandLineRunner.lines`, `StreamedAnswer` with its key). Codex hands over its answer whole.
+  - **Finding them:** where they install themselves (`~/.local/bin`, Homebrew, npm, bun), Codex inside the ChatGPT app (`ChatGPT.app/Contents/Resources/codex-cli/bin/codex`), or through the login shell; looked for once and remembered. They only show in Settings on a Mac that has them. Needs Margin outside the sandbox.
+  - They answer but don't act (their tools are off), so "Ask Margin to…" uses another assistant. `CommandLineModelTests` uses a stand-in script; `MARGIN_LIVE_CLAUDE=1 swift test --filter liveClaudeCode` runs the real one.
+
+**Turning AI off.** Settings → Assistant starts with **Use AI**. Off makes Margin a plain mail app (`usesAI`, stored as `aiOff`): no assistant runs at all, so Ask, summaries, suggested replies, AI drafts, translation by AI, rules in words, AI sorting and actions are gone, and AI apps can't connect over MCP (Settings → Connections says so, with **Turn On AI**). Assistants already added stay saved for when it's turned back on. Home still sorts mail into its groups by Margin's own rules, and the system translation, inbox tabs and rule suggestions keep working, since none of them uses a model. The switch travels with a backup.
+
+**Several assistants.** Settings → Assistant lists every assistant added (Add Assistant, Change, Remove), each with its own key and model; new ones start on their fastest, cheapest model (Claude: Haiku; Claude Code: haiku; Codex: low reasoning), which is plenty for mail. **Who does what** picks one for Ask and writing (answers, drafts, summaries, rules in words, translations) and one for **quick suggestions** (the reply bubbles and label ideas); Automatic puts the quick ones on Apple's model on this Mac when it has one (fast, free, private), else the main assistant on its cheapest model (`quickProviderChoice`, `quickIntelligence`, `AssistantSettings.onQuickestModel`: Haiku for Claude and Claude Code, the fastest listed model for ChatGPT; other providers keep their model, since that needs a server's list). **Sorting into groups** (Sort Now, and new mail as it arrives) has its own choice with the same Automatic (`sortProviderChoice`, `sortIntelligence`): it runs once per conversation, so a quick model suits it, and it no longer goes through the Ask assistant. Actions keep their own choice. The list and Ask's header show the Claude and ChatGPT apps' own icons, read from the installed apps through macOS (`ProviderIcon`); Margin bundles no other company's artwork and falls back to a symbol. Ask's header picks any ready assistant and model for the next question (`askChoices`). Ask also answers faster: it routes a question by topic (`askTopic`: schedule, bills, replies, general), sends only the conversations that topic needs, and waits at most 2 s for missing message bodies and 1.5 s for the calendar (`wait(for:upTo:)`). Drafts written with AI now fill in as they're written, on every assistant that streams (Claude, ChatGPT and others with a key, Apple's model, Claude Code).
+
 - `OpenAICompatibleModel` covers ChatGPT, Gemini (Google's OpenAI-compatible endpoint), Grok, Ollama, LM Studio and other servers. It asks for `json_schema` output and falls back to JSON mode, with the schema in the instructions, for servers that don't support schemas.
 
 ### Taking actions
@@ -61,13 +72,22 @@ A run makes at most 40 requests for "Sort my mail" and 25 otherwise; tool result
 
 ### Ask
 
-Ask is a chat about your mail, with past chats kept on the device and slash commands (`/catchup`, `/waiting`, `/summarize`, `/reply`, `/cleanup`, `/help`). Beside the question field:
+Ask is a chat about your mail, with past chats kept on the device and slash commands (`/catchup`, `/replies`, `/waiting`, `/summarize`, `/reply`, `/cleanup`, `/unsubscribe`, `/feedback`, `/help`). `/feedback the dark mode is lovely` opens a message to the Margin team (hello@relevate.app for now) with what you wrote and your Margin version; nothing goes out until you send it. Settings → Assistant → Ask sets the answer length (brief, normal, detailed), your own instructions, whether it looks only in the mailbox in view, and the suggested questions it starts with (`AskPreferences`). Without an assistant (no Apple Intelligence on the device and no other service), Ask isn't offered anywhere: not in the reading pane, Home, ⌘K, search or the menus. Summaries are kept on the device and come back while their conversation has no newer email. Beside the question field:
 
 - **Attach** pictures, PDFs or text files. Their text goes along with the question; words in pictures are read on the device (Vision), so this works with every provider.
 - **Dictate** the question. Speech is turned into text on the device when it supports that; the microphone is only on while dictating.
 - **Model** in the header shows which model answers, and switches between the provider's models.
 
 Changes Ask suggests (archive these, mark read) only happen when tapped.
+
+What keeps answers honest with a small model on the device:
+
+- The facts Ask is given (`MailModel.askFacts`) always carry every heading, with "none" when it's empty ("Mail that needs a reply: none."). A heading left out made the model answer a question about replies with meetings.
+- The instructions hold no example names: an example line with a name in it came back in answers as a real person. Names, times and places may only be used as written in the facts or the mail.
+- Words of the question itself ("reply", "needs", "mail", "today") aren't searched for in saved mail; "reply" alone found every no-reply sender.
+- A conversation is shown under "From your mail" only when the answer speaks of it: one of its people, a telling word of its subject, or a time, date or amount it holds (`MailIntelligence.answer(_:speaksOf:bodies:)`).
+
+Tests: `Tests/MailCoreTests/AnswerSourcesTests.swift`, `Tests/MailUITests/AskFactsTests.swift`.
 
 **What an answer draws on**, numbered so it can cite them: first what Home already knows needs you
 (up to four replies owed, two unopened bills, three of today's mails from people), then saved mail
@@ -150,7 +170,37 @@ Margin is sandboxed, so the first time it writes one of these files, macOS asks 
 Settings → Assistant → Your writing. With **Learn how I write** on, Margin reads the emails you
 send (on the device, plain text analysis, no model) and keeps your habits in `WritingProfile`:
 greetings, sign-offs, typical length, how casual you sound, exclamation marks and emoji, overall
-and per person you write to one-to-one.
+and per person you write to one-to-one. It also reads sentence length (the middle of each email),
+paragraphs, whether you write in lower case, formal or informal address where the language has
+the choice (je/u, du/Sie, tu/vous, tú/usted; decided per reader, never from how you write to
+others: what you've used with them before, else what their latest email uses with you, else the
+formal form, as is usual with someone you haven't written to), how your first sentence usually starts, the closing
+sentence you keep using ("Laat maar weten als je nog vragen hebt."), and three- and four-word
+phrases you use in at least 3 emails and one in ten. Names (a capital inside a sentence),
+numbers and addresses never become phrases. Phrases, openers and closers are kept for everyone and
+per language, not per person, so the profile stays small (phrases used once fall away past 4,000).
+
+- **What counts as yours.** Quoted mail is cut off in every common form: "On … wrote:" (also
+  wrapped onto two lines), Outlook's "From: / Sent:" block in English, Dutch, German and French,
+  its line of underscores, "Original Message", and phone signatures ("Sent from Outlook for iOS").
+  Before this, Outlook replies counted the quoted company mail as yours, which made emails look
+  long and brought in phrases like "contact met ons op". The name under your sign-off is learned
+  (`signedNames`) and used instead of a mailbox's display name. Lines like "Thanks!" don't count
+  as sentences, there's no paragraph rule (converted HTML has a blank line after every line), and
+  length is a ceiling ("usually under N words, a short message gets a short answer"), never a
+  target: told "about 196 words", a model padded a two-line answer. Every draft is also told not
+  to repeat thanks or enthusiasm or add filler. With a study, the description leads and the
+  counted phrases are left out; where the two differ, the description wins.
+- **Your voice (a study).** Counting can't hear how someone sounds, so Settings → Your voice has
+  **Study My Writing**: the Ask and writing assistant, on a stronger model where it has one
+  (`AssistantProvider.studyModel`: Sonnet instead of Haiku, for Claude and Claude Code), reads up
+  to 40 recent sent emails per language (the two most written in, at least 5 of 12+ words each),
+  cut to fit the model, and writes 8 to 12 points on tone, rhythm, openings and closings, quoted
+  phrases, how you ask and say no, and what you never do (`MailIntelligence.studyWriting`). It is
+  asked for style only, no names, facts or topics. Only the description is kept
+  (`WritingProfile.voices`, with which assistant wrote it and from how many emails), and it goes
+  along with every draft after the rules. It runs only when you press the button, since it sends
+  those emails to the assistant you chose; **Forget** drops it. Starting over keeps it.
 
 - **Per language.** Each sent email's language is detected on the device (Apple's
   NaturalLanguage), and habits are also kept per language and per language per person. Drafts
@@ -170,5 +220,18 @@ and per person you write to one-to-one.
   and **Write my reply** shows the reply as Margin would write it for you, with a note on which
   language and habits it used and, folded away, exactly what Margin told the assistant. Without a
   sender, the name the email is signed with is used, or no name at all. Nothing is sent or saved.
-- When the profile's format changes, an older one starts over and is relearned from sent mail
-  at the next launch.
+- When the profile's format changes (`WritingProfile.currentVersion`), an older one starts over
+  and is relearned from sent mail at the next launch, keeping the studied voices and the people
+  you had Margin forget (`forgotten`, never learned about again).
+
+### Hold Space to dictate on Mac
+
+This is experimental and off until turned on in Settings → Experimental (`holdSpaceDictates`);
+while off, Space is only ever a space. When on: in an editable native text field in Margin, hold Space for 350 milliseconds to start
+on-device dictation. Release Space to insert the words at the original selection; Escape
+cancels. A short press still types a space. Secure fields and modified shortcuts are excluded.
+The microphone and speech permissions are requested on first use. If the current language
+has no on-device recognizer, Margin shows an explanation rather than sending audio away.
+Changing the text, selection or focused field prevents a late result from overwriting it.
+This shortcut applies inside Margin; it does not listen for keys in other apps or target
+embedded web editors.

@@ -30,14 +30,15 @@ extension MailModel {
     }
 
     public func startConnectionIfEnabled() {
-        if connectionSettings.enabled && mcpServer == nil { restartConnection() }
+        if connectionSettings.enabled && usesAI && mcpServer == nil { restartConnection() }
     }
 
     func restartConnection() {
         mcpServer?.stop()
         mcpServer = nil
         connectionError = nil
-        guard connectionSettings.enabled else { return }
+        // AI apps don't connect while AI is off in Settings → Assistant.
+        guard connectionSettings.enabled, usesAI else { return }
         let server = makeConnectionServer(port: connectionSettings.port, token: connectionToken)
         do {
             try server.start()

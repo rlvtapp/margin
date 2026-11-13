@@ -37,11 +37,14 @@ public struct AskSource: Codable, Hashable, Sendable {
 
 /// What can be typed after a slash in Ask.
 public enum AskCommand: String, CaseIterable, Sendable {
-    case catchup, waiting, summarize, reply, cleanup, help
+    case catchup, replies, waiting, summarize, reply, cleanup, unsubscribe, feedback, help
 
     public var title: String {
         switch self {
         case .catchup: String(localized: "Catch up on unread mail from people")
+        case .replies: String(localized: "Mail waiting on your reply")
+        case .unsubscribe: String(localized: "Open Subscriptions to leave newsletters")
+        case .feedback: String(localized: "Tell the Margin team something")
         case .waiting: String(localized: "Mail waiting for an answer")
         case .summarize: String(localized: "Summarize the open conversation")
         case .reply: String(localized: "Draft a reply to the open conversation")
@@ -69,6 +72,11 @@ extension MailModel {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         if trimmed.hasPrefix("/"), let command = AskCommand(rawValue: String(trimmed.dropFirst()).split(separator: " ").first.map(String.init) ?? "") {
+            if command == .feedback {
+                // "/feedback the dark mode is lovely": a message to the team, ready to send.
+                startFeedback(String(trimmed.dropFirst("/feedback".count)))
+                return
+            }
             run(command)
         } else {
             ask(trimmed)
@@ -173,6 +181,18 @@ extension MailModel {
                 return
             }
             ask(String(localized: "Summarize this conversation in a few lines, and say what I'm asked to do."), restrictedTo: [thread], shownAs: label)
+        case .replies:
+            let owed = allInboxesThreads(nil).filter { !isSnoozed($0) && owesReply($0) }
+            let text = owed.isEmpty
+                ? String(localized: "Nothing is waiting on your reply.")
+                : owed.count == 1 ? String(localized: "1 conversation is waiting on your reply.")
+                : String(localized: "\(owed.count) conversations are waiting on your reply.")
+            recordAsk(label, answer: text, sources: Array(owed.prefix(8)))
+        case .unsubscribe:
+            isAsking = false
+            go(to: .subscriptions)
+        case .feedback:
+            startFeedback()
         case .reply:
             guard selectedThread != nil else {
                 recordAsk(label, answer: String(localized: "Open a conversation first."), sources: [], isError: true)
@@ -193,7 +213,7 @@ extension MailModel {
             let context = await askContext(threads)
             let me = accounts.first?.address ?? EmailAddress(address: "me@example.com")
             do {
-                let answer = try await intelligence.ask(question, about: context, me: me) { [weak self] text in
+                let answer = try await intelligence.ask(question, about: context, me: me, style: askPreferences.style) { [weak self] text in
                     await MainActor.run { self?.askProgress = .writing(text) }
                 }
                 recordAsk(label, answer: answer.text, sources: threads)

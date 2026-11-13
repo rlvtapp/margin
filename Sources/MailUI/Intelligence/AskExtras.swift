@@ -66,24 +66,22 @@ final class Dictation {
     private var engine: AVAudioEngine?
     private var task: SFSpeechRecognitionTask?
 
-    func toggle(into text: @escaping (String) -> Void) {
+    func toggle(into text: @escaping @MainActor @Sendable (String) -> Void) {
         isListening ? stop() : start(into: text)
     }
 
-    func start(into text: @escaping (String) -> Void) {
+    func start(into text: @escaping @MainActor @Sendable (String) -> Void) {
         problem = nil
-        SFSpeechRecognizer.requestAuthorization { status in
-            Task { @MainActor in
-                guard status == .authorized else {
-                    self.problem = String(localized: "Allow speech recognition for Margin in System Settings to dictate.")
-                    return
-                }
-                self.begin(into: text)
+        Task { @MainActor in
+            guard await SpeechPermission.request() else {
+                self.problem = String(localized: "Allow speech recognition for Margin in System Settings to dictate.")
+                return
             }
+            self.begin(into: text)
         }
     }
 
-    private func begin(into text: @escaping (String) -> Void) {
+    private func begin(into text: @escaping @MainActor @Sendable (String) -> Void) {
         guard let recognizer = SFSpeechRecognizer(), recognizer.isAvailable else {
             problem = String(localized: "Dictation isn't available right now.")
             return
@@ -97,7 +95,10 @@ final class Dictation {
         try? AVAudioSession.sharedInstance().setActive(true, options: .notifyOthersOnDeactivation)
         #endif
         let input = engine.inputNode
-        input.installTap(onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0)) { buffer, _ in request.append(buffer) }
+        // Speech requests accept buffers from the audio render callback. The callback must
+        // stay off the main actor; Speech's Objective-C type has no Sendable annotation.
+        nonisolated(unsafe) let audioRequest = request
+        input.installTap(onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0)) { @Sendable buffer, _ in audioRequest.append(buffer) }
         do {
             engine.prepare()
             try engine.start()
@@ -107,10 +108,12 @@ final class Dictation {
         }
         self.engine = engine
         isListening = true
-        task = recognizer.recognitionTask(with: request) { result, error in
+        task = recognizer.recognitionTask(with: request) { @Sendable result, error in
+            let words = result?.bestTranscription.formattedString
+            let finished = error != nil || result?.isFinal == true
             Task { @MainActor in
-                if let result { text(result.bestTranscription.formattedString) }
-                if error != nil || result?.isFinal == true { self.stop() }
+                if let words { text(words) }
+                if finished { self.stop() }
             }
         }
     }
@@ -137,9 +140,45 @@ extension MailModel {
         case .chatGPT, .gemini, .grok, .ollama, .lmStudio, .custom:
             guard let url = URL(string: settings.baseURL) else { return [] }
             return (try? await OpenAICompatibleModel.availableModels(baseURL: url, apiKey: key)) ?? []
+        case .claudeCode:
+            return CommandLineTool.claude.modelChoices
         default:
             return []
         }
+    }
+
+    /// Every ready assistant with the models it offers, quickest first, for Ask's picker.
+    func askChoices() async -> [(settings: AssistantSettings, models: [ModelChoice])] {
+        var result: [(settings: AssistantSettings, models: [ModelChoice])] = []
+        for settings in AssistantProvider.allCases.compactMap({ assistantProfiles[$0] }) where isReady(settings) {
+            result.append((settings, await modelChoices(for: settings)))
+        }
+        return result
+    }
+
+    /// The models an assistant offers: its own list for Claude Code and ChatGPT, the provider's
+    /// for a key or a server (quick ones first), none for Apple's model.
+    func modelChoices(for settings: AssistantSettings) async -> [ModelChoice] {
+        let key = savedAPIKey(for: settings.provider)
+        switch settings.provider {
+        case .claudeCode, .codex:
+            return AssistantSettingsView.knownModels(settings.provider)
+        case .claude:
+            guard let key else { return [] }
+            return AssistantSettingsView.quickestFirst((try? await AnthropicModel.availableModels(apiKey: key)) ?? [settings.model])
+        case .chatGPT, .gemini, .grok, .ollama, .lmStudio, .custom:
+            guard let url = URL(string: settings.baseURL) else { return [] }
+            return AssistantSettingsView.quickestFirst((try? await OpenAICompatibleModel.availableModels(baseURL: url, apiKey: key)) ?? [settings.model])
+        default:
+            return []
+        }
+    }
+
+    /// Makes an added assistant answer Ask and write, with `model` when given.
+    public func useAssistant(_ provider: AssistantProvider, model name: String?) {
+        var settings = assistantProfiles[provider] ?? AssistantSettings(provider: provider)
+        if let name { settings.model = name }
+        applyAssistant(settings, apiKey: nil)
     }
 
     /// Switches to another model of the same provider.

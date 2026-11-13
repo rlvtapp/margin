@@ -166,12 +166,9 @@ struct AgentPromptSheet: View {
 /// MCP, so there's one answer to "what may AI do with my mail".
 struct AgentPermissionsSection: View {
     @Bindable var model: MailModel
-    @State private var isChecking = false
-    @State private var checkResult: String?
 
     var body: some View {
         Section {
-            providerPicker
             Toggle(isOn: binding(\.allowChanges)) {
                 SettingLabel("Allow changes",
                              detail: "Label, archive, move, snooze, trash, folders, templates, newsletters and the outbox. Apps can undo their own last change.")
@@ -189,7 +186,6 @@ struct AgentPermissionsSection: View {
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Ask it with “Ask Margin to…” or “Sort my mail”. The same switches apply to AI apps connected to Margin. “Sort my mail” can always sort into Home's groups.")
-                Text("Providers you've set up and saved above stay available for actions after you switch to another.")
             }
         }
         if !model.connectionActivity.isEmpty {
@@ -208,6 +204,16 @@ struct AgentPermissionsSection: View {
             model.applyConnections(settings)
         })
     }
+}
+
+/// Which assistant takes actions (Sort my mail, Ask Margin to…), and in plain words whether the
+/// one for Ask and writing can; a local model can be checked.
+struct ActionProviderPicker: View {
+    @Bindable var model: MailModel
+    @State private var isChecking = false
+    @State private var checkResult: String?
+
+    var body: some View { providerPicker }
 
     /// Which provider takes actions, and in plain words whether the assistant chosen above can.
     @ViewBuilder

@@ -5,7 +5,7 @@ import AppKit
 #endif
 
 /// The first launch: what Margin is, adding a mailbox (or looking around with the sample mail
-/// first), how it looks, what it tells you about, and a last look at what you chose. Each step
+/// first), how it looks, what it tells you about, AI or just mail, and a last look at what you chose. Each step
 /// has a small moving picture (OnboardingScenes.swift); with Reduce Motion they simply appear.
 /// Shown once; Help → Welcome to Margin opens it again.
 public struct OnboardingView: View {
@@ -27,7 +27,7 @@ public struct OnboardingView: View {
     @State private var moreBelow = false
     @State private var scroll = ScrollPosition(edge: .top)
 
-    enum Step: Int, CaseIterable { case welcome, look, alerts, relay, done }
+    enum Step: Int, CaseIterable { case welcome, look, alerts, ai, relay, done }
 
     /// The steps this device shows: the relay is explained only on iPhone and iPad, and only
     /// when the build has one (a Mac keeps its own connections open).
@@ -120,6 +120,7 @@ public struct OnboardingView: View {
         case .welcome: welcome
         case .look: look
         case .alerts: alerts
+        case .ai: aiChoice
         case .relay: relay
         case .done: allSet
         }
@@ -194,7 +195,7 @@ public struct OnboardingView: View {
             Image(systemName: "checkmark.circle.fill").foregroundStyle(Status.done)
         }
         .padding(.horizontal, Space.m)
-        .frame(minHeight: 44)
+        .frame(minHeight: Look.gap(44))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text("\(account.address.address) is connected"))
     }
@@ -276,6 +277,34 @@ public struct OnboardingView: View {
         }
     }
 
+    /// AI, or a plain mail app: the same switch as Settings → Assistant → Use AI (`usesAI`).
+    private var aiChoice: some View {
+        VStack(alignment: .leading, spacing: Space.l) {
+            heading("AI, or just mail", "Margin works well either way. You can change this later in Settings → Assistant.")
+                .rise(0, still: still)
+            ChoiceList(options: [true, false],
+                       selection: Binding(get: { model.usesAI }, set: { value in pick { model.usesAI = value } }),
+                       symbol: { $0 ? "sparkles" : "envelope" },
+                       title: { $0 ? String(localized: "Use AI") : String(localized: "Just mail") },
+                       detail: { $0 ? Self.aiDetail : String(localized: "A plain mail app: no Ask, summaries or suggested replies, and AI apps can't connect.") })
+                .rise(1, still: still)
+            VStack(alignment: .leading, spacing: Space.s) {
+                fact("lock", "Apple's model runs on this device. Any assistant you add later says where it runs.")
+                fact("tray.2", "Either way, Home sorts your mail into groups.")
+            }
+            .font(TypeScale.row)
+            .foregroundStyle(Ink.secondary)
+            .rise(2, still: still)
+        }
+    }
+
+    /// What Use AI brings on this device: Apple's model when it has one, otherwise an assistant to add.
+    static var aiDetail: String {
+        OnDeviceModel.isAvailable
+            ? String(localized: "Ask about your mail, summaries and suggested replies, with Apple's model on this device.")
+            : String(localized: "Ask about your mail, summaries and suggested replies, once you add an assistant in Settings → Assistant.")
+    }
+
     /// iPhone and iPad: why instant alerts need Margin's relay, what it gets and never gets, and
     /// the choice to do without it. The same setting as Settings → Notifications → Instant
     /// notifications (`usesPushRelay`).
@@ -349,6 +378,8 @@ public struct OnboardingView: View {
                 summary("circle.lefthalf.filled", "Appearance", model.appearance.title)
                 Rectangle().fill(Line.hairline).frame(height: 1).padding(.leading, 44)
                 summary("bell", "New mail alerts", model.newMailAlerts.title)
+                Rectangle().fill(Line.hairline).frame(height: 1).padding(.leading, 44)
+                summary(model.usesAI ? "sparkles" : "envelope", "AI", model.usesAI ? String(localized: "On") : String(localized: "Off"))
             }
             .background(Fill.one, in: RoundedRectangle(cornerRadius: Radius.surface, style: .continuous))
             .frame(maxWidth: 480)
@@ -361,7 +392,7 @@ public struct OnboardingView: View {
     // MARK: Sizes
 
     #if os(macOS)
-    private static let pagePadding: CGFloat = Space.xl + Space.s
+    private static var pagePadding: CGFloat { Space.xl + Space.s }
     private static let bandHeight: CGFloat = 220
     private static let heroHeight: CGFloat = 176
     private static let heroIcon: CGFloat = 80
@@ -369,7 +400,7 @@ public struct OnboardingView: View {
     private static let miniWidth: CGFloat = 62
     private static let iconSize: CGFloat = 34
     #else
-    private static let pagePadding: CGFloat = Space.l
+    private static var pagePadding: CGFloat { Space.l }
     private static let bandHeight: CGFloat = 270
     private static let heroHeight: CGFloat = 230
     private static let heroIcon: CGFloat = 92
@@ -402,7 +433,7 @@ public struct OnboardingView: View {
                 withAnimation(still ? nil : .spring(response: 0.5, dampingFraction: 0.9)) { scroll.scrollTo(edge: .bottom) }
             } label: {
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.system(size: Look.size(13), weight: .bold))
                     .foregroundStyle(Ink.secondary)
                     .frame(width: 30, height: 30)
                     .background(Paper.panel, in: Circle())
@@ -467,7 +498,7 @@ public struct OnboardingView: View {
         case .look:
             Button("Back") { go(.welcome) }.buttonStyle(QuietButtonStyle()).fixedSize()
             Button("Continue") { go(.alerts) }.buttonStyle(InkButtonStyle()).keyboardShortcut(.defaultAction).fixedSize()
-        case .alerts, .relay:
+        case .alerts, .ai, .relay:
             Button("Back") { goBack() }.buttonStyle(QuietButtonStyle()).fixedSize()
             Button("Continue") { goOn() }.buttonStyle(InkButtonStyle()).keyboardShortcut(.defaultAction).fixedSize()
         case .done:
@@ -540,7 +571,7 @@ public struct OnboardingView: View {
         } label: {
             HStack(spacing: Space.s) {
                 step == .done ? Text("Start Using Margin") : Text("Continue")
-                Image(systemName: "arrow.right").font(.system(size: 15, weight: .bold))
+                Image(systemName: "arrow.right").font(.system(size: Look.size(15), weight: .bold))
             }
         }
         .buttonStyle(OnboardingPillStyle(still: still))
@@ -550,7 +581,7 @@ public struct OnboardingView: View {
 
     private var backButton: some View {
         Button { goBack() } label: {
-            Image(systemName: "chevron.left").font(.system(size: 17, weight: .semibold))
+            Image(systemName: "chevron.left").font(.system(size: Look.size(17), weight: .semibold))
         }
         .buttonStyle(OnboardingPillStyle(prominent: false, circle: true, still: still))
         .accessibilityLabel(Text("Back"))
@@ -636,7 +667,7 @@ public struct OnboardingView: View {
 
     private func summary(_ symbol: String, _ title: LocalizedStringKey, _ value: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: Space.m) {
-            Image(systemName: symbol).font(.system(size: 15)).foregroundStyle(Ink.tertiary).frame(width: 20)
+            Image(systemName: symbol).font(.system(size: Look.size(15))).foregroundStyle(Ink.tertiary).frame(width: 20)
             // The name and the choice side by side, or the choice under its name when it is long.
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .firstTextBaseline, spacing: Space.m) {
@@ -659,7 +690,7 @@ public struct OnboardingView: View {
 
     private func point(_ symbol: String, _ title: LocalizedStringKey, _ detail: LocalizedStringKey) -> some View {
         HStack(alignment: .top, spacing: Space.m) {
-            Image(systemName: symbol).font(.system(size: 20, weight: .light)).foregroundStyle(Ink.secondary).frame(width: 28)
+            Image(systemName: symbol).font(.system(size: Look.size(20), weight: .light)).foregroundStyle(Ink.secondary).frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(TypeScale.rowStrong).foregroundStyle(Ink.primary)
                 Text(detail).font(TypeScale.row).foregroundStyle(Ink.tertiary).fixedSize(horizontal: false, vertical: true)

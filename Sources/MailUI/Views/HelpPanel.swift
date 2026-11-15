@@ -159,7 +159,7 @@ struct HelpPanel: View {
             Topic(id: "ai", symbol: "point.3.connected.trianglepath.dotted", title: String(localized: "AI apps"),
                   lines: [String(localized: "AI apps on your Mac can search your mail, sort it, save drafts and make rules through Margin once you turn it on."),
                           String(localized: "You choose what they may change or send, and which mailboxes they see.")],
-                  action: (String(localized: "Open Connections"), { settings("connections") })),
+                  action: (String(localized: "Open AI Apps"), { settings("connections") })),
             Topic(id: "backup", symbol: "externaldrive", title: String(localized: "Backups and other devices"),
                   lines: [String(localized: "Back up your settings, mailboxes and signatures on a schedule, locked with a password."),
                           String(localized: "Link Device copies everything to your iPhone or iPad.")],

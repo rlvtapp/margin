@@ -121,7 +121,7 @@ struct AskView: View {
     }
 
     /// Which assistant and model answers: every ready one you've added, each with its models,
-    /// switchable here. The choice is the same one as Settings → Assistant → Ask and writing.
+    /// switchable here. The choice is the same one as Settings → AI → Ask and writing.
     @ViewBuilder
     private var modelPicker: some View {
         let current = model.assistantSettings

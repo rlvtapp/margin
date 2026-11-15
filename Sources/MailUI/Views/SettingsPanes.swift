@@ -26,7 +26,7 @@ struct MailboxesSettings: View {
                         AccountMark(account, size: 28)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(account.label)
-                            Text(account.serverDescription).font(.caption).foregroundStyle(.secondary)
+                            Text(account.serverDescription).font(TypeScale.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
                         Button("Edit…") { editing = account.id }
@@ -62,7 +62,6 @@ struct MailboxesSettings: View {
             Section {
                 Button("Add Mailbox…") { model.isAddingAccount = true }
             }
-            SavedMailSection(model: model)
         }
         .formStyle(.grouped)
         .signsInAgain(model: model, account: $signingIn, confirms: true)
@@ -111,6 +110,8 @@ struct SavedMailSection: View {
                 }
                 .disabled(isClearing)
             }
+        } header: {
+            Text("On this device")
         } footer: {
             Text("Older mail's senders, subjects and previews are downloaded in the background, so it can be searched and scrolled without a connection. The text of recent mail is saved too, without its files, so opening it doesn't wait; older texts and all files come when a mail is opened. On iPhone and iPad only on Wi-Fi, and while charging or above 20% battery.")
         }
@@ -123,18 +124,9 @@ struct SavedMailSection: View {
     }
 }
 
-/// Appearance: theme, accent, layout, rows, colours, accessibility; swipes on iPhone and iPad.
+/// Appearance: theme, accent, size, the app icon, colours and accessibility.
 struct AppearanceSettings: View {
     @Bindable var model: MailModel
-
-    private var layouts: [ListLayout] {
-        #if os(macOS)
-        ListLayout.allCases
-        #else
-        // On iPhone a conversation always opens over the list, so Wide is the same as Side by side.
-        [.panels, .spark, .minimal]
-        #endif
-    }
 
     static func caption(_ appearance: AppAppearance) -> String? {
         switch appearance {
@@ -182,11 +174,6 @@ struct AppearanceSettings: View {
                 Text("Theme")
             }
             Section {
-                ChoiceTiles(options: layouts, selection: $model.layout, title: \.title, caption: Self.caption) { LayoutPreview(layout: $0) }
-            } header: {
-                Text("Layout")
-            }
-            Section {
                 ChoiceTiles(options: Density.allCases, selection: $model.density,
                             title: { $0 == .roomy ? String(localized: "Roomy") : String(localized: "Compact") },
                             caption: { $0 == .roomy ? String(localized: "Bigger text and more room.") : String(localized: "Fits more on screen.") }) {
@@ -194,37 +181,6 @@ struct AppearanceSettings: View {
                 }
             } header: {
                 Text("Size")
-            }
-            Section {
-                ChoiceTiles(options: [false, true], selection: $model.compactRows,
-                            title: { $0 ? String(localized: "One line") : String(localized: "Three lines") },
-                            caption: { $0 ? String(localized: "Fits the most mail on screen.") : String(localized: "Sender, subject and a preview.") }) {
-                    RowsPreview(compact: $0)
-                }
-                #if os(macOS)
-                ChoiceTiles(options: [false, true], selection: $model.insetPanel,
-                            title: { $0 ? String(localized: "Inset panel") : String(localized: "Edge to edge") },
-                            caption: { $0 ? String(localized: "Mail sits in a rounded panel.") : String(localized: "Mail runs to the window's edges.") }) {
-                    WindowStylePreview(inset: $0)
-                }
-                Toggle(isOn: Binding(get: { model.showsAccountRail }, set: { model.showsAccountRail = $0 })) {
-                    SettingLabel("Account column",
-                                 detail: "The column of mailboxes at the far left. Off, All inboxes, Home, the Calendar and your mailboxes move to the top of the sidebar.")
-                }
-                Toggle(isOn: $model.buttonNames) {
-                    SettingLabel("Show button names",
-                                 detail: "Names beside the icons above a conversation, when they fit. Off shows icons only; pointing at one shows its name and shortcut.")
-                }
-                #endif
-            } header: {
-                #if os(macOS)
-                Text("Rows and window")
-                #else
-                Text("Rows")
-                #endif
-            }
-            Section {
-                LabeledContent { LanguageSetting() } label: { SettingLabel("Language", detail: "Margin's own language, apart from the system's.") }
             }
             Section {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 64), spacing: Space.s)], spacing: Space.m) {
@@ -239,7 +195,7 @@ struct AppearanceSettings: View {
                                             .opacity(model.appIcon == choice ? 1 : 0)
                                     )
                                 Text(verbatim: choice.title)
-                                    .font(.caption)
+                                    .font(TypeScale.caption)
                                     .foregroundStyle(model.appIcon == choice ? Ink.primary : Ink.secondary)
                             }
                             .contentShape(Rectangle())
@@ -282,56 +238,135 @@ struct AppearanceSettings: View {
                 Text("Margin also follows these settings from the system's Accessibility settings.")
                 #endif
             }
-            SwipeSettings(model: model)
         }
         .formStyle(.grouped)
     }
-
 }
 
-/// Shortcuts: change any single key, or turn single keys off.
+/// Layout: how the window is arranged, how much a row shows, and the window's own parts on the Mac.
+struct LayoutSettings: View {
+    @Bindable var model: MailModel
+
+    private var layouts: [ListLayout] {
+        #if os(macOS)
+        ListLayout.allCases
+        #else
+        // On iPhone a conversation always opens over the list, so Wide is the same as Side by side.
+        [.panels, .spark, .minimal]
+        #endif
+    }
+
+    var body: some View {
+        Form {
+            SettingsHeader(.layout)
+            Section {
+                ChoiceTiles(options: layouts, selection: $model.layout, title: \.title, caption: AppearanceSettings.caption) { LayoutPreview(layout: $0) }
+            } header: {
+                Text("Layout")
+            }
+            Section {
+                ChoiceTiles(options: [false, true], selection: $model.compactRows,
+                            title: { $0 ? String(localized: "One line") : String(localized: "Three lines") },
+                            caption: { $0 ? String(localized: "Fits the most mail on screen.") : String(localized: "Sender, subject and a preview.") }) {
+                    RowsPreview(compact: $0)
+                }
+            } header: {
+                Text("Rows")
+            }
+            #if os(macOS)
+            Section {
+                ChoiceTiles(options: [false, true], selection: $model.insetPanel,
+                            title: { $0 ? String(localized: "Inset panel") : String(localized: "Edge to edge") },
+                            caption: { $0 ? String(localized: "Mail sits in a rounded panel.") : String(localized: "Mail runs to the window's edges.") }) {
+                    WindowStylePreview(inset: $0)
+                }
+                Toggle(isOn: Binding(get: { model.showsAccountRail }, set: { model.showsAccountRail = $0 })) {
+                    SettingLabel("Account column",
+                                 detail: "The column of mailboxes at the far left. Off, All inboxes, Home, the Calendar and your mailboxes move to the top of the sidebar.")
+                }
+                Toggle(isOn: $model.buttonNames) {
+                    SettingLabel("Show button names",
+                                 detail: "Names beside the icons above a conversation, when they fit. Off shows icons only; pointing at one shows its name and shortcut.")
+                }
+            } header: {
+                Text("Window")
+            }
+            #endif
+        }
+        .formStyle(.grouped)
+    }
+}
+
+/// Shortcuts and Swipes: change any single key or turn single keys off (on the Mac), and what a
+/// swipe on a conversation does.
 struct ShortcutSettings: View {
     @Bindable var model: MailModel
 
     var body: some View {
-        let commands = MailCommand.all(for: model).filter { $0.keys.count == 1 || model.keyOverrides[$0.id] != nil }
         Form {
             SettingsHeader(.shortcuts)
-            Section {
-                Toggle(isOn: $model.singleKeyShortcuts) { SettingLabel("Single-key shortcuts (E, R, J, K…)") }
-                LabeledContent {
-                    Menu("Choose…") {
-                        ForEach(ShortcutPreset.allCases) { preset in
-                            Button(preset.title) {
-                                model.keyOverrides = preset.overrides
-                                model.singleKeyShortcuts = preset.usesSingleKeys
-                            }
-                        }
-                    }
-                    .fixedSize()
-                } label: { SettingLabel("Start from the keys of") }
-            } footer: {
-                Text("Turn this off if you'd rather nothing happens when you type outside a text field. ⌘ shortcuts and ⌘K keep working.")
-            }
-            Section {
-                ForEach(commands) { command in
-                    ShortcutRow(model: model, command: command, clashes: clashes(command, in: commands))
-                }
-            }
-            .disabled(!model.singleKeyShortcuts)
-            Section {
-                Button("Restore the original keys") { model.keyOverrides = [:] }
-            }
+            #if os(macOS)
+            keyboard
+            #endif
+            SwipeSettings(model: model)
+            #if os(macOS)
+            keyList
+            #endif
         }
         .formStyle(.grouped)
+    }
+
+    #if os(macOS)
+    private var commands: [MailCommand] {
+        MailCommand.all(for: model).filter { $0.keys.count == 1 || model.keyOverrides[$0.id] != nil }
+    }
+
+    @ViewBuilder
+    private var keyboard: some View {
+        Section {
+            Toggle(isOn: $model.singleKeyShortcuts) { SettingLabel("Single-key shortcuts (E, R, J, K…)") }
+            LabeledContent {
+                Menu("Choose…") {
+                    ForEach(ShortcutPreset.allCases) { preset in
+                        Button(preset.title) {
+                            model.keyOverrides = preset.overrides
+                            model.singleKeyShortcuts = preset.usesSingleKeys
+                        }
+                    }
+                }
+                .fixedSize()
+            } label: { SettingLabel("Start from the keys of") }
+        } header: {
+            Text("Keyboard")
+        } footer: {
+            Text("Turn this off if you'd rather nothing happens when you type outside a text field. ⌘ shortcuts and ⌘K keep working.")
+        }
+    }
+
+    @ViewBuilder
+    private var keyList: some View {
+        let commands = commands
+        Section {
+            ForEach(commands) { command in
+                ShortcutRow(model: model, command: command, clashes: clashes(command, in: commands))
+            }
+        } header: {
+            Text("Single keys")
+        }
+        .disabled(!model.singleKeyShortcuts)
+        Section {
+            Button("Restore the original keys") { model.keyOverrides = [:] }
+        }
     }
 
     private func clashes(_ command: MailCommand, in commands: [MailCommand]) -> Bool {
         guard let key = command.key(in: model)?.lowercased() else { return false }
         return commands.contains { $0.id != command.id && $0.key(in: model)?.lowercased() == key }
     }
+    #endif
 }
 
+#if os(macOS)
 private struct ShortcutRow: View {
     @Bindable var model: MailModel
     let command: MailCommand
@@ -340,7 +375,7 @@ private struct ShortcutRow: View {
     var body: some View {
         LabeledContent {
             HStack(spacing: Space.s) {
-                if clashes { Text("Used twice").font(.caption).foregroundStyle(Status.danger) }
+                if clashes { Text("Used twice").font(TypeScale.caption).foregroundStyle(Status.danger) }
                 TextField("", text: Binding(
                     get: { command.key(in: model) ?? "" },
                     set: { value in
@@ -361,6 +396,8 @@ private struct ShortcutRow: View {
     }
 }
 
+#endif
+
 /// Templates: reusable text with fill-ins.
 struct TemplateSettings: View {
     @Bindable var model: MailModel
@@ -377,7 +414,7 @@ struct TemplateSettings: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(template.name)
-                            Text(template.body.replacingOccurrences(of: "\n", with: " ")).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                            Text(template.body.replacingOccurrences(of: "\n", with: " ")).font(TypeScale.caption).foregroundStyle(.secondary).lineLimit(1)
                         }
                         Spacer()
                         Button("Edit") { editing = template }
@@ -449,10 +486,22 @@ struct SortingSettings: View {
                 Toggle(isOn: Binding(get: { model.sortsNewMail }, set: { model.sortsNewMail = $0 })) {
                     SettingLabel("Sort new mail as it arrives")
                 }
-                if model.isSorting, let progress = model.sortingProgress {
-                    Button("Stop (\(progress.done) of \(progress.total))") { model.stopSorting() }
-                } else {
-                    Button("Sort Now") { model.sortNow() }
+                LabeledContent {
+                    if model.isSorting, let progress = model.sortingProgress {
+                        Button("Stop (\(progress.done) of \(progress.total))") { model.stopSorting() }
+                    } else {
+                        Button("Sort Now") { model.sortNow() }
+                    }
+                } label: {
+                    SettingLabel("Sort the inbox", detail: "Goes through the mail that's already there.")
+                }
+                LabeledContent {
+                    Button("Open") { model.settingsPageRequest = SettingsPage.assistant.rawValue }
+                } label: {
+                    SettingLabel(verbatim: String(localized: "Sorting with AI"),
+                                 detail: !model.usesAI ? String(localized: "Off, because AI is off. Clear cases are still sorted.")
+                                    : model.sortAssistant.map { String(localized: "On, by \(AssistantRow.label($0)).") }
+                                        ?? String(localized: "Off, because no assistant is set up. Clear cases are still sorted."))
                 }
             } footer: {
                 Text("Margin sorts the inbox into these groups, each a label, and Home shows a tab per group. With the assistant on it reads each conversation; without it, only clear cases are sorted (bills, receipts, orders, travel, newsletters).")
@@ -463,7 +512,7 @@ struct SortingSettings: View {
                         VStack(alignment: .leading, spacing: 4) {
                             TextField("Name", text: $group.name).textFieldStyle(.plain)
                             TextField("What belongs here", text: $group.detail, axis: .vertical)
-                                .textFieldStyle(.plain).font(.caption).foregroundStyle(.secondary).lineLimit(1...3)
+                                .textFieldStyle(.plain).font(TypeScale.caption).foregroundStyle(.secondary).lineLimit(1...3)
                         }
                         .labelsHidden()
                         Spacer()
@@ -476,6 +525,8 @@ struct SortingSettings: View {
                     }
                     .buttonStyle(.borderless)
                 }
+            } header: {
+                Text("Groups")
             }
             Section {
                 Button("Add Group") { groups.append(EmailGroup(name: String(localized: "New group"), detail: "")) }
@@ -495,9 +546,14 @@ struct SortingSettings: View {
     }
 }
 
-/// Backup and Devices: a file now, automatic backups, a recovery key, and moving to another device.
+/// Backup and Devices, as three pages: syncing and moving to another device; a file now,
+/// automatic backups and the recovery key; restoring.
 struct BackupSettings: View {
+    /// The three pages this is shown as: syncing and other devices, making backups, restoring.
+    enum Part { case devices, backups, restore }
+
     let model: MailModel
+    var part: Part = .devices
     @State private var password = ""
     @State private var includeSecrets = false
     @State private var status: String?
@@ -512,7 +568,9 @@ struct BackupSettings: View {
 
     var body: some View {
         Form {
-            SettingsHeader(.backup)
+            switch part {
+            case .devices:
+                SettingsHeader(.backup)
             Section {
                 Toggle(isOn: Binding(get: { model.syncsWithICloud }, set: { model.syncsWithICloud = $0 })) {
                     SettingLabel("Sync with iCloud",
@@ -520,7 +578,7 @@ struct BackupSettings: View {
                 }
                 if model.syncsWithICloud {
                     if let problem = model.syncProblem {
-                        Text(verbatim: problem).font(.caption).foregroundStyle(.secondary)
+                        Text(verbatim: problem).font(TypeScale.caption).foregroundStyle(.secondary)
                     } else {
                         LabeledContent {
                             Button("Sync Now") { Task { await model.syncNow() } }
@@ -538,6 +596,10 @@ struct BackupSettings: View {
             } footer: {
                 Text("Passwords go through iCloud Keychain, encrypted end to end by Apple. The rest is kept in Margin's folder in your iCloud Drive. No server of ours is involved.")
             }
+                linkDevice
+                statusLine
+            case .backups:
+                SettingsHeader(.backupFiles)
             Section {
                 LabeledContent {
                     RevealableField(title: "Password", text: $password, prompt: Text("Optional")).frame(maxWidth: 220)
@@ -562,6 +624,11 @@ struct BackupSettings: View {
                 }
             }
 
+                automatic
+                recovery
+                statusLine
+            case .restore:
+                SettingsHeader(.restore)
             Section {
                 part("Mailboxes and signatures", .mailboxes)
                 part("Settings", .settings)
@@ -582,9 +649,7 @@ struct BackupSettings: View {
                 Text(verbatim: status ?? " ")
             }
 
-            automatic
-            recovery
-            linkDevice
+            }
         }
         .formStyle(.grouped)
         .fileImporter(isPresented: $choosingRestore, allowedContentTypes: [.data]) { result in
@@ -602,6 +667,14 @@ struct BackupSettings: View {
                 pendingRestore = nil
                 restorePassword = ""
             }
+        }
+    }
+
+    /// What the last action said, in room that's always there so nothing moves when it appears.
+    private var statusLine: some View {
+        Section {
+        } footer: {
+            Text(verbatim: status ?? " ")
         }
     }
 

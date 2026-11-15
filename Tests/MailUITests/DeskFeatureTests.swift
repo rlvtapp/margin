@@ -115,7 +115,7 @@ import Testing
 
     @Test func settingsSearchFindsPagesByWhatIsOnThem() {
         #expect(SettingsPage.reading.matches(""))
-        #expect(SettingsPage.reading.matches("tracker"))
+        #expect(SettingsPage.general.matches("tracker"))
         #expect(SettingsPage.notifications.matches("VIP"))
         #expect(SettingsPage.connections.matches("mcp"))
         #expect(!SettingsPage.about.matches("tracker"))

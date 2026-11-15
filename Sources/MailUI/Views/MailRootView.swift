@@ -46,7 +46,7 @@ public struct MailRootView: View {
                             .transition(.move(edge: .leading).combined(with: .opacity))
                     }
                     // The list and the reader: edge to edge on the window with a hairline where they meet
-                    // the sidebar, or in a rounded inset panel (Settings → Appearance → Window). Their
+                    // the sidebar, or in a rounded inset panel (Settings → Layout → Window). Their
                     // own view, so dragging the list's edge redraws only these two.
                     if model.insetPanel {
                         ListAndReader(model: model, listFocused: $listFocused, searchFocused: $searchFocused)

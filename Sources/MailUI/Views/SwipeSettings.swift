@@ -38,6 +38,8 @@ struct SwipeSettings: View {
             Toggle(isOn: Binding(get: { model.showsHoverActions }, set: { model.showsHoverActions = $0 })) {
                 SettingLabel("Buttons on hover", detail: "Done, Mark read and Move to Trash at the end of a conversation while the pointer is over it.")
             }
+        } header: {
+            Text("Pointer")
         }
         #endif
     }

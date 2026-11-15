@@ -37,7 +37,7 @@ extension MailModel {
         mcpServer?.stop()
         mcpServer = nil
         connectionError = nil
-        // AI apps don't connect while AI is off in Settings → Assistant.
+        // AI apps don't connect while AI is off in Settings → AI.
         guard connectionSettings.enabled, usesAI else { return }
         let server = makeConnectionServer(port: connectionSettings.port, token: connectionToken)
         do {

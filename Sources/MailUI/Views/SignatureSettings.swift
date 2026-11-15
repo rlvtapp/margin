@@ -137,6 +137,8 @@ struct SignaturesSettings: View {
     var body: some View {
         Form {
             SettingsHeader(.signatures)
+            // The line that goes under every signature: one switch, so it comes first.
+            SentFromMarginSection(model: model)
             ForEach(owners, id: \.self) { owner in
                 section(owner)
             }

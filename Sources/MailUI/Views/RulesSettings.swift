@@ -27,7 +27,7 @@ struct RulesSettings: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("\(rule.field.title) contains “\(rule.contains)”")
                             Text(verbatim: "→ " + rule.action.title + (model.account(rule.accountID).map { " · " + $0.label } ?? ""))
-                                .font(.caption).foregroundStyle(.secondary)
+                                .font(TypeScale.caption).foregroundStyle(.secondary)
                         }
                     }
                 }

@@ -131,7 +131,7 @@ struct ReaderView: View {
         return messages[index].id
     }
 
-    /// The widest row that fits the pane: names on the buttons (Settings → Appearance), then
+    /// The widest row that fits the pane: names on the buttons (Settings → Layout), then
     /// icons, then icons packed tight. A pane too narrow even for that scrolls the row sideways,
     /// so nothing is ever cut off or pushed out. Which mailbox and group the conversation is in
     /// is said under its subject (`ReaderMetaLine`), not here.

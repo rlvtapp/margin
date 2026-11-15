@@ -1,11 +1,15 @@
 import MailCore
 import SwiftUI
 
-/// One mailbox's identity: the name people see, the other addresses it sends as, and its
-/// signatures (one for new mail, optionally another for replies).
+/// One mailbox's settings, in parts: General (its name, picture, notifications, automatic reply),
+/// Sending (the name people see and the other addresses it sends as), Signatures, and Server for
+/// a mailbox set up by hand.
 struct SignatureEditor: View {
     let model: MailModel
     let accountID: UUID
+    /// In the Settings window itself (picked in its sidebar) instead of a sheet: no size of its
+    /// own, Save stays on the page and Revert puts back what was saved.
+    var isEmbedded = false
     @Environment(\.dismiss) private var dismiss
     @State private var account: MailAccount?
     @State private var newAliasAddress = ""
@@ -21,240 +25,299 @@ struct SignatureEditor: View {
     @State private var findingSignature = false
     @State private var signatureNote: String?
     @State private var editing: SignatureEditing?
+    /// The part of the mailbox's settings in view.
+    @State private var tab: Tab = .general
+
+    enum Tab { case general, sending, signatures, server }
 
     var body: some View {
         NavigationStack {
             Form {
                 if let account = Binding($account) {
-                    Section {
-                        TextField("Mailbox name", text: Binding(
-                            get: { account.wrappedValue.label },
-                            set: { account.wrappedValue.label = $0 }
-                        ), prompt: Text(verbatim: account.wrappedValue.address.address))
-                    } footer: {
-                        Text("What Margin calls this mailbox, like Work or Personal. Only you see it.")
-                    }
-
-                    Section {
-                        TextField("Sender name", text: Binding(
-                            get: { account.wrappedValue.address.name ?? "" },
-                            set: { account.wrappedValue.address.name = $0.isEmpty ? nil : $0 }
-                        ))
-                    } footer: {
-                        Text("What people see as the sender, like “Alex from Northwind”. Every address in this mailbox uses it unless you give one its own name under Send as.")
-                    }
-
-                    Section {
-                        Picker("Notify me about", selection: Binding(
-                            get: { model.alerts(for: accountID) },
-                            set: { model.setAlerts($0, for: accountID) }
-                        )) {
-                            Text("Same as other mailboxes").tag(NewMailAlerts?.none)
-                            ForEach(NewMailAlerts.allCases, id: \.self) { Text($0.title).tag(NewMailAlerts?.some($0)) }
-                        }
-                        Toggle("Show in All Inboxes", isOn: Binding(
-                            get: { account.wrappedValue.inAllInboxes != false },
-                            set: { account.wrappedValue.inAllInboxes = $0 ? nil : false }
-                        ))
-                    } header: {
-                        Text("Notifications")
-                    }
-
-                    AutoReplySection(model: model, account: account.wrappedValue)
-
-                    OutlookReactionsSection(model: model, account: account.wrappedValue)
-
-                    Section {
-                        HStack(spacing: Space.m) {
-                            AccountMark(account.wrappedValue, size: 44)
-                                // Drop a picture on it to use it.
-                                .dropDestination(for: Data.self) { items, _ in
-                                    guard let data = items.first else { return false }
-                                    model.setPicture(data, for: accountID)
-                                    account.wrappedValue.picture = model.account(accountID)?.picture
-                                    return true
-                                }
-                                .help(Text("Drop a picture here, or choose one"))
-                            Button("Choose Picture…") { choosingPicture = true }
-                            if account.wrappedValue.picture != nil {
-                                Button("Remove", role: .destructive) {
-                                    model.setPicture(nil, for: accountID)
-                                    account.wrappedValue.picture = nil
-                                }
-                            }
-                        }
-                    } header: {
-                        Text("Picture")
-                    }
-
-                    if case .imap = account.wrappedValue.connection {
+                    if isEmbedded {
+                        // The same opening as every Settings page: the mailbox's mark, name and address.
                         Section {
-                            TextField("Incoming server (IMAP)", text: $server.incomingHost)
-                            TextField("Port", value: $server.incomingPort, format: .number.grouping(.never))
-                            TextField("Outgoing server (SMTP)", text: $server.outgoingHost)
-                            TextField("Port", value: $server.outgoingPort, format: .number.grouping(.never))
-                            if case .password = account.wrappedValue.auth {
-                                TextField("Username", text: $server.username)
-                                SecureField("New password (leave empty to keep)", text: $server.password)
+                        } footer: {
+                            VStack(spacing: 0) {
+                                MailboxPhoto(model: model, account: account.wrappedValue, size: Look.gap(40))
+                                Text(verbatim: account.wrappedValue.label)
+                                    .font(.system(size: Look.size(20), weight: .bold))
+                                    .foregroundStyle(Ink.primary)
+                                    .padding(.top, Space.s)
+                                Text(verbatim: account.wrappedValue.address.address)
+                                    .font(TypeScale.label)
+                                    .foregroundStyle(Ink.secondary)
+                                    .padding(.top, 4)
                             }
-                            HStack {
-                                Text(verbatim: serverStatus ?? " ").font(TypeScale.label).foregroundStyle(Ink.tertiary)
-                                Spacer()
-                                Button(checking ? "Checking…" : "Check and Save") { checkServer(account.wrappedValue) }.disabled(checking)
+                            .frame(maxWidth: .infinity)
+                            .padding(.top, Space.l)
+                            .padding(.bottom, Space.s)
+                        }
+                    }
+                    // The page in parts, so no part is long: pick one here.
+                    Section {
+                    } footer: {
+                        Picker("", selection: $tab) {
+                            Text("General").tag(Tab.general)
+                            Text("Sending").tag(Tab.sending)
+                            Text("Signatures").tag(Tab.signatures)
+                            if case .imap = account.wrappedValue.connection { Text("Server").tag(Tab.server) }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .frame(maxWidth: 420)
+                        .frame(maxWidth: .infinity)
+                    }
+                    if tab == .general {
+                        Section {
+                            TextField("Mailbox name", text: Binding(
+                                get: { account.wrappedValue.label },
+                                set: { account.wrappedValue.label = $0 }
+                            ), prompt: Text(verbatim: account.wrappedValue.address.address))
+                        } footer: {
+                            Text("What Margin calls this mailbox, like Work or Personal. Only you see it.")
+                        }
+
+                        Section {
+                            HStack(spacing: Space.m) {
+                                AccountMark(account.wrappedValue, size: 44)
+                                    // Drop a picture on it to use it.
+                                    .dropDestination(for: Data.self) { items, _ in
+                                        guard let data = items.first else { return false }
+                                        model.setPicture(data, for: accountID)
+                                        account.wrappedValue.picture = model.account(accountID)?.picture
+                                        return true
+                                    }
+                                    .help(Text("Drop a picture here, or choose one"))
+                                Button("Choose Picture…") { choosingPicture = true }
+                                if account.wrappedValue.picture != nil {
+                                    Button("Remove", role: .destructive) {
+                                        model.setPicture(nil, for: accountID)
+                                        account.wrappedValue.picture = nil
+                                    }
+                                }
                             }
                         } header: {
-                            Text("Server and sign-in")
+                            Text("Picture")
+                        }
+
+                        Section {
+                            Picker("Notify me about", selection: Binding(
+                                get: { model.alerts(for: accountID) },
+                                set: { model.setAlerts($0, for: accountID) }
+                            )) {
+                                Text("Same as other mailboxes").tag(NewMailAlerts?.none)
+                                ForEach(NewMailAlerts.allCases, id: \.self) { Text($0.title).tag(NewMailAlerts?.some($0)) }
+                            }
+                            Toggle("Show in All Inboxes", isOn: Binding(
+                                get: { account.wrappedValue.inAllInboxes != false },
+                                set: { account.wrappedValue.inAllInboxes = $0 ? nil : false }
+                            ))
+                        } header: {
+                            Text("Notifications")
+                        }
+
+                        AutoReplySection(model: model, account: account.wrappedValue)
+
+                        OutlookReactionsSection(model: model, account: account.wrappedValue)
+
+                    }
+                    if tab == .sending {
+                        Section {
+                            TextField("Sender name", text: Binding(
+                                get: { account.wrappedValue.address.name ?? "" },
+                                set: { account.wrappedValue.address.name = $0.isEmpty ? nil : $0 }
+                            ))
                         } footer: {
-                            Text("Margin tries the new settings first. If they don't work, nothing changes.")
+                            Text("What people see as the sender, like “Alex from Northwind”. Every address in this mailbox uses it unless you give one its own name under Send as.")
                         }
-                    }
 
-                    Section {
-                        let senderName = account.wrappedValue.address.name.flatMap { $0.trimmingCharacters(in: .whitespaces).isEmpty ? nil : $0 }
-                        HStack {
-                            Text(verbatim: account.wrappedValue.address.address)
-                            Spacer()
-                            Text(verbatim: senderName ?? "").foregroundStyle(.secondary)
-                        }
-                        ForEach(Array((account.wrappedValue.aliases ?? []).enumerated()), id: \.offset) { index, alias in
+                        Section {
+                            let senderName = account.wrappedValue.address.name.flatMap { $0.trimmingCharacters(in: .whitespaces).isEmpty ? nil : $0 }
                             HStack {
-                                Text(verbatim: alias.address).lineLimit(1).truncationMode(.middle)
+                                Text(verbatim: account.wrappedValue.address.address)
                                 Spacer()
-                                TextField("", text: Binding(
-                                    get: { (account.wrappedValue.aliases ?? []).indices.contains(index) ? account.wrappedValue.aliases?[index].name ?? "" : "" },
-                                    set: { value in
-                                        guard account.wrappedValue.aliases?.indices.contains(index) == true else { return }
-                                        account.wrappedValue.aliases?[index].name = value.trimmingCharacters(in: .whitespaces).isEmpty ? nil : value
-                                    }
-                                ), prompt: senderName.map { Text(verbatim: $0) } ?? Text("Name"))
-                                .labelsHidden()
-                                .multilineTextAlignment(.trailing)
-                                .textFieldStyle(.plain)
-                                .frame(maxWidth: 170)
-                                .accessibilityLabel(Text("Name for \(alias.address)"))
-                                AliasSignatureButton(signature: Binding(
-                                    get: { account.wrappedValue.aliasSignatures?[alias.address.lowercased()] ?? "" },
-                                    set: { value in
-                                        var all = account.wrappedValue.aliasSignatures ?? [:]
-                                        all[alias.address.lowercased()] = value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : value
-                                        account.wrappedValue.aliasSignatures = all.isEmpty ? nil : all
-                                    }
-                                ), choice: Binding(
-                                    get: { account.wrappedValue.aliasSignatureNames?[alias.address.lowercased()] },
-                                    set: { value in
-                                        var all = account.wrappedValue.aliasSignatureNames ?? [:]
-                                        all[alias.address.lowercased()] = value
-                                        account.wrappedValue.aliasSignatureNames = all.isEmpty ? nil : all
-                                    }
-                                ), names: account.wrappedValue.availableSignatures.map(\.name), address: alias.address)
-                                Button(role: .destructive) { account.wrappedValue.aliases?.remove(at: index) } label: {
-                                    Image(systemName: "minus.circle")
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel("Remove")
+                                Text(verbatim: senderName ?? "").foregroundStyle(.secondary)
                             }
+                            ForEach(Array((account.wrappedValue.aliases ?? []).enumerated()), id: \.offset) { index, alias in
+                                HStack {
+                                    Text(verbatim: alias.address).lineLimit(1).truncationMode(.middle)
+                                    Spacer()
+                                    TextField("", text: Binding(
+                                        get: { (account.wrappedValue.aliases ?? []).indices.contains(index) ? account.wrappedValue.aliases?[index].name ?? "" : "" },
+                                        set: { value in
+                                            guard account.wrappedValue.aliases?.indices.contains(index) == true else { return }
+                                            account.wrappedValue.aliases?[index].name = value.trimmingCharacters(in: .whitespaces).isEmpty ? nil : value
+                                        }
+                                    ), prompt: senderName.map { Text(verbatim: $0) } ?? Text("Name"))
+                                    .labelsHidden()
+                                    .multilineTextAlignment(.trailing)
+                                    .textFieldStyle(.plain)
+                                    .frame(maxWidth: 170)
+                                    .accessibilityLabel(Text("Name for \(alias.address)"))
+                                    AliasSignatureButton(signature: Binding(
+                                        get: { account.wrappedValue.aliasSignatures?[alias.address.lowercased()] ?? "" },
+                                        set: { value in
+                                            var all = account.wrappedValue.aliasSignatures ?? [:]
+                                            all[alias.address.lowercased()] = value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : value
+                                            account.wrappedValue.aliasSignatures = all.isEmpty ? nil : all
+                                        }
+                                    ), choice: Binding(
+                                        get: { account.wrappedValue.aliasSignatureNames?[alias.address.lowercased()] },
+                                        set: { value in
+                                            var all = account.wrappedValue.aliasSignatureNames ?? [:]
+                                            all[alias.address.lowercased()] = value
+                                            account.wrappedValue.aliasSignatureNames = all.isEmpty ? nil : all
+                                        }
+                                    ), names: account.wrappedValue.availableSignatures.map(\.name), address: alias.address)
+                                    Button(role: .destructive) { account.wrappedValue.aliases?.remove(at: index) } label: {
+                                        Image(systemName: "minus.circle")
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("Remove")
+                                }
+                            }
+                            let known = Set(([account.wrappedValue.address] + (account.wrappedValue.aliases ?? [])).map { $0.address.lowercased() })
+                            ForEach(suggestions.filter { !known.contains($0.address.lowercased()) }, id: \.address) { suggestion in
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(verbatim: suggestion.address)
+                                        Text("Mail sent to it arrives here").font(TypeScale.caption).foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    Button("Add") { account.wrappedValue.aliases = (account.wrappedValue.aliases ?? []) + [suggestion] }
+                                    Button {
+                                        model.dismissAliasSuggestion(suggestion, for: account.wrappedValue)
+                                        suggestions.removeAll { $0.address == suggestion.address }
+                                    } label: {
+                                        Image(systemName: "xmark")
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .tip("Not mine")
+                                }
+                            }
+                            AliasAddRow(address: $newAliasAddress, name: $newAliasName) { addAlias(to: account) }
+                        } header: {
+                            Text("Send as")
+                        } footer: {
+                            Text("Other addresses this mailbox can send from. Your provider has to allow them. Replies to mail sent to one go out from it. Leave a name empty to use the sender name.")
                         }
-                        let known = Set(([account.wrappedValue.address] + (account.wrappedValue.aliases ?? [])).map { $0.address.lowercased() })
-                        ForEach(suggestions.filter { !known.contains($0.address.lowercased()) }, id: \.address) { suggestion in
+                        .task(id: accountID) {
+                            if let current = model.account(accountID) { suggestions = await model.aliasSuggestions(for: current) }
+                        }
+
+                    }
+                    if tab == .signatures {
+                        Section {
+                            ForEach([account.wrappedValue.defaultSignature ?? NamedSignature(name: NamedSignature.defaultName, text: "")]
+                                    + (account.wrappedValue.moreSignatures ?? [])) { signature in
+                                SignatureRow(signature: signature) {
+                                    editing = SignatureEditing(original: signature.name, signature: signature)
+                                } remove: {
+                                    remove(signature, from: account)
+                                }
+                            }
+                            Button("Add a Signature…") {
+                                editing = SignatureEditing(original: nil, signature: account.wrappedValue.newSignature())
+                            }
+                            Picker("For replies and forwards", selection: Binding(
+                                get: { account.wrappedValue.replySignature ?? NamedSignature.defaultName },
+                                set: { account.wrappedValue.replySignature = $0 == NamedSignature.defaultName ? nil : $0 }
+                            )) {
+                                Text("Default").tag(NamedSignature.defaultName)
+                                ForEach(account.wrappedValue.moreSignatures ?? []) { Text(verbatim: $0.name).tag($0.name) }
+                                Text("None").tag("")
+                            }
+                        } header: {
+                            Text("Signatures")
+                        } footer: {
+                            Text("Signatures can have formatting, links and pictures, and go out the way you see them. Pick another one while writing from the signature menu.")
+                        }
+
+                        Section {
                             HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(verbatim: suggestion.address)
-                                    Text("Mail sent to it arrives here").font(.caption).foregroundStyle(.secondary)
+                                Button("Make One for Me…") {
+                                    details.name = account.wrappedValue.address.displayName
+                                    makingSignature = true
                                 }
-                                Spacer()
-                                Button("Add") { account.wrappedValue.aliases = (account.wrappedValue.aliases ?? []) + [suggestion] }
-                                Button {
-                                    model.dismissAliasSuggestion(suggestion, for: account.wrappedValue)
-                                    suggestions.removeAll { $0.address == suggestion.address }
-                                } label: {
-                                    Image(systemName: "xmark")
-                                }
-                                .buttonStyle(.borderless)
-                                .tip("Not mine")
-                            }
-                        }
-                        AliasAddRow(address: $newAliasAddress, name: $newAliasName) { addAlias(to: account) }
-                    } header: {
-                        Text("Send as")
-                    } footer: {
-                        Text("Other addresses this mailbox can send from. Your provider has to allow them. Replies to mail sent to one go out from it. Leave a name empty to use the sender name.")
-                    }
-                    .task(id: accountID) {
-                        if let current = model.account(accountID) { suggestions = await model.aliasSuggestions(for: current) }
-                    }
-
-                    Section {
-                        ForEach([account.wrappedValue.defaultSignature ?? NamedSignature(name: NamedSignature.defaultName, text: "")]
-                                + (account.wrappedValue.moreSignatures ?? [])) { signature in
-                            SignatureRow(signature: signature) {
-                                editing = SignatureEditing(original: signature.name, signature: signature)
-                            } remove: {
-                                remove(signature, from: account)
-                            }
-                        }
-                        Button("Add a Signature…") {
-                            editing = SignatureEditing(original: nil, signature: account.wrappedValue.newSignature())
-                        }
-                        Picker("For replies and forwards", selection: Binding(
-                            get: { account.wrappedValue.replySignature ?? NamedSignature.defaultName },
-                            set: { account.wrappedValue.replySignature = $0 == NamedSignature.defaultName ? nil : $0 }
-                        )) {
-                            Text("Default").tag(NamedSignature.defaultName)
-                            ForEach(account.wrappedValue.moreSignatures ?? []) { Text(verbatim: $0.name).tag($0.name) }
-                            Text("None").tag("")
-                        }
-                    } header: {
-                        Text("Signatures")
-                    } footer: {
-                        Text("Signatures can have formatting, links and pictures, and go out the way you see them. Pick another one while writing from the signature menu.")
-                    }
-
-                    Section {
-                        HStack {
-                            Button("Make One for Me…") {
-                                details.name = account.wrappedValue.address.displayName
-                                makingSignature = true
-                            }
-                            Button(findingSignature ? "Looking…" : "Find in Sent Mail") {
-                                findingSignature = true
-                                Task {
-                                    if let found = await model.findSignatureInSentMail(accountID) {
-                                        account.wrappedValue.setSignature(NamedSignature(name: NamedSignature.defaultName, text: found))
-                                        signatureNote = String(localized: "Found it in your sent mail.")
-                                    } else {
-                                        signatureNote = String(localized: "No signature showed up in enough sent messages.")
+                                Button(findingSignature ? "Looking…" : "Find in Sent Mail") {
+                                    findingSignature = true
+                                    Task {
+                                        if let found = await model.findSignatureInSentMail(accountID) {
+                                            account.wrappedValue.setSignature(NamedSignature(name: NamedSignature.defaultName, text: found))
+                                            signatureNote = String(localized: "Found it in your sent mail.")
+                                        } else {
+                                            signatureNote = String(localized: "No signature showed up in enough sent messages.")
+                                        }
+                                        findingSignature = false
                                     }
-                                    findingSignature = false
                                 }
+                                .disabled(findingSignature)
                             }
-                            .disabled(findingSignature)
+                            Text(verbatim: signatureNote ?? " ").font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                        } header: {
+                            Text("Signature tools")
+                        } footer: {
+                            Text("Both fill in the default signature, to change as you like.")
                         }
-                        Text(verbatim: signatureNote ?? " ").font(TypeScale.label).foregroundStyle(Ink.tertiary)
-                    } header: {
-                        Text("Signature tools")
-                    } footer: {
-                        Text("Both fill in the default signature, to change as you like.")
+                    }
+                    if tab == .server {
+                        if case .imap = account.wrappedValue.connection {
+                            Section {
+                                TextField("Incoming server (IMAP)", text: $server.incomingHost)
+                                TextField("Port", value: $server.incomingPort, format: .number.grouping(.never))
+                                TextField("Outgoing server (SMTP)", text: $server.outgoingHost)
+                                TextField("Port", value: $server.outgoingPort, format: .number.grouping(.never))
+                                if case .password = account.wrappedValue.auth {
+                                    TextField("Username", text: $server.username)
+                                    SecureField("New password (leave empty to keep)", text: $server.password)
+                                }
+                                HStack {
+                                    Text(verbatim: serverStatus ?? " ").font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                                    Spacer()
+                                    Button(checking ? "Checking…" : "Check and Save") { checkServer(account.wrappedValue) }.disabled(checking)
+                                }
+                            } header: {
+                                Text("Server and sign-in")
+                            } footer: {
+                                Text("Margin tries the new settings first. If they don't work, nothing changes.")
+                            }
+                        }
+
                     }
                 }
             }
             .formStyle(.grouped)
             .navigationTitle(Text(verbatim: account?.label ?? ""))
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        if var account {
-                            account.moreSignatures = account.moreSignatures?.filter { !$0.name.isEmpty }
-                            model.update(account)
-                        }
-                        dismiss()
+                if !isEmbedded {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                    ToolbarItem(placement: .confirmationAction) { Button("Save") { save(); dismiss() } }
+                }
+            }
+            // In the Settings window: Revert and Save under the page, always there, lit once
+            // something changed.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if isEmbedded {
+                    let changed = account != model.account(accountID)
+                    HStack(spacing: Space.s) {
+                        Text("Changes to this mailbox are kept when you save.")
+                            .font(TypeScale.caption).foregroundStyle(Ink.tertiary)
+                        Spacer()
+                        Button("Revert") { account = model.account(accountID) }.disabled(!changed)
+                        Button("Save") { save() }.buttonStyle(.borderedProminent).disabled(!changed)
+                            .keyboardShortcut("s", modifiers: .command)
                     }
+                    .padding(.horizontal, Space.xl)
+                    .padding(.vertical, Space.m)
+                    .background(Paper.ground)
+                    .overlay(alignment: .top) { Rectangle().fill(Line.hairline).frame(height: 1) }
                 }
             }
         }
         .tint(Ink.primary)
         #if os(macOS)
-        .frame(width: 520, height: 620)
+        .frame(width: isEmbedded ? nil : 520, height: isEmbedded ? nil : 620)
         #endif
         .onAppear {
             account = model.account(accountID)
@@ -275,6 +338,13 @@ struct SignatureEditor: View {
             model.setPicture(data, for: accountID)
             account?.picture = model.account(accountID)?.picture
         }
+    }
+
+    private func save() {
+        guard var account else { return }
+        account.moreSignatures = account.moreSignatures?.filter { !$0.name.isEmpty }
+        model.update(account)
+        if isEmbedded { self.account = model.account(accountID) }
     }
 
     private func save(_ saved: NamedSignature, replacing original: String?) {

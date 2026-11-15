@@ -4,7 +4,7 @@ import SwiftUI
 import AppKit
 #endif
 
-/// Settings → Connections: let AI apps reach Margin over MCP, and say what they may do.
+/// Settings → AI Apps: let AI apps reach Margin over MCP, and say what they may do.
 struct ConnectionsSettingsView: View {
     @Bindable var model: MailModel
     @State private var copied: String?
@@ -13,24 +13,16 @@ struct ConnectionsSettingsView: View {
         let settings = model.connectionSettings
         Form {
             SettingsHeader(.connections)
+            AIOffNotice(model: model)
             Section {
                 Toggle(isOn: binding(\.enabled)) {
                     SettingLabel("Let AI apps use Margin",
                                  detail: "Claude, ChatGPT and other apps that support MCP can search and read your mail through Margin, on this Mac only.")
                 }
                 .disabled(!model.usesAI)
-                if !model.usesAI {
-                    HStack {
-                        Text("AI is off in Settings → Assistant, so AI apps can't connect.")
-                            .font(.callout).foregroundStyle(.secondary)
-                        Spacer()
-                        Button("Turn On AI") { model.usesAI = true }
-                    }
-                } else if settings.enabled {
-                    status
-                }
+                if model.usesAI && settings.enabled { status }
             }
-            if settings.enabled && model.usesAI {
+            if settings.enabled { Group {
                 Section {
                     Toggle(isOn: binding(\.allowChanges)) {
                         SettingLabel("Allow changes",
@@ -123,7 +115,7 @@ struct ConnectionsSettingsView: View {
                         Text("Recent activity")
                     }
                 }
-            }
+            }.disabled(!model.usesAI) }
         }
         .formStyle(.grouped)
         .onAppear { model.startConnectionIfEnabled() }
@@ -145,7 +137,7 @@ struct ConnectionsSettingsView: View {
     private func snippet(_ title: String, _ text: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(verbatim: title).font(.caption).foregroundStyle(.secondary)
+                Text(verbatim: title).font(TypeScale.caption).foregroundStyle(.secondary)
                 Spacer()
                 Button(copied == title ? "Copied" : "Copy") { copy(text, title) }.buttonStyle(.borderless)
             }

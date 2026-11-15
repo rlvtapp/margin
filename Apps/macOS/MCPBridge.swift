@@ -25,7 +25,7 @@ enum MCPBridge {
             let settings = settings
             let url = URL(string: "http://127.0.0.1:\(settings.port)/mcp")!
             guard settings.enabled else {
-                reply(error: "Margin's connection is off. Turn on Settings → Connections → Let AI apps use Margin.", id: id)
+                reply(error: "Margin's connection is off. Turn on Settings → AI Apps → Let AI apps use Margin.", id: id)
                 continue
             }
             guard let token = token(in: keychain) else {

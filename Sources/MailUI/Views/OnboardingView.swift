@@ -277,10 +277,10 @@ public struct OnboardingView: View {
         }
     }
 
-    /// AI, or a plain mail app: the same switch as Settings → Assistant → Use AI (`usesAI`).
+    /// AI, or a plain mail app: the same switch as Settings → AI → Use AI (`usesAI`).
     private var aiChoice: some View {
         VStack(alignment: .leading, spacing: Space.l) {
-            heading("AI, or just mail", "Margin works well either way. You can change this later in Settings → Assistant.")
+            heading("AI, or just mail", "Margin works well either way. You can change this later in Settings → AI.")
                 .rise(0, still: still)
             ChoiceList(options: [true, false],
                        selection: Binding(get: { model.usesAI }, set: { value in pick { model.usesAI = value } }),
@@ -302,7 +302,7 @@ public struct OnboardingView: View {
     static var aiDetail: String {
         OnDeviceModel.isAvailable
             ? String(localized: "Ask about your mail, summaries and suggested replies, with Apple's model on this device.")
-            : String(localized: "Ask about your mail, summaries and suggested replies, once you add an assistant in Settings → Assistant.")
+            : String(localized: "Ask about your mail, summaries and suggested replies, once you add an assistant in Settings → AI.")
     }
 
     /// iPhone and iPad: why instant alerts need Margin's relay, what it gets and never gets, and

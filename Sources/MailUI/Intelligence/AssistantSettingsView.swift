@@ -4,7 +4,7 @@ import SwiftUI
 import AppKit
 #endif
 
-/// Settings → Assistant: the assistants you've added, each a row with how it connects, its
+/// Settings → AI: the assistants you've added, each a row with how it connects, its
 /// model and whether it's ready (the form to change one opens right under it), then who does
 /// what: Ask and writing, quick suggestions, actions.
 struct AssistantSettingsView: View {
@@ -33,12 +33,12 @@ struct AssistantSettingsView: View {
         Form {
             SettingsHeader(.assistant)
             Section {
-                Toggle(isOn: $model.usesAI) {
-                    SettingLabel("Use AI",
-                                 detail: "Off makes Margin a plain mail app: no Ask, summaries, suggested replies, AI drafts or AI apps. Home still sorts mail by Margin's own rules.")
-                }
+                AISwitchRow(model: model)
+            } footer: {
+                Text("Sorting by sender and kind of mail, rules, sign-in codes and search are not AI and keep working either way. Translation and dictation are done by this device itself and have their own switches.")
             }
-            if model.usesAI { assistants }
+            // Shown either way, so nothing vanishes; only switched off while AI is off.
+            assistants.disabled(!model.usesAI)
         }
         .formStyle(.grouped)
         .task {
@@ -51,7 +51,7 @@ struct AssistantSettingsView: View {
         }
     }
 
-    /// Everything about the assistants, shown while AI is on.
+    /// Everything about the assistants.
     @ViewBuilder
     private var assistants: some View {
             Section {
@@ -75,11 +75,6 @@ struct AssistantSettingsView: View {
                 Text("Add as many as you like; each keeps its own key and model. New ones start on their fastest, cheapest model, which is plenty for mail.")
             }
             if !added.isEmpty { roles }
-            if model.isAssistantOn {
-                AskSettingsSection(model: model)
-                AgentPermissionsSection(model: model)
-            }
-            WritingProfileView(model: model)
     }
 
     // MARK: Adding
@@ -213,9 +208,9 @@ struct AssistantSettingsView: View {
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
                     if let status { Text(verbatim: status).foregroundStyle(.secondary) }
-                    Text(provider.privacyNote).font(.caption).foregroundStyle(.secondary)
+                    Text(provider.privacyNote).font(TypeScale.caption).foregroundStyle(.secondary)
                     if provider == .onDevice, let reason = OnDeviceModel.unavailableReason {
-                        Text(reason).font(.caption).foregroundStyle(Status.danger)
+                        Text(reason).font(TypeScale.caption).foregroundStyle(Status.danger)
                     }
                 }
             }
@@ -329,12 +324,12 @@ struct AssistantRow: View {
             ProviderIcon(provider: provider, size: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(verbatim: provider.shortName).font(.system(size: 13, weight: .semibold))
-                Text(verbatim: Self.subtitle(settings)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(verbatim: Self.subtitle(settings)).font(TypeScale.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer(minLength: Space.s)
             if !ready {
                 Label("Needs setup", systemImage: "exclamationmark.circle.fill")
-                    .font(.caption).foregroundStyle(Status.star)
+                    .font(TypeScale.caption).foregroundStyle(Status.star)
             }
             ForEach(roles, id: \.self) { role in
                 Text(role).font(.caption2.weight(.medium)).padding(.horizontal, 6).padding(.vertical, 2)
@@ -434,7 +429,7 @@ struct AssistantRow: View {
     }
 }
 
-/// Settings → Assistant → Ask: how answers come out, and what they draw on. Shown only with an
+/// Settings → AI → Ask: how answers come out, and what they draw on. Shown only with an
 /// assistant to ask.
 struct AskSettingsSection: View {
     let model: MailModel
@@ -522,4 +517,29 @@ struct ProviderIcon: View {
         func set(_ provider: AssistantProvider, _ icon: NSImage?) { lock.withLock { icons[provider] = .some(icon) } }
     }
     #endif
+}
+
+/// The one switch for everything AI, drawn larger than a row so it's the first thing seen:
+/// what state Margin is in, in words, and the switch.
+struct AISwitchRow: View {
+    @Bindable var model: MailModel
+
+    var body: some View {
+        Toggle(isOn: $model.usesAI) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Use AI").font(TypeScale.rowStrong)
+                    // Both lines keep their room, so the row is the same height on and off.
+                    ZStack(alignment: .topLeading) {
+                        Text("On: Ask, summaries, suggested replies, AI drafts, AI sorting and AI apps work with the assistants below.")
+                            .opacity(model.usesAI ? 1 : 0)
+                        Text("Off: Margin is a plain mail app. Nothing is summarized, suggested, drafted or sorted by AI, nothing goes to an AI service, and AI apps can't connect.")
+                            .opacity(model.usesAI ? 0 : 1)
+                    }
+                    .font(TypeScale.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+            .padding(.vertical, 2)
+        }
+        .accessibilityHint(Text("Off makes Margin a plain mail app."))
+    }
 }

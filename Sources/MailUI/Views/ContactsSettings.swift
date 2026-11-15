@@ -23,7 +23,7 @@ struct ContactsSettings: View {
                     #endif
                 }
                 if let issue = model.contactProblems["system"] {
-                    Text(verbatim: issue).font(.caption).foregroundStyle(Status.danger)
+                    Text(verbatim: issue).font(TypeScale.caption).foregroundStyle(Status.danger)
                 } else if model.usesSystemContacts {
                     count(model.contactCount(.system))
                 }
@@ -45,7 +45,7 @@ struct ContactsSettings: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(verbatim: book.username)
                             Text(verbatim: model.contactProblems["carddav.\(book.id.uuidString)"] ?? book.server)
-                                .font(.caption)
+                                .font(TypeScale.caption)
                                 .foregroundStyle(model.contactProblems["carddav.\(book.id.uuidString)"] == nil ? Color.secondary : Status.danger)
                         }
                     }
@@ -75,7 +75,7 @@ struct ContactsSettings: View {
     }
 
     private func count(_ number: Int) -> some View {
-        Text("\(number) contacts").font(.caption).foregroundStyle(.secondary)
+        Text("\(number) contacts").font(TypeScale.caption).foregroundStyle(.secondary)
     }
 
     @ViewBuilder
@@ -96,7 +96,7 @@ struct ContactsSettings: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: account.address.address)
                     if let issue {
-                        Text(verbatim: issue).font(.caption).foregroundStyle(Status.danger)
+                        Text(verbatim: issue).font(TypeScale.caption).foregroundStyle(Status.danger)
                     } else if connected {
                         let source: ContactSource = model.oauthProvider(of: account) == .google ? .google : .microsoft
                         count(model.contacts.filter { $0.source == source }.count)

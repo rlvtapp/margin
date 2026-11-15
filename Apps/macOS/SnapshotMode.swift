@@ -58,6 +58,8 @@ struct SnapshotMode {
                 main.setFrame(NSRect(x: screen.minX + 20, y: screen.maxY - size.height - 20, width: size.width, height: size.height), display: true)
             }
             if ProcessInfo.processInfo.arguments.contains("-snapshot-density-compact") { model.density = .compact }
+            // -snapshot-ai-off: AI switched off, to see what the AI pages say then.
+            if ProcessInfo.processInfo.arguments.contains("-snapshot-ai-off") { model.usesAI = false }
             if ProcessInfo.processInfo.arguments.contains("-snapshot-contrast") { model.increaseContrast = true }
             // -snapshot-no-next-up: the Next up column closed, as on the website's pictures.
             if ProcessInfo.processInfo.arguments.contains("-snapshot-no-next-up") { model.showsNextUp = false }
@@ -153,7 +155,7 @@ struct SnapshotMode {
             // -snapshot-settings <page>: the Settings window on that page.
             var settingsWindow: NSWindow?
             if let index = arguments.firstIndex(of: "-snapshot-settings"), index + 1 < arguments.count {
-                let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 820, height: 600), styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
+                let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 980, height: 780), styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
                                       backing: .buffered, defer: false)
                 // "mailbox": the first mailbox's own settings (name, Send as, signatures).
                 // "signatures": the Signatures page, with a workspace and a signature for all inboxes.
@@ -166,6 +168,12 @@ struct SnapshotMode {
                     ? NSHostingView(rootView: AnyView(MailboxSettingsSnapshot(model: model).frame(width: 560, height: 1300)))
                     : arguments[index + 1] == "signature"
                     ? NSHostingView(rootView: AnyView(SignatureSheetSnapshot()))
+                    // "nested": Settings on the first mailbox, picked under Mailboxes in the sidebar.
+                    : arguments[index + 1] == "nested"
+                    ? NSHostingView(rootView: AnyView(MailSettingsView(firstMailboxOf: model)))
+                    // "search:undo": Settings with those words in its search field.
+                    : arguments[index + 1].hasPrefix("search:")
+                    ? NSHostingView(rootView: AnyView(MailSettingsView(model: model, searching: String(arguments[index + 1].dropFirst(7)))))
                     : NSHostingView(rootView: AnyView(MailSettingsView(model: model, startingAt: arguments[index + 1])))
                 if arguments[index + 1] == "mailbox" { window.setContentSize(NSSize(width: 560, height: 1300)) }
                 window.makeKeyAndOrderFront(nil)
@@ -259,7 +267,7 @@ struct SnapshotMode {
             // on screen for a moment; it stays behind the other windows without taking the keyboard
             // (launch it with `open -g` so the app doesn't come forward either). A row under the
             // pointer shows its hover buttons, so keep the pointer off the window's top left.
-            if arguments.contains("-snapshot-glass"), let window {
+            if arguments.contains("-snapshot-glass"), let window, window.windowNumber > 0 {
                 window.orderFrontRegardless()
                 window.orderBack(nil)
                 try? await Task.sleep(for: .seconds(1.2))

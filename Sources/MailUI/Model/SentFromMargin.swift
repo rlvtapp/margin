@@ -45,7 +45,7 @@ extension MailModel {
     }
 }
 
-/// Settings → Writing: the line under mail you send.
+/// Settings → Signatures: the line under mail you send, after the signature.
 struct SentFromMarginSection: View {
     @Bindable var model: MailModel
     @State private var text = ""

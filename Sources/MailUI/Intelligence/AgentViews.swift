@@ -16,7 +16,7 @@ struct AgentRunCard: View {
                         .foregroundStyle(Ink.primary)
                         .lineLimit(2)
                     Spacer(minLength: Space.s)
-                    Text(verbatim: run.attribution).font(.caption).foregroundStyle(Ink.tertiary)
+                    Text(verbatim: run.attribution).font(TypeScale.caption).foregroundStyle(Ink.tertiary)
                 }
                 if !run.steps.isEmpty {
                     VStack(alignment: .leading, spacing: 3) {
@@ -28,7 +28,7 @@ struct AgentRunCard: View {
                                 Image(systemName: step.isError ? "exclamationmark.circle" : "checkmark.circle")
                                     .foregroundStyle(step.isError ? Status.danger : Ink.tertiary)
                             }
-                            .font(.caption)
+                            .font(TypeScale.caption)
                             .foregroundStyle(Ink.secondary)
                         }
                     }
@@ -36,14 +36,14 @@ struct AgentRunCard: View {
                 }
                 ForEach(run.handoffs, id: \.self) { note in
                     Label(note, systemImage: "arrow.triangle.branch")
-                        .font(.caption)
+                        .font(TypeScale.caption)
                         .foregroundStyle(Ink.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 if run.isWorking {
                     HStack(spacing: Space.s) {
                         ProgressView().controlSize(.small)
-                        Text(progressText(run)).font(.caption).foregroundStyle(Ink.secondary)
+                        Text(progressText(run)).font(TypeScale.caption).foregroundStyle(Ink.secondary)
                         Spacer()
                         Button("Stop") { model.stopAgent() }
                             .keyboardShortcut(.cancelAction)
@@ -55,8 +55,8 @@ struct AgentRunCard: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .textSelection(.enabled)
                     if run.couldOnlyLook {
-                        Text("To let the assistant make changes, turn on Allow changes in Settings → Assistant.")
-                            .font(.caption)
+                        Text("To let the assistant make changes, turn on Allow changes in Settings → AI.")
+                            .font(TypeScale.caption)
                             .foregroundStyle(Ink.tertiary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -125,9 +125,9 @@ struct AgentPromptSheet: View {
                     if model.actionProvider == nil {
                         Text(verbatim: model.noActionProviderMessage)
                     } else if model.connectionSettings.allowChanges {
-                        Text("It uses the tools you allow in Settings → Assistant. Undo puts back what it changed.")
+                        Text("It uses the tools you allow in Settings → AI. Undo puts back what it changed.")
                     } else {
-                        Text("To let the assistant make changes, turn on Allow changes in Settings → Assistant.")
+                        Text("To let the assistant make changes, turn on Allow changes in Settings → AI.")
                     }
                 }
                 Section {
@@ -162,7 +162,7 @@ struct AgentPromptSheet: View {
     }
 }
 
-/// Settings → Assistant: what the assistant may change. The same switches as AI apps get over
+/// Settings → AI: what the assistant may change. The same switches as AI apps get over
 /// MCP, so there's one answer to "what may AI do with my mail".
 struct AgentPermissionsSection: View {
     @Bindable var model: MailModel
@@ -253,7 +253,7 @@ struct ActionProviderPicker: View {
                 }
                 if let checkResult { Text(verbatim: checkResult) }
             }
-            .font(.caption)
+            .font(TypeScale.caption)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
         }

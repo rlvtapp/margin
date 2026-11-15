@@ -207,7 +207,7 @@ public enum AssistantError: LocalizedError, Equatable, Sendable {
         case .toolsUnsupported(let name): String(localized: "\(name) can answer questions but can't take actions.")
         case .refused: String(localized: "The model declined to help with this conversation.")
         case .badResponse(let detail): String(localized: "The model's answer couldn't be read. \(detail)")
-        case .http(401, _), .http(403, _): String(localized: "The API key was refused. Check it in Settings → Assistant.")
+        case .http(401, _), .http(403, _): String(localized: "The API key was refused. Check it in Settings → AI.")
         case .http(429, _): String(localized: "The provider is rate-limiting requests. Try again in a moment.")
         case .http(let code, let message): String(localized: "The provider returned an error (\(code)). \(message)")
         }

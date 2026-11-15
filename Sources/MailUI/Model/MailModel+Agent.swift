@@ -143,7 +143,7 @@ extension MailModel {
                         index += 1
                         continue
                     }
-                    let message = cantAct ? error.localizedDescription + " " + String(localized: "To take actions, set up Claude, ChatGPT, Gemini or Grok in Settings → Assistant.")
+                    let message = cantAct ? error.localizedDescription + " " + String(localized: "To take actions, set up Claude, ChatGPT, Gemini or Grok in Settings → AI.")
                         : error.localizedDescription
                     self.finishAgent(.failed(message), summary: "", reachedLimit: false)
                     return
@@ -171,7 +171,7 @@ extension MailModel {
 
     // MARK: Which provider takes actions
 
-    /// Every provider set up and saved in Settings → Assistant, so one can take actions while
+    /// Every provider set up and saved in Settings → AI, so one can take actions while
     /// another (Apple's on-device model, say) does everything else.
     public var assistantProfiles: [AssistantProvider: AssistantSettings] {
         _ = actionSettingsRevision
@@ -257,7 +257,7 @@ extension MailModel {
     }
 
     var noActionProviderMessage: String {
-        let setUp = String(localized: "To take actions, set up Claude, ChatGPT, Gemini or Grok in Settings → Assistant.")
+        let setUp = String(localized: "To take actions, set up Claude, ChatGPT, Gemini or Grok in Settings → AI.")
         guard usesAI, assistantSettings.provider != .off else { return String(localized: "Turn on the assistant in Settings first.") }
         return AssistantError.toolsUnsupported(assistantSettings.displayName).localizedDescription + " " + setUp
     }
@@ -356,7 +356,7 @@ extension MailModel {
             "Only use ids the tools gave you. If a tool returns an error, read it and try another way.",
         ]
         if !canChange {
-            lines.append("You can only look, not change anything: the person hasn't allowed changes. Say so if they asked for one, and that they can allow it in Settings → Assistant.")
+            lines.append("You can only look, not change anything: the person hasn't allowed changes. Say so if they asked for one, and that they can allow it in Settings → AI.")
         }
         if !canSend { lines.append("You can't send email; create_draft opens one for the person to send.") } else {
             lines.append("Only send email when the person explicitly asked you to send.")

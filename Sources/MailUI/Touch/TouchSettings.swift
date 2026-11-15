@@ -12,22 +12,34 @@ struct TouchSettingsView: View {
 
     @State private var search = ""
 
+    /// The pages opened, so a row on one page can open another.
+    @State private var path: [SettingsPage] = []
+
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             List {
-                ForEach(Array(SettingsPage.sections(matching: search).enumerated()), id: \.offset) { _, pages in
+                ForEach(SettingsPage.groups(matching: search)) { group in
                     Section {
-                        ForEach(pages) { item in
+                        ForEach(group.pages) { item in
                             NavigationLink(value: item) {
-                                Label { Text(verbatim: item.title) } icon: { SettingsIcon(page: item, size: 28) }
+                                Label {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(verbatim: item.title)
+                                        ForEach(item.hits(for: search).prefix(4), id: \.self) { hit in
+                                            Text(verbatim: hit).font(.caption).foregroundStyle(.secondary)
+                                        }
+                                    }
+                                } icon: { SettingsIcon(page: item, size: 28) }
                             }
                         }
+                    } header: {
+                        if let title = group.title { Text(verbatim: title) }
                     }
                 }
             }
             .searchable(text: $search, prompt: Text("Search settings"))
             .navigationDestination(for: SettingsPage.self) { item in
-                detail(item)
+                SettingsDetail(model: model, page: item, editingAccount: $editingSignature)
                     .environment(\.settingsTint, item.tint)
                     .navigationTitle(Text(verbatim: item.title))
                     .navigationBarTitleDisplayMode(.inline)
@@ -39,31 +51,15 @@ struct TouchSettingsView: View {
             }
         }
         .tint(Ink.primary)
+        // A row on one page asked for another.
+        .onChange(of: model.settingsPageRequest) { _, request in
+            guard let request else { return }
+            model.settingsPageRequest = nil
+            if let wanted = SettingsPage(named: request), SettingsPage.available.contains(wanted) { path.append(wanted) }
+        }
         .sheet(isPresented: $model.isAddingAccount) { AccountSetupView(model: model) }
         .sheet(item: Binding(get: { editingSignature.map(SignatureTarget.init) }, set: { editingSignature = $0?.id })) { item in
             SignatureEditor(model: model, accountID: item.id)
-        }
-    }
-
-    @ViewBuilder
-    private func detail(_ page: SettingsPage) -> some View {
-        switch page {
-        case .mailboxes: MailboxesSettings(model: model, editing: $editingSignature)
-        case .contacts: ContactsSettings(model: model)
-        case .workspaces: WorkspacesSettings(model: model)
-        case .notifications: NotificationSettings(model: model)
-        case .reading: ReadingSettings(model: model)
-        case .writing: WritingSettings(model: model)
-        case .signatures: SignaturesSettings(model: model)
-        case .appearance: AppearanceSettings(model: model)
-        case .sorting: SortingSettings(model: model)
-        case .templates: TemplateSettings(model: model)
-        case .assistant: AssistantSettingsView(model: model)
-        case .rules: RulesSettings(model: model)
-        case .backup: BackupSettings(model: model)
-        case .experimental: ExperimentalSettings(model: model)
-        case .about: AboutSettings(model: model)
-        case .shortcuts, .connections: EmptyView()
         }
     }
 }

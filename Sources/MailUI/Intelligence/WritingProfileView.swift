@@ -1,7 +1,7 @@
 import MailCore
 import SwiftUI
 
-/// Settings → Assistant → Your writing: what Margin has learned about how you write, overall
+/// Settings → Writing Style: what Margin has learned about how you write, overall
 /// and per person, with a way to forget someone or start over.
 struct WritingProfileView: View {
     @Bindable var model: MailModel
@@ -31,7 +31,9 @@ struct WritingProfileView: View {
         }
         // Read from disk the first time something needs it; this page needs it at once.
         .onAppear { model.loadWritingProfileIfNeeded() }
-        if model.learnsWriting && model.isAssistantOn { voiceSection(profile) }
+        // With an assistant to study with; while AI is off, with the one that would, so the
+        // section doesn't vanish with the switch.
+        if model.learnsWriting && (model.isAssistantOn || (!model.usesAI && model.assistantSettings.provider != .off)) { voiceSection(profile) }
         if model.learnsWriting {
             Section {
                 if profile.isEmpty {
@@ -47,7 +49,7 @@ struct WritingProfileView: View {
                         }
                     }
                     if !profile.frequentPeople.isEmpty {
-                        Text("With people you write to most").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                        Text("With people you write to most").font(TypeScale.caption.weight(.semibold)).foregroundStyle(.secondary)
                     }
                     ForEach(Array(profile.frequentPeople.prefix(8)), id: \.address) { person in
                         LabeledContent {
@@ -75,7 +77,7 @@ struct WritingProfileView: View {
     @ViewBuilder
     private func voiceSection(_ profile: WritingProfile) -> some View {
         let voices = profile.voices.sorted { $0.value.emails > $1.value.emails }
-        let assistant = model.studyAssistant.map(AssistantRow.label) ?? ""
+        let assistant = AssistantRow.label(model.studyAssistant ?? model.assistantSettings)
         Section {
             if voices.isEmpty {
                 SettingsEmptyRow(isStudying ? "Reading your sent mail…" : "Not studied yet. Margin's own learning below already shapes drafts; a study adds how you sound.")
@@ -84,14 +86,14 @@ struct WritingProfileView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     if voices.count > 1 {
                         Text(verbatim: Locale.current.localizedString(forLanguageCode: language) ?? language)
-                            .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                            .font(TypeScale.caption.weight(.semibold)).foregroundStyle(.secondary)
                     }
                     Text(verbatim: voice.text)
                         .font(.callout)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
                     Text("Studied by \(voice.by) from \(voice.emails) emails, \(voice.date.formatted(date: .abbreviated, time: .omitted)).")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(TypeScale.caption).foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 2)
             }
@@ -111,7 +113,7 @@ struct WritingProfileView: View {
                 if isStudying { ProgressView().controlSize(.small) }
             }
             if let studyError {
-                Text(verbatim: studyError).font(.caption).foregroundStyle(.red)
+                Text(verbatim: studyError).font(TypeScale.caption).foregroundStyle(.red)
             }
         } header: {
             Text("Your voice")
@@ -141,16 +143,16 @@ struct WritingProfileView: View {
                 }
                 .disabled(isTrying || tryText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !model.isAssistantOn)
                 if !model.isAssistantOn {
-                    Text("Turn on the assistant to try this.").font(.caption).foregroundStyle(.secondary)
+                    Text("Turn on the assistant to try this.").font(TypeScale.caption).foregroundStyle(.secondary)
                 }
             }
             if let tryError {
-                Text(verbatim: tryError).font(.caption).foregroundStyle(.red)
+                Text(verbatim: tryError).font(TypeScale.caption).foregroundStyle(.red)
             }
             if let tryResult {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(verbatim: tryResult.reply).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-                    Text(verbatim: tryResult.about).font(.caption).foregroundStyle(.secondary)
+                    Text(verbatim: tryResult.about).font(TypeScale.caption).foregroundStyle(.secondary)
                     DisclosureGroup("What Margin told the assistant") {
                         Text(verbatim: tryResult.instructions)
                             .font(.caption.monospaced())
@@ -158,7 +160,7 @@ struct WritingProfileView: View {
                             .textSelection(.enabled)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    .font(.caption)
+                    .font(TypeScale.caption)
                 }
                 .padding(.vertical, 4)
             }
@@ -183,7 +185,7 @@ struct WritingProfileView: View {
         return VStack(alignment: .leading, spacing: 2) {
             title
             Text(verbatim: parts.joined(separator: " · "))
-                .font(.caption)
+                .font(TypeScale.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }

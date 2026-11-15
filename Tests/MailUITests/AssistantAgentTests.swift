@@ -200,7 +200,7 @@ final class ScriptedMailAgent: AgentStepModel, @unchecked Sendable {
         let run = try #require(model.agentRun)
         guard case .failed(let message) = run.state else { Issue.record("not failed: \(run.state)"); return }
         #expect(message.hasPrefix("my-server.example can answer questions but can't take actions."))
-        #expect(message.contains("Settings → Assistant"))
+        #expect(message.contains("Settings → AI"))
         #expect(!model.isSorting)
     }
 

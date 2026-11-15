@@ -4,7 +4,7 @@ import SwiftUI
 import AppKit
 
 /// Two fingers sideways on a trackpad over a conversation, as in the Mac's own Mail: the row
-/// follows the fingers and shows the actions behind it (Settings → Appearance → Swipes). Let go
+/// follows the fingers and shows the actions behind it (Settings → Shortcuts and Swipes). Let go
 /// part of the way and the row stays open so an action can be clicked; swipe on past the
 /// actions and the first one runs. Scrolling up and down is left alone.
 extension View {
@@ -52,6 +52,8 @@ private struct RowSwipe: ViewModifier {
                 }
             }
             .onChange(of: thread.id) { _, _ in offset = 0 }
+            // Told to the row's hover buttons, which stay away while the swipe actions show.
+            .preference(key: RowSwipeIsOpen.self, value: offset != 0)
     }
 
     /// The actions on one side, sharing the uncovered space and growing into it; past the full

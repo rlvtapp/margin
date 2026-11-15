@@ -25,19 +25,29 @@ extension MailModel {
     }
 }
 
+/// Whether a row is swiped aside, with its swipe actions showing.
+struct RowSwipeIsOpen: PreferenceKey {
+    static let defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
+}
+
 /// Buttons at the end of a row while the pointer is over it, so the common things need no
 /// opening, menu or keyboard.
 struct RowHoverActions: ViewModifier {
     let model: MailModel
     let thread: MailThread
     @State private var isHovered = false
+    /// The row is swiped aside: its swipe actions are in the same place, so the buttons wait.
+    @State private var isSwiped = false
 
     func body(content: Content) -> some View {
         // Hover is tracked over the row and its buttons together: tracked on the row alone,
         // moving onto a button counted as leaving the row, and the buttons vanished.
+        let shows = isHovered && !isSwiped && model.showsHoverActions && model.selection.isEmpty
         content
             .overlay(alignment: .trailing) {
-                if isHovered && model.showsHoverActions && model.selection.isEmpty {
+                ZStack(alignment: .trailing) {
+                if shows {
                     HStack(spacing: 2) {
                         button("checkmark.circle", help: "Done") { model.perform(.done, on: thread) }
                         button(thread.isUnread ? "envelope.open" : "envelope.badge", help: thread.isUnread ? "Mark read" : "Mark unread") {
@@ -50,8 +60,16 @@ struct RowHoverActions: ViewModifier {
                     .overlay(Capsule().strokeBorder(Line.edge))
                     .shadow(color: .black.opacity(0.08), radius: 4, y: 1)
                     .padding(.trailing, Space.s)
-                    .transition(.opacity)
+                    // Eased in and out, a little from the edge, so they don't pop over the row
+                    // or snap away when a swipe starts.
+                    .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .trailing)).combined(with: .offset(x: 6)))
                 }
+                }
+                // On the buttons alone, so nothing else in the row eases with them.
+                .animation(Look.reduceMotion ? nil : .easeOut(duration: 0.18), value: shows)
+            }
+            .onPreferenceChange(RowSwipeIsOpen.self) { open in
+                if open != isSwiped { isSwiped = open }
             }
             .onContinuousHover { phase in
                 switch phase {

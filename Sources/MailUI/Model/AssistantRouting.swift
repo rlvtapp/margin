@@ -104,7 +104,12 @@ extension MailModel {
             actionSettingsRevision += 1
             rebuildIntelligence()
             if newValue { startConnectionIfEnabled() } else { restartConnection() }
-            if !newValue { isAsking = false }
+            if !newValue {
+                isAsking = false
+                // Whatever an assistant was in the middle of stops here too.
+                stopAgent()
+                if isSorting { stopSorting() }
+            }
         }
     }
 }

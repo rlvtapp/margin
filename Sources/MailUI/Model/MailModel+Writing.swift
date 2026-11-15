@@ -39,14 +39,15 @@ extension MailModel {
     /// Learns from a message just sent.
     func learnWriting(from draft: Draft, account: MailAccount) {
         loadWritingProfileIfNeeded()
-        guard learnsWriting else { return }
+        guard usesAI, learnsWriting else { return }
         if writingProfile.learn(draft.text, to: draft.to, signature: account.signature) { saveWritingProfile() }
     }
 
     /// On first start: learns from recent sent mail so drafts sound right from day one.
     func learnFromSentMailIfNew() async {
         loadWritingProfileIfNeeded()
-        guard learnsWriting, writingProfile.isEmpty else { return }
+        // Only AI drafts use what's learned, so with AI off sent mail isn't read for it.
+        guard usesAI, learnsWriting, writingProfile.isEmpty else { return }
         await learnFromSentMail()
     }
 

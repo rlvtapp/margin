@@ -26,7 +26,7 @@
 
 ## Email links
 
-On the Mac, Settings → Writing → Email links makes Margin the default mail app, so `mailto:`
+On the Mac, Settings → General → Email links makes Margin the default mail app, so `mailto:`
 links on websites and in other apps open a new message in Margin with the address, subject, body
 and Cc filled in. iPhone and iPad register the same links; becoming the default mail app there
 needs Apple's mail-client entitlement, which is requested when Margin ships to the App Store.

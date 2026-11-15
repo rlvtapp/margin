@@ -46,7 +46,7 @@ pnpm types:check
     that ticks, the answer typed out, the conversation it came from, and a composer. It plays
     once in view and nothing shifts while it does. (He likes the chat, but an unpolished mock-up
     of one reads as fake.)
-  - `connection-switches`: beside it, the real switches from Settings → Connections, to try,
+  - `connection-switches`: beside it, the real switches from Settings → AI Apps, to try,
     with a sentence underneath saying what they allow. They start off, as in the app; in view,
     the first turns itself on. Keep the wording in step with `ConnectionsSettingsView.swift`.
   - `bring-your-own`: the AI apps Margin adds itself to (the list in `MCPInstaller.swift`) and

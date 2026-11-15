@@ -52,7 +52,7 @@ the whole line when your words don't say "Margin"). What you see is what's sent:
 or changed when you press Send, so deleting or editing the line is all it takes. Switching
 mailbox swaps the signature and keeps it last, an AI draft keeps it under what's written, and a
 formatted signature still replaces the plain one with the line kept after it. On by default;
-Settings → Writing turns it off or changes its words for new messages. Reactions, invitation
+Settings → Signatures turns it off or changes its words for new messages. Reactions, invitation
 answers, quick replies from an alert and mail a rule sends don't get it. On iPhone and iPad the
 editor is plain text, so the line is there without the link. The writing profile doesn't learn
 from it.

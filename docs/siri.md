@@ -19,6 +19,6 @@ understands Apple Mail. Code: `Sources/MailUI/Siri/`.
 ## Sign-in codes
 
 When a mail with a sign-in code arrives, Margin copies the code to the clipboard (Settings →
-Reading → Sign-in codes) and its notification shows the code with a Copy button, whatever the
+Notifications → Sign-in codes) and its notification shows the code with a Copy button, whatever the
 alert setting. The keyboard's own code suggestions (QuickType AutoFill) only read Messages and
 Apple Mail, so a third-party app can't put a code there; the clipboard is the next best thing.

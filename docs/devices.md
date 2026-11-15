@@ -2,7 +2,7 @@
 
 ## Backups
 
-Settings → Backup, the same on Mac, iPhone and iPad:
+Settings → Backup and Devices, with Backup and Restore under it, the same on Mac, iPhone and iPad:
 
 - **Export** a backup (with a password, mail passwords and API keys can be included) and
   **Restore** from one, choosing what to bring back. **Undo Restore** puts everything back as it
@@ -22,7 +22,7 @@ is one), each with its own PBKDF2-HMAC-SHA256 salt. See `MailCore/Store/BackupBo
 
 ## Link another device
 
-Settings → Backup → **Link Another Device…** makes a `.marginlink` file holding the mailboxes with
+Settings → Backup and Devices → **Link Another Device…** makes a `.marginlink` file holding the mailboxes with
 their passwords, settings, labels, templates and more, locked with a fresh code like `K7QM-3XHP`.
 Send the file to the other Mac, iPhone or iPad (AirDrop works), open it there, and type the code.
 Nothing already on that device is removed, and the link can be undone with Undo Restore.

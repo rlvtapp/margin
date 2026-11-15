@@ -15,7 +15,8 @@ menu when something unread arrives. Deleting the workspace in view goes back to 
 - **Pin to top:** a conversation's … menu or right-click. Pinned conversations come first in
   inbox lists, until unpinned.
 - **VIPs:** a conversation's … menu → Add to VIPs. The VIPs mailbox in the sidebar shows their
-  mail; Settings → Notifications → **Only VIPs and sign-in codes** keeps alerts to them.
+  mail; Settings → Notifications → **Only VIPs and sign-in codes** keeps alerts to them. The list of VIPs,
+  with Remove, is Settings → Notifications → VIPs.
 
 ## Follow-ups
 
@@ -27,7 +28,7 @@ menu when something unread arrives. Deleting the workspace in view goes back to 
 
 ## Reading and privacy
 
-- **Block trackers** (Settings → Reading, on by default): removes the hidden pictures that report
+- **Block trackers** (Settings → General → Privacy, on by default): removes the hidden pictures that report
   when you open mail, even when pictures are allowed, and takes tracking parameters out of links.
   The reader says how many were blocked and from whom. Code: `MailCore/MIME/TrackerBlocker.swift`.
 - **Hide Margin from screen sharing and recordings** (Mac): Margin's windows are left out of
@@ -36,7 +37,7 @@ menu when something unread arrives. Deleting the workspace in view goes back to 
 
 ## Writing
 
-**Instructions for the assistant** (Settings → Writing): rules in your own words ("No exclamation
+**Instructions for the assistant** (Settings → Writing Style): rules in your own words ("No exclamation
 marks. Sign off with just my first name.") that every draft and suggested reply follows. They come
 after what was learned from your sent mail, so they win.
 
@@ -46,7 +47,7 @@ A short welcome: what Margin is with **Add Your Mailbox…** or **Look Around Fi
 mail); layout, appearance, the color-blind-safe palette and app icon, each one short row of
 the Settings picture tiles so the step fits without scrolling (the window style stays in
 Settings); alerts, Contacts suggestions, iCloud sync and copying
-sign-in codes; **AI, or just mail**, the same switch as Settings → Assistant → Use AI (`usesAI`),
+sign-in codes; **AI, or just mail**, the same switch as Settings → AI → Use AI (`usesAI`),
 which says what AI brings on this device; on iPhone and iPad (when the build has a push relay) **Instant notifications**,
 which says why the relay exists, what it learns and never sees, and has the same switch as
 Settings → Notifications (`usesPushRelay`, docs/push.md); then **You're all set** with a summary (AI on or off among it).

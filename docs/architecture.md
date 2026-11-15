@@ -267,12 +267,12 @@ recipients, subject, date, flags, list headers and the short preview; never file
 all of it can be searched (Return) and scrolled without asking a server, also offline
 (`MailModel+Download.swift`).
 
-- **How much:** Settings → Mailboxes → **Keep on this device**: Off, 3 months, 1 year, Everything.
+- **How much:** Settings → General → **Keep on this device**: Off, 3 months, 1 year, Everything.
   The Mac keeps everything, iPhone and iPad the last year. It's set per device (`keepMail`, not
   in `backedUpSettings`). The same section shows how many messages are saved and the file's size,
   and **Clear Downloaded Mail** takes out what has no saved text below each folder's newest 500
   (it downloads again unless set to Off).
-- **The text of recent mail:** Settings → Mailboxes → **Open recent mail instantly** (`keepText`,
+- **The text of recent mail:** Settings → General → **Open recent mail instantly** (`keepText`,
   per device: Off, 2 weeks, 3 months, 1 year; the Mac saves three months, iPhone and iPad two
   weeks). Before each header page, `downloadTexts` asks for the text of eight saved messages that
   have none, newest first, per mailbox, down to the stretch's start, so a first open comes from
@@ -357,6 +357,54 @@ Snoozes (`snoozes.json`) and the outbox (`outbox.json`) are JSON files in Applic
 
 `MailCommand.all(for:)` is the single list of commands. The command palette (⌘K) shows it, the shortcuts sheet (?) documents it, and the single-key handler runs it. A new command only needs adding there. Single keys only act while the conversation list has focus, so they never fire while you're typing.
 
+## Settings
+
+Settings are the same pages on the Mac (a window with a sidebar, `MailSettingsView`) and on iPhone
+and iPad (a list that pushes each page, `TouchSettingsView`); both draw a page with
+`SettingsDetail`. The pages are the cases of `SettingsPage` (`Views/SettingsPages.swift`), in five
+named groups (`SettingsPage.groups`). A page that was split off a long one sits folded under the
+page it came from (`SettingsPage.outline`), so no page grows long:
+
+| Group | Pages (▸ folded under the page before) |
+| --- | --- |
+| (no name) | **General** (language, default mail app, privacy, the mail kept on this device), **Mailboxes** ▸ each mailbox, **Workspaces**, **Contacts** |
+| Mail | **Notifications** ▸ **Sign-in codes**, **VIPs**; **Reading**; **Writing** (Undo Send, the attachment reminder); **Signatures** (with the Sent from Margin line); **Templates**; **Sorting**; **Rules** |
+| Look and feel | **Appearance** (theme, accent, size, app icon, colours, accessibility), **Layout**, **Shortcuts and Swipes** (just **Swipes** on iPhone and iPad) |
+| AI | **AI** (the Use AI switch, the assistants, who does what) ▸ **Ask**, **Permissions**; **Writing Style**; **AI Apps** (MCP, Mac only) |
+| Your data | **Backup and Devices** (iCloud sync, linking another device) ▸ **Backup**, **Restore**; **Experimental** (Mac only while Hold Space to dictate is its one setting); **About** |
+
+Folded rows start folded, except Mailboxes; picking the row or its arrow unfolds it (remembered as
+`settingsOpenRows`), and opening a page from elsewhere unfolds its row. On iPhone and iPad the
+groups are the list's sections, with every page a row. A mailbox's own settings are in parts too,
+picked at the top of its page: General, Sending, Signatures and, for a mailbox set up by hand,
+Server.
+
+- **The window.** No bar of its own: the page runs to the top (`SettingsWindowLook` makes the
+  title bar transparent), with Back and Forward as two small chevrons at the top right of the sidebar (⌘[ and ⌘]), and the close, minimize and zoom buttons moved down onto the same line (`SettingsBar.center`) and
+  the search field at the top of the sidebar (⌘F). Under **Mailboxes** the sidebar lists each
+  mailbox; picking one shows that mailbox's own settings as a page (`SignatureEditor` with
+  `isEmbedded`), with Revert and Save in a strip under it, always there and lit once something
+  changed. Edit… on the Mailboxes page and iPhone and iPad still open it as a sheet.
+- **One way a page looks.** Every page is a grouped `Form` that starts with `SettingsHeader(page)`:
+  the page's icon, name and one line (`blurb`), centred. Then named sections, the most used first.
+  A row is a `SettingLabel` (name, and a line under it) with its control on the right: a switch for
+  on/off, a menu for a short list of values, `ChoiceTiles` (small pictures) for choices that change
+  how Margin looks, `ChoiceList` (cards with a line of explanation) for a choice between ways of
+  working. A row's Open button can go to another page by setting `settingsPageRequest`, which both
+  platforms follow.
+- **Search finds settings, not only pages.** `SettingsPage.settings` lists the name of every
+  setting and button on a page (the same localized strings the page shows), `keywords` adds other
+  words people look for. A search matches at the start of a word ("ai" finds "Use AI", not
+  "Mailboxes") and ignores case and accents; the sidebar then shows only the matching pages, each
+  with the settings on it that matched (`hits(for:)`). A new setting goes into `settings` and into
+  the list in `SettingsStructureTests`, which fails when a setting can't be found.
+- **Names.** `SettingsPage(named:)` turns a name into a page, for links from the Help panel and
+  for screenshots.
+- **AI off.** The AI pages stay in place when Use AI is off: the AI page keeps its sections,
+  switched off; Ask, Permissions, Writing Style and AI Apps open with a row that says AI is off, with **Turn On AI**
+  (`AIOffNotice`, always there and the same height on or off, so nothing moves). See
+  [intelligence.md](intelligence.md).
+
 ## Design
 
 The look is called paper and ink: one neutral scale per appearance, and the system font at regular and medium weights only. Colour is used only where it means something: each account's colour, the three parts of the inbox, a steady colour per sender, and a blue unread mark. All tokens live in `Sources/MailUI/Design/Theme.swift`; views never hard-code colours.
@@ -381,6 +429,8 @@ redraws the window once. Mail's own HTML is left at the sender's size; plain-tex
 ## Checking the UI without screen recording
 
 `-snapshot <file.png>` launches the app with the sample mailboxes, renders the window to a PNG and quits. Add `-appearance light|dark`, `-snapshot-palette`, `-snapshot-compose`, `-snapshot-mailbox 0`, `-snapshot-combined sent`, `-snapshot-select "Issue 212"` or `-snapshot-size 1520x940` (the window at that size in points, drawn two pixels a point). `-snapshot-cc "maya@example.com, no"` (with `-snapshot-compose`) opens Cc and Bcc with that in Cc. Put flags that take no value last: AppKit reads `-flag value` pairs, so a bare flag swallows the next one and a stray word after that is taken for a file to open, and no window comes up. Add `-snapshot-glass` to save the system's own picture of the real window instead, with Liquid Glass and scrolling parts in it; the window shows on a Retina screen for a moment. The website's pictures are made that way. Web content is drawn in another process, so snapshot mode paints each web view's own snapshot over its frame. A sandboxed build can only write inside its container, so build without the sandbox entitlement for snapshots:
+
+`-snapshot-settings <page>` pictures the Settings window on a page (`general`, `assistant`, `writingStyle`…), `-snapshot-settings search:undo` with those words in its search field, and `-snapshot-ai-off` with Use AI switched off; add `-snapshot-glass` to see the sidebar, which only the real window draws.
 
 ```bash
 cd Apps && xcodebuild -scheme Margin -derivedDataPath ../.build/xcode-snapshot CODE_SIGN_ENTITLEMENTS= MARGIN_BUNDLE_ID=app.relevate.margin.snapshot build
@@ -418,13 +468,14 @@ Tests: `Tests/MailUITests/QuotedHistoryTests.swift`.
 - **Dock:** the unread count on Margin's icon, following the same count as the rail, so it drops as
   soon as mail is read; off in Settings → Notifications (`DockBadge.swift`).
 - **Rows:** Done, Mark read and Move to Trash at the end of a row under the pointer; off in
-  Settings → Swipes (`RowHoverActions.swift`).
+  Settings → Shortcuts and Swipes (`RowHoverActions.swift`). They stay away while the row is swiped
+  aside, where the swipe actions are in the same place (`RowSwipeIsOpen`), and ease in and out.
 - **Inbox tabs:** All, Important (mail from people) and Other (updates and newsletters together)
   are glass tabs under the inbox title, ⌘1–⌘3. The split itself still knows updates from
   newsletters (a conversation's header says which); the shelf keeps "Other" as one bit of its
   facts, so the tab filters as fast as the others (`InboxShelf.Facts.otherBit`).
 - **Account column:** scrolls when there are more mailboxes than fit, with Add a mailbox in view.
-  It can be hidden (Settings → Appearance → Account column): All inboxes, Home, the Calendar and the
+  It can be hidden (Settings → Layout → Account column): All inboxes, Home, the Calendar and the
   mailboxes then sit at the top of the sidebar, which also stays on the Calendar (`RailOptional.swift`).
 - **Home** leaves the reading pane on Ask until a conversation is clicked (with an assistant).
 - **Help** (the ? above Settings in the account column, Help → Margin Help…, or ⌘K "Help and

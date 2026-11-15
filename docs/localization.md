@@ -35,7 +35,7 @@ Canadian English only differs in spelling (colour, centre, cancelled), so it lis
 
 ## Changing the language
 
-Margin follows the system language. Settings → Appearance → Language opens the place where the
+Margin follows the system language. Settings → General → Language opens the place where the
 system keeps each app's language (Settings → Margin on iPhone and iPad; System Settings → Language &
 Region → Applications on the Mac). To try one while developing, launch with
 `-AppleLanguages "(nl)"`.

@@ -19,7 +19,7 @@ before into iCloud Keychain.
   tombstone for 60 days, so a device that was offline can't bring it back.
 - **When:** at launch and about every minute while Margin runs, and with **Sync Now**.
 - **Stays on each device:** mail itself (it's on your mail servers), the automatic backup
-  schedule, the offline cache, how much older mail to keep (Settings → Mailboxes → Keep on this
+  schedule, the offline cache, how much older mail to keep (Settings → General → Keep on this
   device: a Mac wants everything, a phone a recent stretch), contacts (refetched from their
   sources), and the sample mailboxes.
 - **Not in device backups either:** saved mail (`mail.sqlite` and its `-wal` and `-shm` files) is

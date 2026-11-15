@@ -8,8 +8,8 @@ Margin keeps a small calendar of the events in invitations it has seen. It stays
   be), so events are known before they're opened.
 - **Next meeting:** above the mail list on Mac, iPhone and iPad, the next meeting in the coming
   hours, with **Join** when it has a meeting link and starts within ten minutes.
-- **Reminders:** a notification before each event, 5–30 minutes ahead (Settings → Reading, or
-  Settings → Reading on iPhone), or off. Cancelled and declined events are left out.
+- **Reminders:** a notification before each event, 5–30 minutes ahead (Settings → Notifications → Meeting reminders, on the Mac and
+  on iPhone), or off. Cancelled and declined events are left out.
 - **Answering:** Accept, Maybe and Decline send the organizer a proper reply. Add to Calendar hands
   the event to the Calendar app.
 - **Home** lists today's meetings under "Don't forget".

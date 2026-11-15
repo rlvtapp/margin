@@ -10,7 +10,7 @@
 
 ## Layouts
 
-Settings → Reading (Mac) or Appearance (iPhone and iPad) → Layout:
+Settings → Layout:
 
 - **Side by side:** the list and the conversation next to each other.
 - **Wide list:** the list across the whole window; a conversation opens over it (Mac).
@@ -23,7 +23,7 @@ On the Mac:
 - **Search** sits in the bar across the top of the window (`WindowBar`), with the Unread, Starred
   and Attachments toggles at its end; `/` still jumps to it.
 - **Window:** the list and reader edge to edge on the window (the default), or in a rounded inset
-  panel (Settings → Appearance → Window, also in the welcome).
+  panel (Settings → Layout → Window, also in the welcome).
 - **The one next thing** (`NextUpBadge`), top right of that bar: the next meeting when one is
   happening or starts within a few hours (Join when it's about to start), otherwise the next
   snoozed conversation coming back today. Nothing when there's nothing.
@@ -49,7 +49,7 @@ Sorting a conversation gives it its group as a label, so groups work everywhere 
 search, AI apps, backups.
 
 - **With the assistant on**, it reads each conversation and picks one group, or none
-  (`MailIntelligence.classify`). That uses whichever model is chosen in Settings → Assistant,
+  (`MailIntelligence.classify`). That uses whichever model is chosen in Settings → AI,
   on the device or with the person's own key.
 - **Without it**, only clear cases are sorted, by rules (`EmailSorter.ruleGroup`): invoices,
   receipts, orders, travel, invitations, account notices and newsletters.

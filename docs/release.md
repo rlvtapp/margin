@@ -63,7 +63,7 @@ Store all need the company's paid Apple Developer Program membership ($99 a year
 - Mac builds shared outside the App Store need a Developer ID certificate and notarisation.
 - The Mac app isn't sandboxed (so it can run Claude Code and Codex), which means it can't go on the
   Mac App Store as it is: it ships as a direct download, signed with Developer ID and notarised, with
-  its own updater. iCloud sync and push work there with a Developer ID provisioning profile that
+  its own updater ([updates.md](updates.md)). iCloud sync and push work there with a Developer ID provisioning profile that
   includes them. Switching the signing certificate (Apple Development → Developer ID) makes macOS
   ask once whether Margin may read the passwords it saved in the login keychain; choose Always Allow.
   iPhone and iPad stay on the App Store, sandboxed as before.

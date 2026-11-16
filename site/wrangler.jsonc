@@ -8,7 +8,9 @@
 		"binding": "ASSETS",
 		"directory": "./.output/public",
 		"html_handling": "auto-trailing-slash",
-		"not_found_handling": "404-page"
+		"not_found_handling": "404-page",
+		// These go to the newest GitHub release (worker.js) rather than a file.
+		"run_worker_first": ["/appcast.xml", "/download/*"]
 	},
 	"routes": [
 		{

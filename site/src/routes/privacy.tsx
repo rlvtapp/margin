@@ -227,6 +227,12 @@ function Privacy() {
 				send anything unless you allow it. Pictures in mail are blocked until you
 				allow them, so senders can't tell when you open their message.
 			</p>
+			<p>
+				The Mac app downloaded from this website looks for new versions about
+				once a day. It asks this website, which points it to the newest release
+				on GitHub; the request carries the app's version and nothing about you
+				or your mail. You can turn this off in Settings → About.
+			</p>
 
 			<h2>Crashes and bug reports</h2>
 			<p>

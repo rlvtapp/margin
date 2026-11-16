@@ -15,5 +15,5 @@ export const site = {
 	publisher: "Relevate",
 	publisherURL: "https://relevate.app",
 	/** Shown at the top of the privacy policy and terms. */
-	updated: "13 November 2026",
+	updated: "16 November 2026",
 };

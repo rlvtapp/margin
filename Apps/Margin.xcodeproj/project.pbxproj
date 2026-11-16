@@ -49,6 +49,7 @@
 		A1000000000000000000C015 /* AppIcon-Graphite-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D015 /* AppIcon-Graphite-Dark.icon */; };
 		A1000000000000000000E015 /* AppIcon-Graphite-Dark.icon in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000D015 /* AppIcon-Graphite-Dark.icon */; };
 		A10000000000000000000112 /* MarginDockTile.docktileplugin in Embed Dock Tile Plug-in */ = {isa = PBXBuildFile; fileRef = A10000000000000000000209 /* MarginDockTile.docktileplugin */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		A1000000000000000000F001 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A1000000000000000000F003 /* Sparkle */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -92,6 +93,7 @@
 			files = (
 				A10000000000000000000101 /* MailUI */,
 				A10000000000000000000102 /* MailCore */,
+				A1000000000000000000F001 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -242,6 +244,7 @@
 			packageProductDependencies = (
 				A10000000000000000000301 /* MailUI */,
 				A10000000000000000000302 /* MailCore */,
+				A1000000000000000000F003 /* Sparkle */,
 			);
 			productName = Margin;
 			productReference = A10000000000000000000201 /* Margin.app */;
@@ -351,6 +354,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				A10000000000000000000300 /* XCLocalSwiftPackageReference ".." */,
+				A1000000000000000000F002 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A10000000000000000000602 /* Products */;
@@ -794,6 +798,17 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		A1000000000000000000F002 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.10.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		A10000000000000000000301 /* MailUI */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -810,6 +825,11 @@
 		A10000000000000000000304 /* MailCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = MailCore;
+		};
+		A1000000000000000000F003 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A1000000000000000000F002 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

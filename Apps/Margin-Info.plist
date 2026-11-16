@@ -46,6 +46,13 @@
 	<string>$(MARGIN_PUSH_RELAY_URL)</string>
 	<key>MarginGmailPushTopic</key>
 	<string>$(MARGIN_GMAIL_PUSH_TOPIC)</string>
+	<!-- Updates (docs/updates.md). Empty in builds from source, which then never check. -->
+	<key>SUFeedURL</key>
+	<string>$(MARGIN_UPDATE_FEED_URL)</string>
+	<key>SUPublicEDKey</key>
+	<string>$(MARGIN_UPDATE_PUBLIC_KEY)</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
 	<key>NSDockTilePlugIn</key>
 	<string>MarginDockTile.docktileplugin</string>
 	<key>NSContactsUsageDescription</key>

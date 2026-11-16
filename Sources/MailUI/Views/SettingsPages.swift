@@ -206,7 +206,7 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
         case .backupFiles: ["backup", "export", "recovery key", "automatic", "password", "schedule"]
         case .restore: ["restore", "bring back", "undo restore", "import"]
         case .experimental: ["labs", "beta", "early", "dictate", "dictation", "voice", "speak", "space bar", "microphone"]
-        case .about: ["version", "made by", "welcome", "feedback", "problem"]
+        case .about: ["version", "made by", "welcome", "feedback", "problem", "update", "upgrade", "new version"]
         }
     }
 
@@ -385,7 +385,8 @@ extension SettingsPage {
         case .experimental:
             return [String(localized: "Hold Space to dictate")]
         case .about:
-            return [String(localized: "Show Welcome"), String(localized: "Something broken?")]
+            return [String(localized: "Show Welcome"), String(localized: "Something broken?"), String(localized: "Check for Updates…"),
+                    String(localized: "Check for updates automatically"), String(localized: "Download and install updates")]
         }
     }
 }

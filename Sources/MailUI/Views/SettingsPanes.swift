@@ -848,6 +848,12 @@ struct AboutSettings: View {
                     .foregroundStyle(Ink.tertiary)
                     .textSelection(.enabled)
                     .padding(.top, 4)
+                #if os(macOS)
+                if let updates = model.updates {
+                    UpdateSettings(updates: updates)
+                        .padding(.top, 20)
+                }
+                #endif
                 TellUsCard()
                     .padding(.top, 36)
                 Link(destination: URL(string: "https://relevate.app")!) {
@@ -882,6 +888,34 @@ struct AboutSettings: View {
         return build.isEmpty || build == short ? short : "\(short) (\(build))"
     }
 }
+
+#if os(macOS)
+/// On the Mac app downloaded from the website: check now, and whether Margin looks and installs
+/// by itself. Sparkle keeps these settings; this copies them in when the page opens.
+private struct UpdateSettings: View {
+    let updates: any AppUpdates
+    @State private var checks = true
+    @State private var installs = false
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Button("Check for Updates…") { updates.checkForUpdates() }
+            VStack(alignment: .leading, spacing: 6) {
+                Toggle("Check for updates automatically", isOn: $checks)
+                    .onChange(of: checks) { _, on in updates.checksAutomatically = on }
+                Toggle("Download and install updates", isOn: $installs)
+                    .onChange(of: installs) { _, on in updates.installsAutomatically = on }
+                    .disabled(!checks)
+            }
+            .font(TypeScale.label)
+        }
+        .onAppear {
+            checks = updates.checksAutomatically
+            installs = updates.installsAutomatically
+        }
+    }
+}
+#endif
 
 /// Nothing is tracked, so a problem is only known once someone says so: an ink card with the
 /// X mark, that sentence, and the two accounts to tell, each a row you can click.

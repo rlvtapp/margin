@@ -14,6 +14,12 @@ MARGIN_MICROSOFT_CLIENT_ID =
 MARGIN_PUSH_RELAY_URL =
 MARGIN_GMAIL_PUSH_TOPIC =
 
+// Updates for the Mac app (docs/updates.md): where Sparkle looks for new versions, and the public
+// half of the key releases are signed with. Either empty turns updates off (builds from source,
+// forks). "//" starts a comment in xcconfig files, so the address is written https:/$()/….
+MARGIN_UPDATE_FEED_URL =
+MARGIN_UPDATE_PUBLIC_KEY =
+
 // Relevate's block editor ships for Apple silicon only (and the arm64 simulator).
 EXCLUDED_ARCHS[sdk=iphonesimulator*] = x86_64
 EXCLUDED_ARCHS[sdk=macosx*] = x86_64

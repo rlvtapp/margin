@@ -164,6 +164,8 @@ public enum UndoKind: Equatable, Sendable {
 @MainActor @Observable
 public final class MailModel {
     public let environment: MailEnvironment
+    /// The Mac app's updater, when this build has one (see `AppUpdates`).
+    @ObservationIgnored public var updates: (any AppUpdates)?
     public internal(set) var accounts: [MailAccount] {
         // Each mailbox knows the shared signatures it falls back on.
         didSet { applySharedSignatures() }

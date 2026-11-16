@@ -28,7 +28,10 @@ struct MarginApp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1480, height: 960)
-        .commands { MarginCommands(model: delegate.model) }
+        .commands {
+            UpdateCommands(updates: delegate.updates)
+            MarginCommands(model: delegate.model)
+        }
 
         Settings {
             MailSettingsView(model: delegate.model)
@@ -47,6 +50,8 @@ struct MarginApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     let model: MailModel
+    /// Nil for builds without an update feed, and in snapshot and benchmark runs.
+    let updates: Updates?
     private let snapshot = SnapshotMode.fromArguments()
     private let benchmark = BenchmarkMode.fromArguments()
 
@@ -55,6 +60,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         // earlier versions come over once (the container itself is left as it was).
         if snapshot == nil && benchmark == nil { SandboxMigration.runIfNeeded() }
         model = MailModel(environment: snapshot == nil && benchmark == nil ? .standard : (benchmark?.environment ?? .preview()))
+        updates = snapshot == nil && benchmark == nil ? Updates.makeIfConfigured() : nil
+        model.updates = updates
         super.init()
     }
 

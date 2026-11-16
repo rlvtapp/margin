@@ -1,0 +1,44 @@
+# When a release is published, puts its cask in the Homebrew tap (rlvtapp/homebrew-tap), so
+# `brew install --cask rlvtapp/tap/margin` installs it. Skipped until the tap and its token exist
+# (docs/updates.md).
+name: Update Homebrew tap
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  cask:
+    runs-on: ubuntu-latest
+    env:
+      TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      TAP: ${{ vars.HOMEBREW_TAP || 'rlvtapp/homebrew-tap' }}
+    steps:
+      - name: Check the tap is set up
+        id: ready
+        run: |
+          if [[ -z "$TAP_TOKEN" ]]; then echo "No HOMEBREW_TAP_TOKEN; skipping."; echo "go=false" >> "$GITHUB_OUTPUT"
+          else echo "go=true" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Get the cask from the release
+        if: steps.ready.outputs.go == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "${{ github.event.release.tag_name }}" --repo "${{ github.repository }}" --pattern margin.rb --dir cask
+
+      - name: Commit it to the tap
+        if: steps.ready.outputs.go == 'true'
+        run: |
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/${TAP}.git" tap
+          mkdir -p tap/Casks
+          cp cask/margin.rb tap/Casks/margin.rb
+          cd tap
+          git config user.name "Margin releases"
+          git config user.email "hello@relevate.app"
+          git add Casks/margin.rb
+          git diff --cached --quiet && { echo "Cask unchanged"; exit 0; }
+          git commit -m "margin ${{ github.event.release.tag_name }}"
+          git push

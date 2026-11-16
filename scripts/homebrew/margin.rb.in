@@ -1,0 +1,29 @@
+cask "margin" do
+  version "@VERSION@"
+  sha256 "@SHA256@"
+
+  url "https://github.com/@REPO@/releases/download/v#{version}/Margin.dmg"
+  name "Margin"
+  desc "Free, open-source mail app that connects straight to your mail provider"
+  homepage "https://margin.relevate.app/"
+
+  livecheck do
+    url :url
+    strategy :github_latest
+  end
+
+  # Margin updates itself (Sparkle), so Homebrew leaves running copies alone.
+  auto_updates true
+  depends_on arch: :arm64
+  depends_on macos: ">= :sequoia"
+
+  app "Margin.app"
+
+  zap trash: [
+    "~/Library/Application Support/Margin",
+    "~/Library/Caches/app.relevate.margin",
+    "~/Library/HTTPStorages/app.relevate.margin",
+    "~/Library/Preferences/app.relevate.margin.plist",
+    "~/Library/Saved Application State/app.relevate.margin.savedState",
+  ]
+end

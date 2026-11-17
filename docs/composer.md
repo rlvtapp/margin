@@ -163,6 +163,61 @@ the same on the Mac's composer, the inline reply and iPhone and iPad. Each perso
 - Backspace in an empty field picks out the last badge; again removes it. A click picks one out
   too, and each has a small cross.
 
+## Where the cursor starts
+
+The editor opens with the cursor on the first line of the message, above the signature,
+"Sent from Margin" and anything quoted, whether you Tab there from Subject or start a Reply,
+Reply all or Forward. (Setting the text used to leave it at the very end, on the signature.)
+`RichTextEditor.makeNSView` puts it at the start, so the signature editor in Settings starts
+at the top too. iPhone and iPad use the system's plain text editor, unchanged. Test:
+`ReplySizeTests.writingStartsOnTheFirstLineAboveTheSignature`.
+
+## Writing a reply bigger (Mac)
+
+The expand button (arrows pointing out, ⇧⌘E) in the reply's tools makes the reply fill the
+reading pane, in the same place, with no other window. The reply grows to the height of the
+pane and scrolls into view, with a strip of the conversation showing above it; scrolling up
+reads the whole conversation. The same button (arrows pointing in), ⇧⌘E or Esc makes it its
+usual size again. After that, Esc closes the reply as before and keeps it in Drafts.
+
+- The reply's editor stays where it is in the reader's scroll view and only changes height
+  (`ReplyEditor.expandedHeight`), so the text, the cursor and the formatting are untouched.
+  The button's symbol changes inside its own frame, so the tools don't shift.
+- It grows and scrolls with `Motion.present`. With Reduce Motion it changes at once.
+- A new reply, and one that's sent, closed or discarded, starts at its usual size
+  (`MailModel.isReplyExpanded`, reset in `reply`'s `didSet`). Choosing another conversation
+  clears the reply bar, as before.
+- A new message already fills the reading pane, so it has no such button. On iPhone and iPad
+  a reply opens full screen anyway.
+- Code: `MailModel+ReplySize.swift`, `ReplyEditor` in `ComposeViews.swift`, `ReaderView`.
+  Tests: `ReplySizeTests`.
+
+## Sending and Undo Send
+
+Send closes the composer at once and the message waits out the Undo Send delay (Settings, 5
+seconds by default) before it goes: `MailModel.queueSend`.
+
+- **One notice the whole way.** The pill at the bottom says "Sending…" with a ring that fills
+  and **Undo** (Z on the Mac). When the ring is full Undo fades out; once the message is out the
+  same pill changes in place to "Sent from" and the mailbox (or the alias address it went out
+  from), and a tick draws into the full ring. It never leaves and comes back in between: the
+  model keeps the same notice (`Notice.isSent`, `Notice.countdown`) and `NoticeBar` doesn't time
+  it out while it's still sending. The text interpolates and the pill's width springs to fit
+  (`Motion.present`); with Reduce Motion it's a short fade, without the slide or the tick's scale.
+- **Undo** cancels the send before anything reaches the server (`undoSend`: the task is
+  cancelled and `pendingSend` cleared in one main-actor step, so it can't also go out) and opens
+  the message again exactly as it was: recipients, Cc and Bcc, subject, text, formatting and
+  pictures, attachments, the from address, the reply or forward it belongs to, a reminder, and
+  the saved draft it came from. It's never put in the outbox. A reply goes back to the reply bar
+  when its conversation is still open, otherwise to the composer (still a reply). A message
+  started in that spot meanwhile is saved to Drafts first, so nothing is written over.
+- **Formatting comes back too.** The Mac editor starts from the message's HTML when there is
+  some and reading it back gives the same words (`EditorStart`), so bold, links and inline
+  pictures survive Undo and a failed send. Otherwise it starts from the plain words, as before.
+- Sending a second message while one is still waiting sends the first at once (`deliver`); if
+  that fails it reopens like any failed send. Offline, a message waits in the outbox instead.
+- Tests: `UndoSendTests`.
+
 ## Replying to one message
 
 The toolbar has Reply, Reply all and Forward for the conversation's latest message. Every

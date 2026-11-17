@@ -19,6 +19,11 @@
   ordinary notifications instead.
 - **Menu bar (Mac):** sign-in codes and links from the last 15 minutes (one click to copy or
   open) and the newest unread mail, each with a quick reply. It can be turned off in Settings.
+- **What counts as a sign-in link** (`SignInLink`): a link whose words or address say sign in,
+  log in, magic link, verify or confirm. Mail that reports a sign-in ("accessed from a new IP
+  address", "new sign-in", "if this was you") has none: its links are help pages and settings.
+  "auth" in an address counts only as a whole part of the path, so a help page about two-factor
+  authentication isn't one. A code ends at a full stop or comma too ("…to continue: 056459.").
 - **Sign-in codes** are copied when they arrive (see [siri.md](siri.md)). On the Mac they can
   also be typed into the field you're in (off by default; needs Accessibility permission, and
   only works in the direct download, since App Store apps can't type into other apps).

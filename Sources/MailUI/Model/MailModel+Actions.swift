@@ -165,8 +165,19 @@ extension MailModel {
             if let failure {
                 show(failure)
                 await reload(only: account)
+            } else {
+                await saveInbox(of: account.id)
             }
         }
+        saveLastScreen()
+    }
+
+    /// Writes an inbox as it is now to saved mail: read marks, stars and what left. A check that
+    /// finds the server just as the model has it saves nothing, so without this a change made
+    /// here stayed out of saved mail, and the next launch showed old unread counts for a moment.
+    func saveInbox(of accountID: UUID) async {
+        guard let inbox = mailboxes[accountID]?.first(where: { $0.role == .inbox }), let shelf = shelves[accountID] else { return }
+        await environment.cache.saveThreads(shelf.threads.map(Self.untagged), account: accountID, mailbox: inbox.id, limit: inboxLimit(accountID))
     }
 
     nonisolated static func changed(_ thread: MailThread, by action: MailAction) -> MailThread {
@@ -283,7 +294,12 @@ extension MailModel {
             noteSent(draft, account: account)
             learnWriting(from: draft, account: account)
             if let days = state.remindAfterDays { remindIfNoReply(draft, accountID: account.id, after: days) }
-            notice = Notice(text: String(localized: "Sent from \(account.label)"))
+            // Another message still in its Undo moment keeps its notice; otherwise this one
+            // says where it went from (the address, when it went out from an alias).
+            if notice?.undo != .send {
+                let sender = draft.from.address.lowercased() == account.address.address.lowercased() ? account.label : draft.from.address
+                notice = Notice(text: String(localized: "Sent from \(sender)"), isSent: true)
+            }
             return nil
         } catch {
             return error

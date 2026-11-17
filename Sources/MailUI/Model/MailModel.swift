@@ -1,6 +1,7 @@
 import Foundation
 import MailCore
 import Observation
+import os
 import SwiftUI
 
 /// Where the list is pointed. A nil account means every account together.
@@ -95,6 +96,8 @@ public struct MailEnvironment: @unchecked Sendable {
     public var isPreview: Bool
     /// Mail kept on this device.
     public var cache: MailCache
+    /// What each IMAP folder held at the last check, so a launch checks only what changed.
+    public var imapSync: IMAPSyncStore?
 
     public init(appName: String, accounts: AccountStore, keychain: Keychain, oauth: OAuthClientRegistry,
                 labels: LabelStore? = nil, defaults: UserDefaults = .standard, folder: URL? = nil, isPreview: Bool = false) {
@@ -108,6 +111,7 @@ public struct MailEnvironment: @unchecked Sendable {
             .appending(path: appName, directoryHint: .isDirectory)
         self.isPreview = isPreview
         cache = MailCache(url: isPreview ? nil : self.folder.appending(path: "mail.sqlite"))
+        imapSync = isPreview ? nil : IMAPSyncStore(folder: self.folder.appending(path: "IMAP Sync", directoryHint: .isDirectory))
     }
 
     /// The app's own: mailboxes and settings on this device, secrets in the Keychain.
@@ -144,13 +148,16 @@ public struct Notice: Identifiable, Equatable {
     public var isError = false
     /// While a message waits to go out: from now until it sends, drawn as a ring that fills.
     public var countdown: ClosedRange<Date>?
+    /// A message has gone: the full ring shows a tick, and the text says where it went from.
+    public var isSent = false
     public var canUndo: Bool { undo != nil }
 
-    public init(text: String, undo: UndoKind? = nil, isError: Bool = false, countdown: ClosedRange<Date>? = nil) {
+    public init(text: String, undo: UndoKind? = nil, isError: Bool = false, countdown: ClosedRange<Date>? = nil, isSent: Bool = false) {
         self.text = text
         self.undo = undo
         self.isError = isError
         self.countdown = countdown
+        self.isSent = isSent
     }
 }
 
@@ -234,6 +241,15 @@ public final class MailModel {
     @ObservationIgnored lazy var readsAhead = !environment.isPreview
     /// Fetching the conversations next to the open one; a new selection starts it over.
     @ObservationIgnored var neighbourReading: Task<Void, Never>?
+    /// Reading the newest conversations ahead after a check; the next check starts it over
+    /// instead of starting a second one beside it.
+    @ObservationIgnored var inboxReading: Task<Void, Never>?
+    /// Saving the last screen (see `MailModel+LastScreen`); a newer change starts it over.
+    @ObservationIgnored var lastScreenSaving: Task<Void, Never>?
+    /// Mailboxes whose `sentMail` is only the last screen's few replies, until saved Sent is read.
+    @ObservationIgnored var sentFromLastScreen: Set<UUID> = []
+    /// Mailboxes whose folders and inbox came from the last screen at launch.
+    @ObservationIgnored var restoredFromLastScreen: Set<UUID> = []
     /// Set by a "Sign in again" button in the window; the window's sign-in sheet picks it up.
     public var signingInAgain: MailAccount?
     /// A rule being made from a conversation (Create Rule…), shown as a sheet over the list.
@@ -364,12 +380,16 @@ public final class MailModel {
                 saveToDrafts(old)
             }
             if reply == nil || oldValue == nil { isReplyPutAway = false }
+            // A new or closed reply starts at its usual size.
+            if reply == nil || oldValue == nil { isReplyExpanded = false }
         }
     }
     /// The message being written is tucked into the top bar while you search and read other
     /// mail; it comes back down with everything as it was.
     public var isComposePutAway = false
     public var isReplyPutAway = false
+    /// The reply fills the reading pane, the conversation above it; see `MailModel+ReplySize.swift`.
+    public internal(set) var isReplyExpanded = false
     var unsentSave: Task<Void, Never>?
     /// Bumped to ask the list to take keyboard focus back.
     public var focusRequest = 0
@@ -639,6 +659,11 @@ public final class MailModel {
     let credentials: KeychainCredentials
 
     public init(environment: MailEnvironment) {
+        if !environment.isPreview { Self.noteLaunch("model made") }
+        // The steps of each check (connecting, signing in, syncing) go to the system log too.
+        if !environment.isPreview, StepTimes.report == nil {
+            StepTimes.report = { Self.refreshLog.notice("\($0, privacy: .public)") }
+        }
         self.environment = environment
         // The sample mailboxes only stand in until there's a real one; leftovers go.
         var loaded = environment.accounts.load()
@@ -689,6 +714,11 @@ public final class MailModel {
         rebuildIntelligence()
         SafeHTMLCache.blocksTrackers = environment.defaults.object(forKey: "blocksTrackers") as? Bool ?? true
         if layout == .minimal { place = .home(group: nil) }
+        restoreLastScreen()
+        if !environment.isPreview {
+            Self.noteLaunch("last screen restored")
+            saveLastScreenWhenLeaving()
+        }
     }
 
     // MARK: Reading
@@ -750,10 +780,13 @@ public final class MailModel {
             pictureStore.forgetMissing()
         }
         if !hasOnboarded && !environment.isPreview { isShowingOnboarding = true }
+        Self.noteLaunch("start")
         await forgetRemovedAccounts()
         pruneLearnedAliases()
         upgradeFormattedSignatures()
+        Self.noteLaunch("before saved mail")
         await loadSavedMail()
+        Self.noteLaunch("saved mail shown")
         // The conversation that's open shows its saved text now. It used to wait for everything
         // below (the sync, then every mailbox answering from its server), so the mail on screen
         // sat at "Loading…" for as long as the slowest mailbox took, though it was on this device.
@@ -800,6 +833,11 @@ public final class MailModel {
     /// changes nothing, so nothing on screen is worked out again for it.
     nonisolated static func load(_ id: UUID, from provider: any MailProvider, limit: Int = MailModel.listPage,
                                  previous: [MailThread]? = nil, mutationRevision: Int = 0) async -> LoadedAccount {
+        let started = ContinuousClock.now
+        defer {
+            let took = ContinuousClock.now - started
+            refreshLog.notice("Checked mailbox \(id.uuidString.prefix(8), privacy: .public) in \(Int(took / .milliseconds(1)), privacy: .public) ms")
+        }
         do {
             let boxes = try await provider.mailboxes()
             guard let inbox = boxes.first(where: { $0.role == .inbox }) else {
@@ -911,7 +949,7 @@ public final class MailModel {
         applyInboxRules()
         notifyAboutNewMail()
         // What just arrived is read ahead, so it opens at once.
-        Task { await readAhead() }
+        startReadingAhead()
         if selectedThread == nil { selectedThreadID = firstConversation }
     }
 
@@ -919,7 +957,7 @@ public final class MailModel {
     /// as it answers: one that fails, or takes its time, never holds the others back.
     public func reload() async {
         isLoading = true
-        defer { isLoading = false }
+        let started = ContinuousClock.now
         var jobs: [(UUID, any MailProvider, Int, [MailThread]?)] = []
         for account in accounts {
             do {
@@ -941,7 +979,7 @@ public final class MailModel {
         correspondents = await environment.cache.correspondents(of: Set(accounts.flatMap(\.sendAddresses).map { $0.address.lowercased() }))
         notifyAboutNewMail()
         // The top of the list is read ahead, so those conversations open instantly.
-        Task { await readAhead() }
+        startReadingAhead()
         #if os(iOS) && canImport(WatchConnectivity)
         WatchBridge.shared.push()
         #endif
@@ -958,8 +996,28 @@ public final class MailModel {
         if place.isFolder { await loadFolder(for: place) }
         if selectedThread == nil { selectedThreadID = firstConversation }
         restoreSummariesIfNeeded()
+        // The check is done once the mail is in. The open conversation picking up what arrived
+        // in it (downloads, the Sent check, marking it read) used to keep "Checking…" up too,
+        // and kept the three-minute check and a reconnect from starting meanwhile.
+        isLoading = false
+        saveLastScreen()
+        Self.refreshLog.notice("Checked \(self.accounts.count, privacy: .public) mailboxes in \(Int((ContinuousClock.now - started) / .milliseconds(1)), privacy: .public) ms")
         await loadBodies()
     }
+
+    /// Launch steps in the system log (category refresh), in ms since the process started.
+    public static func noteLaunch(_ step: String) {
+        var info = kinfo_proc(), size = MemoryLayout<kinfo_proc>.stride
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
+        guard sysctl(&mib, 4, &info, &size, nil, 0) == 0 else { return }
+        let started = info.kp_proc.p_un.__p_starttime
+        let since = Date().timeIntervalSince1970 - (Double(started.tv_sec) + Double(started.tv_usec) / 1e6)
+        refreshLog.notice("Launch: \(step, privacy: .public) at \(Int(since * 1000), privacy: .public) ms")
+    }
+
+    /// How long checks take, in the system log (Console, subsystem app.relevate.margin,
+    /// category refresh): `/usr/bin/log stream --predicate 'subsystem == "app.relevate.margin"'`.
+    nonisolated static let refreshLog = Logger(subsystem: "app.relevate.margin", category: "refresh")
 
     /// Thread ids are only unique within one account, so they carry the account's id.
     nonisolated static func tag(_ thread: MailThread, account: UUID) -> MailThread {
@@ -1136,6 +1194,10 @@ public final class MailModel {
                 await loadSavedSentMail(for: account)
                 if selectedThreadID == thread.id, conversation(thread).messages.count != shown { await loadBodies() }
             }
+            // The server's Sent waits for the first check: at launch it took the connection
+            // first, and the inbox waited for a whole download of Sent (10 s on Outlook.com).
+            // The check ends by calling this again.
+            guard lastUpdated != nil else { return }
             await loadSentMail(for: account)
             // Replies that just came in from Sent need their text too.
             if selectedThreadID == thread.id, conversation(thread).messages.count != shown { await loadBodies() }
@@ -1212,7 +1274,7 @@ public final class MailModel {
             await credentials.forgetPauses(for: account.id)
         }
         do {
-            let provider = try ProviderFactory.make(for: account, credentials: credentials)
+            let provider = try ProviderFactory.make(for: account, credentials: credentials, imapSync: environment.imapSync)
             _ = try await provider.mailboxes()
             providers[account.id] = provider
         } catch {
@@ -1279,7 +1341,7 @@ public final class MailModel {
 
     func provider(for account: MailAccount) throws -> any MailProvider {
         if let provider = providers[account.id] { return provider }
-        let provider = try ProviderFactory.make(for: account, credentials: credentials)
+        let provider = try ProviderFactory.make(for: account, credentials: credentials, imapSync: environment.imapSync)
         providers[account.id] = provider
         return provider
     }

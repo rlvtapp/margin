@@ -111,7 +111,7 @@ extension MailModel {
             await credentials.forgetPauses(for: changed.id)
         }
         do {
-            let provider = try ProviderFactory.make(for: changed, credentials: credentials)
+            let provider = try ProviderFactory.make(for: changed, credentials: credentials, imapSync: environment.imapSync)
             _ = try await provider.mailboxes()
             if let old = providers.removeValue(forKey: changed.id) { Task { await old.disconnect() } }
             providers[changed.id] = provider

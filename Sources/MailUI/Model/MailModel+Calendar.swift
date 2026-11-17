@@ -276,14 +276,57 @@ extension MailModel {
 }
 
 extension MailModel {
+    /// Starts reading the newest conversations ahead, in place of one still going.
+    func startReadingAhead() {
+        inboxReading?.cancel()
+        inboxReading = Task { [weak self] in await self?.readAhead() }
+    }
+
     /// Loads the bodies of the newest conversations in the inbox, from the offline cache when
-    /// they're there, so opening them is instant.
+    /// they're there, so opening them is instant. What isn't saved yet comes in one request
+    /// per mailbox and folder, and only the start of each message (its text, not big files;
+    /// opening it fetches the rest). It used to be one whole message per request, files and
+    /// all, each holding the connection a check needs.
     func readAhead(count: Int = 20) async {
         guard readsAhead else { return }
-        for thread in newestInInboxes(count) {
-            await readAhead(thread)
-            forgetNote(of: thread.id)
+        let threads = newestInInboxes(count)
+        var wanted: [UUID: (provider: any MailProvider, messages: [MailMessage])] = [:]
+        for thread in threads {
+            guard let account = account(thread.accountID) else { continue }
+            for message in thread.messages.suffix(3) {
+                guard !Task.isCancelled else { return }
+                let key = Self.bodyKey(thread.accountID, message.id)
+                guard bodies[key] == nil else { continue }
+                if let body = message.body {
+                    bodies[key] = body
+                } else if let saved = await environment.cache.body(of: message.id, account: account.id) {
+                    bodies[key] = saved
+                } else if let provider = try? provider(for: account) {
+                    wanted[account.id, default: (provider, [])].messages.append(message)
+                }
+            }
         }
+        let cache = environment.cache
+        let fetched = await withTaskGroup(of: (UUID, [MailMessage], [String: MessageBody]).self) { group in
+            for (accountID, item) in wanted {
+                group.addTask { (accountID, item.messages, (try? await item.provider.readableBodies(of: item.messages)) ?? [:]) }
+            }
+            var all: [(UUID, [MailMessage], [String: MessageBody])] = []
+            for await answer in group { all.append(answer) }
+            return all
+        }
+        for (accountID, messages, found) in fetched {
+            for message in messages {
+                guard let body = found[message.id] else { continue }
+                let key = Self.bodyKey(accountID, message.id)
+                // The open conversation may have fetched the whole message meanwhile; a start
+                // isn't put back over it, here or in saved mail.
+                guard bodies[key] == nil || bodies[key]?.isPartial == true else { continue }
+                bodies[key] = body
+                await cache.saveBody(body, of: message, account: accountID)
+            }
+        }
+        for thread in threads { forgetNote(of: thread.id) }
     }
 
     /// Fetches a conversation's latest messages before they're asked for, on the background

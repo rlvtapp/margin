@@ -31,14 +31,42 @@ struct HTMLMessageView: View {
         _height = State(initialValue: Self.heights[Self.heightKey(html.html, zoom: zoom, card: fillsCard)] ?? 120)
     }
 
-    /// Measured heights of mail shown this session, so going back to one doesn't jump.
-    @MainActor static var heights: [Int: CGFloat] = [:]
-    static func heightKey(_ html: String, zoom: Double, card: Bool) -> Int {
-        var hasher = Hasher()
-        hasher.combine(TextKey.of(html))
-        hasher.combine(zoom)
-        hasher.combine(card)
-        return hasher.finalize()
+    /// Measured heights of mail, so going back to one doesn't jump. Kept between launches too
+    /// (`heights.json`): the mail open at launch used to start as a small box and grow once
+    /// it had measured itself, re-forming the reader as Margin opened.
+    @MainActor static var heights: [String: CGFloat] = loadHeights()
+    @MainActor private static var heightsSaving: Task<Void, Never>?
+
+    /// The same for the same mail in every launch (Swift's own hashing changes per launch).
+    static func heightKey(_ html: String, zoom: Double, card: Bool) -> String {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for byte in html.utf8 {
+            hash ^= UInt64(byte)
+            hash &*= 0x0000_0100_0000_01b3
+        }
+        return "\(String(hash, radix: 36))|\(zoom)|\(card ? 1 : 0)"
+    }
+
+    private static var heightsFile: URL? {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+            .appending(path: "Margin", directoryHint: .isDirectory).appending(path: "heights.json")
+    }
+
+    @MainActor private static func loadHeights() -> [String: CGFloat] {
+        guard let file = heightsFile, let data = try? Data(contentsOf: file) else { return [:] }
+        return (try? JSONDecoder().decode([String: CGFloat].self, from: data)) ?? [:]
+    }
+
+    @MainActor private static func saveHeights() {
+        heightsSaving?.cancel()
+        heightsSaving = Task {
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled, let file = heightsFile else { return }
+            let kept = heights
+            await Task.detached(priority: .utility) {
+                try? JSONEncoder().encode(kept).write(to: file, options: .atomic)
+            }.value
+        }
     }
 
     var body: some View {
@@ -60,6 +88,7 @@ struct HTMLMessageView: View {
         .onChange(of: height) { _, measured in
             if Self.heights.count > 500 { Self.heights.removeAll() }
             Self.heights[Self.heightKey(html.html, zoom: zoom, card: fillsCard)] = measured
+            Self.saveHeights()
         }
         .padding(fillsCard ? 0 : (onSheet ? 16 : 0))
         .background(onSheet && !fillsCard ? Color.white : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -128,8 +157,19 @@ enum RemoteContentRules {
     }
 }
 
+/// How many mail pages are still loading for the first time. The Mac window waits (briefly)
+/// for this to reach zero before it shows, so the mail open at launch isn't a blank box that
+/// fills in a moment later.
+public enum MailPages {
+    @MainActor public private(set) static var loading = 0
+    @MainActor static func started() { loading += 1 }
+    @MainActor static func ended() { loading = max(0, loading - 1) }
+}
+
 final class HTMLWebCoordinator: NSObject, WKNavigationDelegate {
     var height: Binding<CGFloat>
+    /// This page counts in `MailPages.loading` until its first load ends.
+    @MainActor private var countsAsLoading = false
     var onMailto: (URL) -> Void
     var loaded: (document: String, allowsRemote: Bool)?
     private var generation = 0
@@ -145,13 +185,17 @@ final class HTMLWebCoordinator: NSObject, WKNavigationDelegate {
     func load(_ document: String, allowsRemote: Bool, in webView: WKWebView) {
         guard loaded?.document != document || loaded?.allowsRemote != allowsRemote else { return }
         loaded = (document, allowsRemote)
+        if !countsAsLoading {
+            countsAsLoading = true
+            MailPages.started()
+        }
         generation += 1
         let current = generation
         Task { @MainActor in
             let controller = webView.configuration.userContentController
             controller.removeAllContentRuleLists()
             if !allowsRemote {
-                guard let rules = await RemoteContentRules.blockRemote() else { return }
+                guard let rules = await RemoteContentRules.blockRemote() else { self.firstLoadEnded(); return }
                 controller.add(rules)
             }
             guard current == self.generation else { return }
@@ -228,9 +272,24 @@ final class HTMLWebCoordinator: NSObject, WKNavigationDelegate {
         Task { @MainActor in measure(webView) }
     }
 
+    @MainActor func firstLoadEnded() {
+        guard countsAsLoading else { return }
+        countsAsLoading = false
+        MailPages.ended()
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        Task { @MainActor in firstLoadEnded() }
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        Task { @MainActor in firstLoadEnded() }
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         Task { @MainActor in
             measure(webView)
+            firstLoadEnded()
             // Data images and late layout can change the height once more.
             try? await Task.sleep(for: .milliseconds(250))
             measure(webView)
@@ -413,6 +472,19 @@ enum MailWebViewPool {
 
     /// For tests.
     static func empty() { ready = []; reused = 0 }
+
+    /// Makes `count` views ahead of time, each with its page process started, and gets the
+    /// remote-content rules ready. Called at launch for the mail open on the last screen:
+    /// starting WebKit's process took about a quarter of a second once the window was up,
+    /// and the window waits for that page.
+    static func warmUp(count: Int, background: UInt32) {
+        for _ in 0..<max(0, min(count, capacity) - ready.count) {
+            let view = HTMLWebCoordinator.makeWebView(background: background)
+            view.loadHTMLString("", baseURL: nil)
+            ready.append(view)
+        }
+        Task { _ = await RemoteContentRules.blockRemote() }
+    }
 }
 
 /// Pictures you chose to load for one message ("Load pictures" without trusting the sender).

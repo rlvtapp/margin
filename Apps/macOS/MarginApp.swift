@@ -25,6 +25,7 @@ struct MarginApp: App {
             MailRootView(model: delegate.model)
                 // Small enough to sit beside another app; the columns give way as it narrows.
                 .frame(minWidth: 480, minHeight: 440)
+                .background(RevealWhenDrawn())
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1480, height: 960)
@@ -69,9 +70,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         snapshot?.run(model: model)
         benchmark?.run(model: model)
         if snapshot == nil, benchmark == nil {
+            MailModel.noteLaunch("did finish launching")
             model.applyAppIcon()
+            MailModel.noteLaunch("app icon applied")
             model.startConnectionIfEnabled()
             model.startClock()
+            MailModel.noteLaunch("launch work done")
             UNUserNotificationCenter.current().delegate = self
             // New windows follow the screen-sharing setting too.
             NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: nil, queue: .main) { [weak self] _ in
@@ -184,6 +188,44 @@ struct MarginCommands: Commands {
             Divider()
             Button("Margin Help…") { model.isShowingHelp = true }
             Button("Send Feedback…") { model.startFeedback() }
+        }
+    }
+}
+
+
+/// Keeps the main window out of sight until its first frame is drawn, then shows it whole. The
+/// window used to come up as an empty black or white rectangle for a few hundred milliseconds
+/// while the sidebar, list and reader were laid out for the first time (from the last screen,
+/// so there's no waiting on mail), and a formatted mail's page was still blank. 1.5 s at most.
+private struct RevealWhenDrawn: NSViewRepresentable {
+    func makeNSView(context: Context) -> RevealView { RevealView() }
+    func updateNSView(_ view: RevealView, context: Context) {}
+
+    final class RevealView: NSView {
+        private var handled = false
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard let window, !handled else { return }
+            handled = true
+            window.alphaValue = 0
+            // The next turns of the main loop come after the first frame is committed; then the
+            // open mail's page gets up to 0.8 s to finish loading, so it isn't blank at first.
+            DispatchQueue.main.async {
+                DispatchQueue.main.async {
+                    Task { @MainActor [weak window] in
+                        for _ in 0..<50 where MailPages.loading > 0 { try? await Task.sleep(for: .milliseconds(16)) }
+                        Self.reveal(window)
+                    }
+                }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak window] in Self.reveal(window) }
+        }
+
+        private static func reveal(_ window: NSWindow?) {
+            guard let window, window.alphaValue < 1 else { return }
+            window.alphaValue = 1
+            MailModel.noteLaunch("window shown")
         }
     }
 }

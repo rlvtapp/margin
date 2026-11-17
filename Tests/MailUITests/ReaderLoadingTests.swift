@@ -62,6 +62,29 @@ private actor ReaderProvider: MailProvider {
         #expect(thread.messages.allSatisfy { model.body(of: $0, in: thread) != nil })
     }
 
+    @Test func readingAheadAsksOnceForTheNewestConversations() async throws {
+        let environment = MailEnvironment.preview()
+        let account = MailAccount(label: "Reader", address: EmailAddress(address: "me@example.com"),
+                                  connection: .sample, auth: .password(username: "me"))
+        try environment.accounts.save([account])
+        let model = MailModel(environment: environment)
+        let threads = (0..<5).map { number in
+            MailModel.tag(MailThread(id: "t\(number)", messages: (0..<2).map { index in
+                MailMessage(id: "INBOX/\(number * 10 + index)", mailboxID: "INBOX", from: account.address, subject: "Hello \(number)",
+                            date: Date(timeIntervalSince1970: Double(number * 10 + index)))
+            }), account: account.id)
+        }
+        model.shelves[account.id] = InboxShelf(threads)
+        let provider = ReaderProvider()
+        model.providers[account.id] = provider
+        model.readsAhead = true
+        await model.readAhead()
+        // One request for all ten messages, not one each; and each is kept.
+        #expect(await provider.batches.count == 1)
+        #expect(await provider.batches.first?.count == 10)
+        #expect(threads.allSatisfy { thread in thread.messages.allSatisfy { model.body(of: $0, in: thread) != nil } })
+    }
+
     @Test func leavingAConversationStopsItsRemainingHistoryDownloads() async throws {
         let (model, thread) = try setup()
         let account = try #require(thread.accountID)

@@ -69,7 +69,7 @@ extension MailModel {
         // The open connection was made with the old sign-in.
         if let old = providers.removeValue(forKey: account.id) { await old.disconnect() }
         do {
-            let provider = try ProviderFactory.make(for: account, credentials: credentials)
+            let provider = try ProviderFactory.make(for: account, credentials: credentials, imapSync: environment.imapSync)
             if let prove { try await prove(provider) } else { _ = try await provider.mailboxes() }
             providers[account.id] = provider
         } catch {

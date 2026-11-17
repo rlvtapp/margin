@@ -17,8 +17,12 @@ extension MailModel {
         // texts stay in the database until a mail is opened. However much is saved, this reads
         // the newest page of each inbox through an index.
         let cache = environment.cache
+        // A mailbox the last screen brought back keeps it: that is the newer of the two (saved
+        // after every check and change), and putting saved mail over it made counts jump. Its
+        // saved inbox isn't even read: that was 800 conversations unpacked to be thrown away.
+        let restored = restoredFromLastScreen
         let saved = await withTaskGroup(of: (UUID, [Mailbox], InboxShelf)?.self) { group in
-            for id in accounts.map(\.id) {
+            for id in accounts.map(\.id) where !restored.contains(id) {
                 group.addTask {
                     guard let boxes = await cache.mailboxes(account: id), let inbox = boxes.first(where: { $0.role == .inbox }) else { return nil }
                     let threads = await cache.threads(account: id, mailbox: inbox.id, limit: MailModel.listPage, bodies: false)

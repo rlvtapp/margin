@@ -167,6 +167,7 @@ extension MailModel {
         for id in await environment.cache.savedAccounts() where !current.contains(id) {
             await environment.cache.removeAccount(id)
         }
+        await environment.imapSync?.keepOnly(current)
         let entries = calendarEntries.filter { $0.accountID.map(current.contains) ?? true }
         if entries.count != calendarEntries.count { saveCalendar(entries) }
         for id in sentMail.keys where !current.contains(id) { sentMail[id] = nil }

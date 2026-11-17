@@ -28,8 +28,9 @@ extension MailModel {
     /// every two minutes.
     /// Sent mail saved on this device, for stitching your replies into conversations.
     func loadSavedSentMail(for account: MailAccount) async {
-        guard !environment.isPreview, sentMail[account.id] == nil,
+        guard !environment.isPreview, sentMail[account.id] == nil || sentFromLastScreen.contains(account.id),
               let sent = mailboxes[account.id]?.first(where: { $0.role == .sent }) else { return }
+        sentFromLastScreen.remove(account.id)
         // Without the saved texts: a reply's text is read when its conversation is opened.
         let saved = await environment.cache.threads(account: account.id, mailbox: sent.id, bodies: false).flatMap(\.messages)
         if !saved.isEmpty { sentMail[account.id] = saved }
@@ -43,6 +44,7 @@ extension MailModel {
         sentMailLoaded[account.id] = Date()
         guard let provider = try? provider(for: account), let threads = try? await provider.threads(in: sent, limit: 200) else { return }
         let fresh = threads.flatMap(\.messages)
+        let before = sentMail[account.id] ?? []
         // Keep what was just sent from here until the server's Sent has its own copy.
         let pending = (sentMail[account.id] ?? []).filter { local in
             local.messageID?.hasPrefix(Self.localSentPrefix) == true && Date().timeIntervalSince(local.date) < 600
@@ -52,6 +54,7 @@ extension MailModel {
         // The newest 200 only: older Sent mail saved here (scrolled to, or downloaded in the
         // background) stays.
         await environment.cache.saveThreads(threads, account: account.id, mailbox: sent.id, limit: 200)
+        await keepWrittenTexts(of: before, in: fresh, account: account.id)
         learnSenderName(from: fresh, account: account)
     }
 
@@ -231,6 +234,27 @@ extension MailModel {
 
     static let localSentPrefix = "margin-sent-"
 
+    /// The server's copy of a mail sent from here takes the text that was written, so your own
+    /// reply opens at once instead of saying "Loading…" until its text is fetched again. Mail
+    /// with attachments keeps them coming from the server (the text is marked partial).
+    func keepWrittenTexts(of local: [MailMessage], in fresh: [MailMessage], account: UUID) async {
+        for written in local where written.messageID?.hasPrefix(Self.localSentPrefix) == true {
+            guard let body = written.body,
+                  let copy = fresh.first(where: { $0.subject == written.subject && abs($0.date.timeIntervalSince(written.date)) < 300 }) else { continue }
+            let key = Self.bodyKey(account, copy.id)
+            guard bodies[key] == nil, await environment.cache.body(of: copy.id, account: account) == nil else { continue }
+            bodies[key] = body
+            await environment.cache.saveBody(body, of: copy, account: account)
+        }
+    }
+
+    /// What was written, as a body; with attachments it's partial, so the files come from the server.
+    static func writtenBody(_ draft: Draft) -> MessageBody {
+        var body = MessageBody(text: draft.text, html: draft.html)
+        if !draft.attachments.isEmpty { body.isPartial = true }
+        return body
+    }
+
     /// A message just sent from here joins its conversation at once, instead of after the next
     /// Sent refresh (up to two minutes, and only on reopening): a copy with what was written and
     /// its reply headers, replaced by the server's own copy when Sent is read again shortly after.
@@ -238,7 +262,7 @@ extension MailModel {
         var message = MailMessage(id: Self.localSentPrefix + UUID().uuidString, mailboxID: "",
                                   messageID: Self.localSentPrefix + UUID().uuidString, from: draft.from,
                                   subject: draft.subject, date: Date(), snippet: String(draft.text.prefix(200)),
-                                  body: MessageBody(text: draft.text, html: draft.html))
+                                  body: Self.writtenBody(draft))
         message.to = draft.to
         message.cc = draft.cc
         message.inReplyTo = draft.inReplyTo

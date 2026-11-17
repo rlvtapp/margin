@@ -31,6 +31,21 @@ public enum Unsubscribe: Hashable, Sendable {
         return targets.compactMap(URL.init(string:)).first { $0.scheme?.lowercased() == "http" }.map(Unsubscribe.web)
     }
 
+    /// Whether a mail you sent is a request to leave a list (what `.mail` sends, or one written
+    /// by hand): the subject or text is just the word, or it went to a list's unsubscribe
+    /// address. Nobody answers these, so they are never waiting for a reply.
+    public static func isRequest(_ message: MailMessage) -> Bool {
+        let words = ["unsubscribe", "unsub", "remove", "opt out", "opt-out", "stop", "afmelden", "uitschrijven", "abmelden"]
+        func bare(_ value: String) -> String {
+            value.lowercased().trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+        }
+        if words.contains(bare(message.subject)) || words.contains(bare(message.snippet)) { return true }
+        return message.to.contains { address in
+            let local = address.address.lowercased().split(separator: "@").first.map(String.init) ?? ""
+            return linkAddressWords.contains(where: local.contains)
+        }
+    }
+
     /// Words an unsubscribe link is labelled with, or that the sentence around it uses, in
     /// the languages mail commonly comes in.
     static let linkWords = ["unsubscribe", "opt out", "opt-out", "stop receiving", "stop getting", "no longer wish", "no longer want",
@@ -151,8 +166,10 @@ public enum SignInCode {
     /// How far before the number those words may be.
     private static let reach = 80
 
-    /// 4–8 digits, optionally split once by a space or dash ("482 913", "482-913"). Built once.
-    private static let codePattern = try? NSRegularExpression(pattern: #"(?<![\d\w€$£.,:/=?&#+])(\d{3,4}[ -]\d{3,4}|\d{4,8})(?![\d\w%.,/:])"#)
+    /// 4–8 digits, optionally split once by a space or dash ("482 913", "482-913"). A full stop
+    /// or comma may end the sentence after it ("…to continue: 056459."), just not start a
+    /// decimal ("1234.50"). Built once.
+    private static let codePattern = try? NSRegularExpression(pattern: #"(?<![\d\w€$£.,:/=?&#+])(\d{3,4}[ -]\d{3,4}|\d{4,8})(?![\d\w%/:]|[.,]\d)"#)
     private static let linkPattern = try? NSRegularExpression(pattern: #"(https?://|www\.)\S+"#)
 
     public static func detect(subject: String, text: String) -> String? {
@@ -206,12 +223,20 @@ public enum SignInLink {
 
     private static let signInCues = ["sign in", "sign-in", "log in", "login", "magic link", "inloggen", "anmelden", "se connecter"]
     private static let confirmCues = ["confirm your", "verify your", "activate your", "bevestig je", "bestätige", "confirmez"]
+    /// Words in an address that make it a sign-in or confirmation link. "auth" only as a whole
+    /// part of the path: anywhere, it matched help pages about two-factor authentication.
     private static let linkWords = ["signin", "sign-in", "sign_in", "login", "log-in", "magic", "verify", "confirm", "activate",
-                                    "auth", "token", "session", "validate"]
+                                    "/auth/", "/auth?", "oauth", "token", "session", "validate"]
+    /// Mail that reports a sign-in instead of offering one: "Your account was accessed from a
+    /// new IP address", "New sign-in on Mac". Its links are help pages and settings.
+    private static let noticeCues = ["accessed from", "new ip address", "new sign-in", "new sign in", "new login", "new log-in",
+                                     "new device", "unusual sign", "unusual activity", "if you recognize this", "if this was you",
+                                     "if that was you", "wasn't you", "was this you", "nieuwe aanmelding", "neue anmeldung"]
 
     /// The sign-in or confirmation link in a message, or nil when there isn't a clear one.
     public static func detect(subject: String, text: String, html: String?) -> (url: URL, kind: Kind)? {
         let lower = (subject + "\n" + String(text.prefix(3_000))).lowercased()
+        guard !noticeCues.contains(where: lower.contains) else { return nil }
         let kind: Kind
         if confirmCues.contains(where: lower.contains) { kind = .confirm }
         else if signInCues.contains(where: lower.contains) { kind = .signIn }
@@ -289,6 +314,7 @@ public enum FollowUp {
         return sent.filter { thread in
             let mine = thread.latest
             guard me.contains(mine.from.address.lowercased()), !MeetingNotice.isNotice(subject: mine.subject),
+                  !Unsubscribe.isRequest(mine),
                   now.timeIntervalSince(mine.date) >= olderThan,
                   now.timeIntervalSince(mine.date) < 60 * 86_400 else { return false }
             let subject = Subject.normalized(mine.subject)

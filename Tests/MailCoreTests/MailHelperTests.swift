@@ -72,6 +72,11 @@ import Testing
         #expect(SignInCode.detect(subject: "Card payment of €42.10", text: "Card ending 4410 on 8 Nov 2026") == nil)
         #expect(SignInCode.detect(subject: "Lunch on Tuesday?", text: "Table for 4 at 1230") == nil)
         #expect(SignInCode.detect(subject: "Your code", text: "Valid since 2026.") == nil)
+        // The code ends the sentence.
+        #expect(SignInCode.detect(subject: "Your temporary OpenAI login code",
+                                  text: "Enter this temporary verification code to continue: 056459. OpenAI Log-in Code") == "056459")
+        #expect(SignInCode.detect(subject: "Your code", text: "Your code is 4821, valid for 10 minutes.") == "4821")
+        #expect(SignInCode.detect(subject: "Your code", text: "Your code total was 1234.50 today") == nil)
     }
 
     @Test func snoozeTimes() throws {
@@ -105,6 +110,26 @@ import Testing
         let reply = MailThread(id: "r", messages: [message("r", from: lena, to: me, subject: "Re: Offsite", daysAgo: 4, inReplyTo: "b")])
         let waiting = FollowUp.waiting(sent: [unanswered, answered, recent], inbox: [reply], me: [me.address], olderThan: 3 * day, now: now)
         #expect(waiting.map(\.id) == ["a"])
+    }
+
+    @Test func leavesUnsubscribeRequestsOutOfWaiting() {
+        let me = EmailAddress(address: "me@example.com")
+        let day: TimeInterval = 86_400
+        let now = Date(timeIntervalSince1970: 100 * day)
+        func sent(_ id: String, to: String, subject: String, snippet: String = "") -> MailThread {
+            var message = MailMessage(id: id, mailboxID: "x", messageID: id, from: me, to: [EmailAddress(address: to)], subject: subject,
+                                      date: now.addingTimeInterval(-5 * day))
+            message.snippet = snippet
+            return MailThread(id: id, messages: [message])
+        }
+        let threads = [
+            sent("token", to: "JFCVGWTZNRHX@bounce.list.example", subject: "unsubscribe", snippet: "unsubscribe"),
+            sent("custom", to: "x7f2@lists.example", subject: "Remove me 8812", snippet: "unsubscribe"),
+            sent("address", to: "unsubscribe-42@news.example", subject: "Leave"),
+            sent("person", to: "sam@kettle.example", subject: "How do I unsubscribe from the board?"),
+        ]
+        let waiting = FollowUp.waiting(sent: threads, inbox: [], me: [me.address], olderThan: 3 * day, now: now)
+        #expect(waiting.map(\.id) == ["person"])
     }
 
     @Test func buildsAndReadsAttachments() {

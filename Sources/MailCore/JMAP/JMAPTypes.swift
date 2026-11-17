@@ -62,7 +62,7 @@ enum JMAPEmail {
             if let value = email[key] as? String { headers[name] = value }
         }
         for name in InboxSplit.bulkHeaders {
-            if let value = email["header:\(name):asText"] as? String { headers[name] = value }
+            if email["header:\(name):asText"] is String { headers[name] = "" }
         }
         if let thread = email["threadId"] as? String { headers["x-jmap-thread"] = thread }
         let date = (email["receivedAt"] as? String).flatMap(parseDate) ?? (email["sentAt"] as? String).flatMap(parseDate) ?? .distantPast

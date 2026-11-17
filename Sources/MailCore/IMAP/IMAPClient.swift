@@ -137,7 +137,9 @@ actor IMAPClient {
         }
         do {
             let reply = try await command("LOGIN \(user) \(pass)", redacted: "LOGIN ***")
-            learnCapabilities(fromStatusText: reply.text)
+            // Servers that list what they can do in the answer to a sign-in needn't be asked
+            // again: that would only cost a round trip.
+            if learnCapabilities(fromStatusText: reply.text) { return }
         } catch MailError.serverRejected(let text) {
             throw MailError.authenticationFailed(text)
         }
@@ -151,7 +153,8 @@ actor IMAPClient {
             ? "OAUTHBEARER \(SASL.oauthBearer(username: username, accessToken: accessToken))"
             : "XOAUTH2 \(payload)"
         do {
-            _ = try await command("AUTHENTICATE \(mechanism)", redacted: "AUTHENTICATE ***")
+            let reply = try await command("AUTHENTICATE \(mechanism)", redacted: "AUTHENTICATE ***")
+            if learnCapabilities(fromStatusText: reply.text) { return }
         } catch MailError.serverRejected(let text) {
             throw MailError.authenticationFailed(text)
         }
@@ -326,10 +329,13 @@ actor IMAPClient {
         }
     }
 
-    private func learnCapabilities(fromStatusText text: String) {
-        guard text.uppercased().hasPrefix("[CAPABILITY "), let close = text.firstIndex(of: "]") else { return }
+    /// Takes in a `[CAPABILITY …]` code at the start of a status answer; says whether there was one.
+    @discardableResult
+    private func learnCapabilities(fromStatusText text: String) -> Bool {
+        guard text.uppercased().hasPrefix("[CAPABILITY "), let close = text.firstIndex(of: "]") else { return false }
         let list = text[text.index(text.startIndex, offsetBy: 12)..<close]
         capabilities = Set(list.split(separator: " ").map { $0.uppercased() })
+        return true
     }
 
     private func takeTag() -> String {

@@ -69,8 +69,9 @@ import Testing
         #expect(second.first { $0.subject == "Three" }?.isUnread == false)
         var round = Array(mailbox.commands.dropFirst(mark))
         #expect(round.first == "SELECT \"INBOX\" (CONDSTORE)")
+        // One left, so the count doesn't add up and a SEARCH finds which.
         #expect(round.contains("UID SEARCH UID 1:*"))
-        #expect(round.contains("UID FETCH 1:3 (UID FLAGS) (CHANGEDSINCE \(modSeq))"))
+        #expect(round.contains("UID FETCH 1:* (UID FLAGS) (CHANGEDSINCE \(modSeq))"))
         #expect(round.contains { $0.hasPrefix("UID FETCH 4 (UID FLAGS ENVELOPE") })
         #expect(!round.contains { $0.hasPrefix("FETCH ") })
 
@@ -99,6 +100,29 @@ import Testing
         await provider.disconnect()
     }
 
+    @Test func condstoreFindsNewMailWithoutASearch() async throws {
+        let mailbox = FakeIMAPMailbox(capabilities: "IMAP4rev1 CONDSTORE", subjects: ["One", "Two"])
+        let server = try await FakeServer(greeting: "* OK Fake ready", respond: { mailbox.respond($0) })
+        defer { server.stop() }
+        let provider = try provider(server)
+
+        _ = try await provider.threads(in: inbox, limit: 50)
+        let modSeq = mailbox.modSeq
+        mailbox.add("Three")
+        mailbox.markSeen(1)
+        let mark = mailbox.commands.count
+        let second = try await provider.threads(in: inbox, limit: 50)
+        #expect(second.map(\.subject) == ["Three", "Two", "One"])
+        #expect(second.first { $0.subject == "One" }?.isUnread == false)
+        // The count adds up (two before, one arrived), so nothing left: no SEARCH.
+        #expect(Array(mailbox.commands.dropFirst(mark)) == [
+            "SELECT \"INBOX\" (CONDSTORE)",
+            "UID FETCH 1:* (UID FLAGS) (CHANGEDSINCE \(modSeq))",
+            "UID FETCH 3 \(IMAPProvider.listItems)",
+        ])
+        await provider.disconnect()
+    }
+
     @Test func withoutCondstoreFetchesNewUIDsAndFlags() async throws {
         let mailbox = FakeIMAPMailbox(capabilities: "IMAP4rev1", subjects: ["One", "Two", "Three", "Four"])
         let server = try await FakeServer(greeting: "* OK Fake ready", respond: { mailbox.respond($0) })
@@ -116,8 +140,9 @@ import Testing
         #expect(second.map(\.subject) == ["Three", "Two"])
         #expect(second.first?.isUnread == false)
         var round = Array(mailbox.commands.dropFirst(mark))
-        #expect(round.contains("UID SEARCH UID 3:*"))
-        #expect(round.contains("UID FETCH 3:4 (UID FLAGS)"))
+        // One FETCH lists what's still there, what's new and every flag; no SEARCH.
+        #expect(round.contains("UID FETCH 3:* (UID FLAGS)"))
+        #expect(!round.contains { $0.hasPrefix("UID SEARCH") })
         #expect(round.contains { $0.hasPrefix("FETCH 2:2 (UID FLAGS ENVELOPE") })
 
         mailbox.add("Five")
@@ -235,12 +260,22 @@ final class FakeIMAPMailbox: @unchecked Sendable {
                     return "* SEARCH \(found.map(String.init).joined(separator: " "))\r\n\(tag) OK searched\r\n"
                 }
                 let set = words[2], items = words[3]
-                let uids = Self.numbers(set, max: Int.max)
+                // In a UID set `*` is the highest UID there is.
+                let uids = Self.numbers(set, max: messages.map(\.uid).max() ?? 0)
                 var since: Int?
                 if let range = items.range(of: "CHANGEDSINCE ") { since = Int(items[range.upperBound...].dropLast()) }
                 var out = ""
                 for (offset, message) in messages.enumerated() where uids.contains(message.uid) {
                     if let since, message.modSeq <= since { continue }
+                    if items.contains("BODY.PEEK[1]<0.") {
+                        let text = "Hello from \(message.subject)"
+                        out += "* \(offset + 1) FETCH (UID \(message.uid) BODY[1]<0> {\(text.utf8.count)}\r\n\(text))\r\n"
+                        continue
+                    }
+                    if items.contains("BODY.PEEK[]") {
+                        out += body(message, sequence: offset + 1, start: items.contains("BODY.PEEK[]<0."))
+                        continue
+                    }
                     out += items.contains("ENVELOPE") ? full(message, sequence: offset + 1) : short(message, sequence: offset + 1)
                 }
                 return out + "\(tag) OK fetched\r\n"
@@ -265,8 +300,29 @@ final class FakeIMAPMailbox: @unchecked Sendable {
         return out
     }
 
+    /// Whether the list items carry a BODYSTRUCTURE: a plain text part whose character set
+    /// and encoding differ from message to message, the way real mail does.
+    var structured = false
+
+    private func structure(_ message: Message) -> String {
+        guard structured else { return "" }
+        let charsets = ["utf-8", "iso-8859-1", "windows-1252", "us-ascii"], encodings = ["7bit", "quoted-printable", "8bit"]
+        return " BODYSTRUCTURE (\"text\" \"plain\" (\"charset\" \"\(charsets[message.uid % 4])\") NIL NIL \"\(encodings[message.uid % 3])\" 20 1)"
+    }
+
     private func full(_ message: Message, sequence: Int) -> String {
-        "* \(sequence) FETCH (UID \(message.uid) FLAGS (\(message.seen ? "\\Seen" : "")) ENVELOPE (\"Tue, 3 Nov 2026 \(String(format: "%02d", message.uid % 24)):00:00 +0100\" \"\(message.subject)\" ((\"Sender\" NIL \"sender\" \"example.com\")) NIL NIL ((NIL NIL \"me\" \"example.com\")) NIL NIL NIL \"<\(message.subject)@example.com>\"))\r\n"
+        "* \(sequence) FETCH (UID \(message.uid) FLAGS (\(message.seen ? "\\Seen" : ""))\(structure(message)) ENVELOPE (\"Tue, 3 Nov 2026 \(String(format: "%02d", message.uid % 24)):00:00 +0100\" \"\(message.subject)\" ((\"Sender\" NIL \"sender\" \"example.com\")) NIL NIL ((NIL NIL \"me\" \"example.com\")) NIL NIL NIL \"<\(message.subject)@example.com>\"))\r\n"
+    }
+
+    /// How big each message is when its whole text is asked for.
+    var bodySize = 2_000
+
+    /// The whole message, or (for `BODY.PEEK[]<0.n>`) its start; the text is plain ASCII.
+    private func body(_ message: Message, sequence: Int, start: Bool) -> String {
+        let head = "Subject: \(message.subject)\r\nContent-Type: text/plain\r\n\r\n"
+        let whole = head + String(repeating: "Hello there, this is the text. ", count: max(1, bodySize / 31)) + "\r\n"
+        let sent = start ? String(whole.prefix(IMAPProvider.openingBytes)) : whole
+        return "* \(sequence) FETCH (UID \(message.uid) RFC822.SIZE \(whole.utf8.count) BODY[]\(start ? "<0>" : "") {\(sent.utf8.count)}\r\n\(sent))\r\n"
     }
 
     private func short(_ message: Message, sequence: Int) -> String {

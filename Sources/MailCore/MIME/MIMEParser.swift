@@ -301,9 +301,13 @@ public enum HTMLText {
         looksLikeHTML(preview) ? snippet(preview) : tidyPreview(preview)
     }
 
-    /// A preview without the dividers plain-text mail draws with characters ("-------",
-    /// "=====", "_____", "*****"): runs of three or more go, and the spaces close up.
+    /// A preview without what plain-text versions of designed mail leave in it: links written
+    /// as `[Shop](https://…)` keep their words, web addresses on their own (bare, `<…>` or
+    /// `(…)`) go, and so do HTML comment marks (`<!--`, `-->`) from conditional code. Then the
+    /// dividers drawn with characters ("-------", "=====", "_____", "*****"): runs of three or
+    /// more go, and the spaces close up.
     public static func tidyPreview(_ text: String) -> String {
+        let text = withoutAddresses(text)
         guard text.contains(where: { dividerCharacters.contains($0) }) else { return text }
         var result = ""
         var run = ""
@@ -325,4 +329,20 @@ public enum HTMLText {
     }
 
     private static let dividerCharacters: Set<Character> = ["-", "_", "=", "*", "~", "—", "–", "·", "•", "#"]
+
+    private static func withoutAddresses(_ text: String) -> String {
+        guard text.contains("://") || text.contains("-->") || text.contains("<!") || text.contains("[") else { return text }
+        var result = text
+        // [words](address) keeps the words; the address and its brackets go.
+        result = result.replacingOccurrences(of: #"\[([^\]\n]{0,200})\]\(\s*(?:https?|mailto):[^)\s]*\)"#, with: "$1", options: .regularExpression)
+        result = result.replacingOccurrences(of: #"[<(]\s*(?:https?|mailto):[^>)\s]*[>)]"#, with: " ", options: .regularExpression)
+        result = result.replacingOccurrences(of: #"https?://\S+"#, with: " ", options: .regularExpression)
+        // A link cut off by the end of the preview: "[Holiday Shop](https://shop.exa".
+        result = result.replacingOccurrences(of: #"\[([^\]\n]{0,200})\]\(\s*(?=\s|$)"#, with: "$1 ", options: .regularExpression)
+        result = result.replacingOccurrences(of: #"\[([^\]\n]*)$"#, with: "$1", options: .regularExpression)
+        result = result.replacingOccurrences(of: #"<!--\[if[^\]]*\]>|<!\[endif\]-->|<!\[if[^\]]*\]>|<!\[endif\]>|<!--|-->"#, with: " ", options: [.regularExpression, .caseInsensitive])
+        // Brackets left with nothing in them.
+        result = result.replacingOccurrences(of: #"\[\s*\]|\(\s*\)"#, with: " ", options: .regularExpression)
+        return result.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+    }
 }

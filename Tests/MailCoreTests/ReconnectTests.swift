@@ -75,14 +75,15 @@ import Testing
         imap.hangUp()
         try await Task.sleep(for: .milliseconds(150))
 
-        // The next request doesn't fail: it signs in again and gets its answer.
-        #expect(try await provider.mailboxes().map(\.id) == ["INBOX", "Drafts"])
+        // The next request doesn't fail: it signs in again and gets its answer. (The folder
+        // list is kept for a few minutes, so reading the inbox is what goes to the server.)
+        let inbox = Mailbox(id: "INBOX", name: "Inbox", role: .inbox)
+        #expect(try await provider.threads(in: inbox, limit: 50).count == 1)
         #expect(signIns(log) == 2)
 
-        // And reading mail after another drop works the same way.
+        // And again after another drop.
         imap.hangUp()
         try await Task.sleep(for: .milliseconds(150))
-        let inbox = Mailbox(id: "INBOX", name: "Inbox", role: .inbox)
         #expect(try await provider.threads(in: inbox, limit: 50).count == 1)
         #expect(signIns(log) == 3)
         await provider.disconnect()
@@ -98,11 +99,12 @@ import Testing
         imap.stop()
         imap.hangUp()
         try await Task.sleep(for: .milliseconds(150))
-        await #expect(throws: MailError.self) { _ = try await provider.mailboxes() }
+        let inbox = Mailbox(id: "INBOX", name: "Inbox", role: .inbox)
+        await #expect(throws: MailError.self) { _ = try await provider.threads(in: inbox, limit: 50) }
 
         // A later try isn't stuck on the dead connection: it fails by trying to connect anew.
         do {
-            _ = try await provider.mailboxes()
+            _ = try await provider.threads(in: inbox, limit: 50)
             Issue.record("The server is gone; this should have failed.")
         } catch {
             #expect(MailError.isConnectionProblem(error))

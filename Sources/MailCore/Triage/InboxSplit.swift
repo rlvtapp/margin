@@ -45,6 +45,17 @@ public enum InboxSplit: String, CaseIterable, Codable, Sendable {
     /// when it was sent in bulk (Gmail asks bulk senders for Feedback-ID).
     static let bulkHeaders = ["feedback-id", "x-csa-complaints", "x-mailgun-sid", "x-ses-outgoing", "x-sg-eid", "x-mc-user"]
 
+    /// The list headers as they're kept in memory and saved: only what's read. `References` is
+    /// already on the message, parsed; bulk-sending headers are only checked for being there,
+    /// and some (SendGrid's) run to hundreds of characters on every message from that sender.
+    public static func compact(_ headers: [String: String]) -> [String: String] {
+        guard headers["references"] != nil || bulkHeaders.contains(where: { !(headers[$0] ?? "").isEmpty }) else { return headers }
+        var kept = headers
+        kept["references"] = nil
+        for name in bulkHeaders where kept[name] != nil { kept[name] = "" }
+        return kept
+    }
+
     public static func classify(_ message: MailMessage) -> InboxSplit {
         let headers = message.listHeaders
         if headers["list-id"] != nil || headers["list-unsubscribe"] != nil {

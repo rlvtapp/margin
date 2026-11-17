@@ -11,10 +11,23 @@ public actor IMAPProvider: MailProvider {
     /// first one's commands.
     private var watcher: IMAPClient?
     private var folders: [Mailbox] = []
+    /// When the folder list was last read from the server. Folders rarely change, so a check
+    /// doesn't ask for the list again within `folderListAge`.
+    private var foldersListed: Date?
+    static let folderListAge: TimeInterval = 5 * 60
     /// What each folder held at the last refresh, by mailbox name.
     private var sync: [String: IMAPFolderSync] = [:]
+    /// Keeps `sync` between launches; nil in previews and tests that don't ask for it.
+    private let syncStore: IMAPSyncStore?
+    private var restored = false
+    /// A saved folder state is brought back with at most this many messages: the window a list
+    /// starts with. Older mail that was scrolled to before isn't refreshed on every check after.
+    static let restoredWindow = 200
     private var isBusy = false
     private var waiting: [CheckedContinuation<Void, Never>] = []
+    /// Downloads in the background (reading ahead, invitations, the assistant) wait here, behind
+    /// checks and anything a person asked for.
+    private var waitingLater: [CheckedContinuation<Void, Never>] = []
     /// A third connection, only for the mail someone just opened. The first one does one folder
     /// operation at a time (a refresh, the Sent check, reading ahead), and a click shouldn't
     /// stand in that line.
@@ -31,7 +44,7 @@ public actor IMAPProvider: MailProvider {
     /// The parts of a message a list needs: no body.
     static let listItems = "(UID FLAGS ENVELOPE RFC822.SIZE INTERNALDATE BODYSTRUCTURE BODY.PEEK[HEADER.FIELDS (LIST-ID LIST-UNSUBSCRIBE LIST-UNSUBSCRIBE-POST PRECEDENCE REFERENCES AUTO-SUBMITTED FEEDBACK-ID X-CSA-COMPLAINTS X-MAILGUN-SID X-SES-OUTGOING X-SG-EID X-MC-USER X-MS-REACTIONS)])"
 
-    public init(account: MailAccount, credentials: any CredentialSource) throws {
+    public init(account: MailAccount, credentials: any CredentialSource, syncStore: IMAPSyncStore? = nil) throws {
         guard case .imap(let incoming, let outgoing) = account.connection else {
             throw MailError.notSupported(String(localized: "Not an IMAP account."))
         }
@@ -39,14 +52,60 @@ public actor IMAPProvider: MailProvider {
         self.incoming = incoming
         self.outgoing = outgoing
         self.credentials = credentials
+        self.syncStore = syncStore
     }
 
+    /// Which server and sign-in the saved state belongs to.
+    private var syncOwner: String {
+        let user: String = switch account.auth {
+        case .password(let name), .oauth(_, let name): name
+        case .token: ""
+        }
+        return "\(incoming.host.lowercased()):\(incoming.port) \(user.lowercased())"
+    }
+
+    /// Brings back what every folder held when the app last ran, once, before the first sync.
+    private func restoreSync() async {
+        guard !restored else { return }
+        restored = true
+        guard let syncStore else { return }
+        for (name, var state) in await syncStore.load(account: account.id, server: syncOwner) where sync[name] == nil {
+            state.window = min(state.window, Self.restoredWindow)
+            state.messages = state.messages.mapValues { message in
+                var compact = message
+                compact.listHeaders = InboxSplit.compact(message.listHeaders)
+                compact.snippet = HTMLText.cleanedPreview(message.snippet)
+                return compact
+            }
+            state.trim()
+            sync[name] = state
+        }
+    }
+
+    /// Saves `sync` on the side when a refresh changed it.
+    private func saveSync() {
+        guard let syncStore else { return }
+        let snapshot = sync, taken = ContinuousClock.now, id = account.id, owner = syncOwner
+        Task.detached(priority: .utility) { await syncStore.save(snapshot, account: id, server: owner, taken: taken) }
+    }
+
+    /// The account's folders. Asked of the server at most every `folderListAge` (and after a
+    /// reconnect, or when a folder is made, renamed or deleted here); in between, every check
+    /// would otherwise spend a round trip on a list that hasn't changed.
     public func mailboxes() async throws -> [Mailbox] {
+        if !folders.isEmpty, let listed = foldersListed, Date().timeIntervalSince(listed) < Self.folderListAge { return folders }
+        return try await listedAgain()
+    }
+
+    private func listedAgain() async throws -> [Mailbox] {
         try await reliably { try await self.listMailboxes() }
     }
 
     private func listMailboxes() async throws -> [Mailbox] {
+        let before = foldersListed
         let client = try await connected()
+        // A new connection reads the list as it signs in: no need to ask twice.
+        if foldersListed != before { return folders }
         let items = try await client.list().filter(\.isSelectable)
         let names = Set(items.map(\.name))
         folders = items.map { item in
@@ -54,24 +113,36 @@ public actor IMAPProvider: MailProvider {
             let parent = item.parent.flatMap { names.contains($0) ? $0 : nil }
             return Mailbox(id: item.name, name: ModifiedUTF7.decode(parent == nil ? item.name : item.shortName), role: item.role, parentID: parent)
         }
+        foldersListed = Date()
         return folders
     }
 
     /// The newest `limit` messages, threaded. The first visit to a folder fetches them all;
     /// later ones fetch only what changed (see `refresh`).
     public func threads(in mailbox: Mailbox, limit: Int) async throws -> [MailThread] {
-        try await exclusive {
-            try await self.reliably {
+        var laps = StepTimes.Laps()
+        return try await exclusive {
+            laps.lap("waited for the connection")
+            defer { StepTimes.send("\(self.tag) \(mailbox.role == .inbox ? "inbox" : "folder"): \(laps.line)") }
+            return try await self.reliably {
                 let client = try await self.connected()
+                laps.lap("connection")
+                await self.restoreSync()
+                let before = self.sync[mailbox.id]
                 let state = try await self.refresh(mailbox.id, limit: limit, client: client)
+                laps.lap(before == nil ? "full download" : "sync")
+                if self.sync[mailbox.id] != before { self.saveSync() }
                 let newest = state.messages.keys.sorted(by: >).prefix(max(0, limit)).compactMap { state.messages[$0] }
                 return Threader.threads(from: newest).sorted { $0.date > $1.date }
             }
         }
     }
 
+    /// How this mailbox shows in step times: its server and the start of its id, no address.
+    private var tag: String { "IMAP \(incoming.host) \(account.id.uuidString.prefix(8))" }
+
     public func body(of message: MailMessage) async throws -> MessageBody {
-        try await exclusive { try await self.reliably { try await self.fetchBody(of: message) } }
+        try await exclusive(.later) { try await self.reliably { try await self.fetchBody(of: message) } }
     }
 
     private func fetchBody(of message: MailMessage) async throws -> MessageBody {
@@ -131,7 +202,7 @@ public actor IMAPProvider: MailProvider {
             guard !uids.isEmpty else { continue }
             // Conversation history and attachments must not occupy the connection used to
             // open the next message. That connection is reserved for `openedBody`.
-            let items = try await exclusive {
+            let items = try await exclusive(.later) {
                 try await self.reliably {
                     let client = try await self.connected()
                     if await client.selected != mailboxID { try await client.select(mailboxID) }
@@ -153,7 +224,7 @@ public actor IMAPProvider: MailProvider {
         for (mailboxID, group) in Dictionary(grouping: messages, by: \.mailboxID) {
             let uids = group.compactMap(Self.uid(of:))
             guard !uids.isEmpty else { continue }
-            let items = try await exclusive {
+            let items = try await exclusive(.later) {
                 try await self.reliably {
                     let client = try await self.connected()
                     if await client.selected != mailboxID { try await client.select(mailboxID) }
@@ -374,7 +445,7 @@ public actor IMAPProvider: MailProvider {
             guard id.hasPrefix(mailbox.id + "/"), let uid = Self.uid(of: id) else { continue }
             byUID[uid] = id
         }
-        return try await exclusive {
+        return try await exclusive(.later) {
             try await self.reliably {
                 let client = try await self.connected()
                 let condStore = await client.supportsCondStore
@@ -410,23 +481,25 @@ public actor IMAPProvider: MailProvider {
 
     public func createMailbox(named name: String) async throws {
         try await checkedConnection().create(name)
-        _ = try await mailboxes()
+        _ = try await listedAgain()
     }
 
     public func renameMailbox(_ mailbox: Mailbox, to name: String) async throws {
         try await exclusive {
             try await self.checkedConnection().rename(mailbox.id, to: name)
             self.sync[mailbox.id] = nil
+            self.saveSync()
         }
-        _ = try await mailboxes()
+        _ = try await listedAgain()
     }
 
     public func deleteMailbox(_ mailbox: Mailbox) async throws {
         try await exclusive {
             try await self.checkedConnection().delete(mailbox.id)
             self.sync[mailbox.id] = nil
+            self.saveSync()
         }
-        _ = try await mailboxes()
+        _ = try await listedAgain()
     }
 
     /// Appends the message to Drafts with the \Draft flag (RFC 9051 §6.3.12).
@@ -436,6 +509,8 @@ public actor IMAPProvider: MailProvider {
     }
 
     public func disconnect() async {
+        // The network changed or the Mac woke: the next check reads the folder list again.
+        foldersListed = nil
         await dropConnection()
         await dropReader()
         // The watcher may be deep in a long wait; its line is simply closed.
@@ -533,17 +608,31 @@ public actor IMAPProvider: MailProvider {
             if current != old { fresh.formUnion(try await client.uidSearch("UID \(highest + 1):*").filter { $0 > highest }) }
         } else if let old = state.highestModSeq, let current = selection.highestModSeq {
             if current != old || selection.exists != state.exists {
-                fresh = try await state.reconcile(with: client.uidSearch("UID \(lowest):*"), above: highest)
-                if current != old, !state.messages.isEmpty {
-                    for item in try await client.fetch(known, "(UID FLAGS) (CHANGEDSINCE \(old))", byUID: true) { state.update(item) }
+                // One FETCH says both what changed and what arrived: every new message raises
+                // HIGHESTMODSEQ, so it's among the answers. When the count then adds up (the
+                // old count plus the arrivals) nothing left either, and no SEARCH is needed.
+                var arrived = Set<Int>()
+                if current != old {
+                    for item in try await client.fetch("\(lowest):*", "(UID FLAGS) (CHANGEDSINCE \(old))", byUID: true) {
+                        guard let uid = item.uid else { continue }
+                        if uid > highest { arrived.insert(uid) } else { state.update(item) }
+                    }
+                }
+                if selection.exists == state.exists + arrived.count {
+                    fresh = arrived
+                } else {
+                    fresh = try await state.reconcile(with: client.uidSearch("UID \(lowest):*"), above: highest)
                 }
             }
         } else {
             let unchanged = selection.exists == state.exists && selection.uidNext != nil && selection.uidNext == state.uidNext
             if !unchanged {
-                fresh = try await state.reconcile(with: client.uidSearch("UID \(lowest):*"), above: highest)
-            }
-            if !state.messages.isEmpty {
+                // The flags of everything from the lowest known UID up: that lists what's still
+                // there (and so what left), what's new, and every flag, in one command.
+                let items = try await client.fetch("\(lowest):*", "(UID FLAGS)", byUID: true)
+                fresh = state.reconcile(with: items.compactMap(\.uid), above: highest)
+                for item in items { state.update(item) }
+            } else if !state.messages.isEmpty {
                 for item in try await client.fetch(known, "(UID FLAGS)", byUID: true) { state.update(item) }
             }
         }
@@ -576,7 +665,10 @@ public actor IMAPProvider: MailProvider {
         )
         if selection.exists > 0, window > 0 {
             let first = max(1, selection.exists - window + 1)
-            await add(try await client.fetch("\(first):\(selection.exists)", Self.listItems), to: &state, mailbox: name, client: client)
+            let started = ContinuousClock.now
+            let items = try await client.fetch("\(first):\(selection.exists)", Self.listItems)
+            StepTimes.send("\(tag) full download of \(items.count) messages: list items \(StepTimes.milliseconds(since: started)) ms")
+            await add(items, to: &state, mailbox: name, client: client)
         }
         // Without UIDVALIDITY the UIDs can't be trusted next time.
         sync[name] = selection.uidValidity == nil ? nil : state
@@ -599,16 +691,24 @@ public actor IMAPProvider: MailProvider {
             state.messages[uid] = message
             if let part = item.textPart { parts[uid] = part }
         }
-        // Previews: the start of each message's text, one request per kind of part. IMAP's list
-        // has no preview of its own. A failure only leaves previews empty. A plain part that is
-        // really HTML gets one more, longer read, past its style code.
+        // Previews: the start of each message's text. IMAP's list has no preview of its own. A
+        // failure only leaves previews empty. A plain part that is really HTML gets one more,
+        // longer read, past its style code.
+        let started = ContinuousClock.now
+        var requests = 0, separate = 0
         for round in 0..<2 where !parts.isEmpty {
             var again: [Int: IMAPTextPart] = [:]
-            for (part, uids) in Dictionary(grouping: parts.keys, by: { parts[$0]! }) {
-                let section = "BODY.PEEK[\(part.section)]<0.\(part.previewBytes)>"
+            // One request per part number and length. The encoding and character set only
+            // matter for reading each answer; asking per combination of them took dozens of
+            // round trips for 200 mixed mails, one after the other (14 s on Outlook.com).
+            let requested = Dictionary(grouping: parts.keys) { PreviewRequest(section: parts[$0]!.section, bytes: parts[$0]!.previewBytes) }
+            requests += requested.count
+            separate += Set(parts.values).count
+            for (request, uids) in requested.sorted(by: { $0.key.section < $1.key.section }) {
+                let section = "BODY.PEEK[\(request.section)]<0.\(request.bytes)>"
                 guard let fetched = try? await client.fetch(IMAPClient.set(uids.sorted()), "(UID \(section))", byUID: true) else { continue }
                 for item in fetched {
-                    guard let uid = item.uid, let bytes = item.sections[part.section] else { continue }
+                    guard let uid = item.uid, let part = parts[uid], let bytes = item.sections[request.section] else { continue }
                     let preview = part.preview(from: bytes)
                     state.messages[uid]?.snippet = preview
                     if round == 0, let longer = part.againAsHTML(after: bytes, preview: preview) { again[uid] = longer }
@@ -616,15 +716,34 @@ public actor IMAPProvider: MailProvider {
             }
             parts = again
         }
+        if requests > 0 {
+            StepTimes.send("\(tag) previews of \(items.count) messages: \(requests) requests (\(separate) before), \(StepTimes.milliseconds(since: started)) ms")
+        }
     }
 
+    /// Which line a folder operation waits in.
+    enum Lane { case now, later }
+
     /// Runs one folder operation at a time: each SELECTs, and interleaving would read the
-    /// wrong folder and corrupt what's remembered.
-    private func exclusive<T: Sendable>(_ body: () async throws -> T) async throws -> T {
-        if isBusy { await withCheckedContinuation { waiting.append($0) } }
+    /// wrong folder and corrupt what's remembered. Work in the `.later` line (downloads nobody
+    /// is looking at yet) goes only when nothing in the `.now` line waits, so a check waits
+    /// for at most the one download under way, not for every one queued before it: twelve
+    /// queued downloads used to hold a check up for twelve round trips.
+    private func exclusive<T: Sendable>(_ lane: Lane = .now, _ body: () async throws -> T) async throws -> T {
+        if isBusy {
+            await withCheckedContinuation { continuation in
+                if lane == .now { waiting.append(continuation) } else { waitingLater.append(continuation) }
+            }
+        }
         isBusy = true
         defer {
-            if waiting.isEmpty { isBusy = false } else { waiting.removeFirst().resume() }
+            if !waiting.isEmpty {
+                waiting.removeFirst().resume()
+            } else if !waitingLater.isEmpty {
+                waitingLater.removeFirst().resume()
+            } else {
+                isBusy = false
+            }
         }
         return try await body()
     }
@@ -656,11 +775,15 @@ public actor IMAPProvider: MailProvider {
 
     private func connected() async throws -> IMAPClient {
         if let client { return client }
+        let started = ContinuousClock.now
         let client = try await signedIn(readTimeout: 30)
+        let signedIn = StepTimes.milliseconds(since: started)
         // Must come before the first SELECT.
         await client.enableQResync()
         self.client = client
-        if folders.isEmpty { _ = try await mailboxes() }
+        let listing = ContinuousClock.now
+        if folders.isEmpty { _ = try await listMailboxes() }
+        StepTimes.send("\(tag) new connection: signed in \(signedIn) ms, then folder list \(StepTimes.milliseconds(since: listing)) ms")
         return client
     }
 
@@ -673,6 +796,7 @@ public actor IMAPProvider: MailProvider {
             do {
                 return try await signInOnce(readTimeout: readTimeout)
             } catch let MailError.authenticationFailed(detail) where Self.isPassing(detail) {
+                StepTimes.send("\(tag) sign-in answered \"not now\", attempt \(attempt + 1)")
                 guard attempt < 3 else { throw MailError.connectionFailed(detail) }
                 attempt += 1
                 try await Task.sleep(for: .milliseconds(800 * attempt))
@@ -688,18 +812,27 @@ public actor IMAPProvider: MailProvider {
     }
 
     private func signInOnce(readTimeout: TimeInterval) async throws -> IMAPClient {
+        var laps = StepTimes.Laps()
+        defer { StepTimes.send("\(tag) sign-in: \(laps.line)") }
         let client = try IMAPClient(endpoint: incoming, readTimeout: readTimeout)
         try await client.open(security: incoming.security)
+        laps.lap("open")
         do {
             switch account.auth {
             case .password(let username):
-                try await client.login(username: username, password: try await credentials.secret(for: account))
+                let password = try await credentials.secret(for: account)
+                laps.lap("token")
+                try await client.login(username: username, password: password)
             case .oauth(_, let username):
-                try await client.authenticate(username: username, accessToken: try await credentials.secret(for: account))
+                let token = try await credentials.secret(for: account)
+                laps.lap("token")
+                try await client.authenticate(username: username, accessToken: token)
             case .token:
                 throw MailError.notSupported(String(localized: "IMAP needs a password or a sign-in."))
             }
+            laps.lap("sign in")
         } catch {
+            laps.note("failed")
             // Closed straight away, so a retry doesn't leave a connection open on the server.
             await client.logout()
             throw error
@@ -726,7 +859,7 @@ public actor IMAPProvider: MailProvider {
             date: envelope.date ?? item.internalDate ?? .distantPast,
             flags: item.flags,
             hasAttachments: item.bodyStructureHasAttachment,
-            listHeaders: headers.fields
+            listHeaders: InboxSplit.compact(headers.fields)
         )
     }
 
@@ -740,8 +873,14 @@ public actor IMAPProvider: MailProvider {
     }
 }
 
+/// One request for previews: a part number and how many bytes of it.
+private struct PreviewRequest: Hashable {
+    var section: String
+    var bytes: Int
+}
+
 /// What one folder held at the last refresh.
-struct IMAPFolderSync: Sendable {
+struct IMAPFolderSync: Sendable, Codable, Equatable {
     var uidValidity: Int
     /// HIGHESTMODSEQ (RFC 7162); nil when the server keeps none.
     var highestModSeq: Int?

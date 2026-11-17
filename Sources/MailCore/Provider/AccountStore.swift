@@ -31,10 +31,11 @@ public struct AccountStore: Sendable {
 
 /// Makes the right provider for an account.
 public enum ProviderFactory {
-    public static func make(for account: MailAccount, credentials: any CredentialSource) throws -> any MailProvider {
+    /// `imapSync` keeps what IMAP folders held between launches (see `IMAPSyncStore`).
+    public static func make(for account: MailAccount, credentials: any CredentialSource, imapSync: IMAPSyncStore? = nil) throws -> any MailProvider {
         switch account.connection {
         case .sample: SampleProvider(me: account.address, variant: account.id == MailAccount.samplePersonal.id ? .personal : .work)
-        case .imap: try IMAPProvider(account: account, credentials: credentials)
+        case .imap: try IMAPProvider(account: account, credentials: credentials, syncStore: imapSync)
         case .jmap: try JMAPProvider(account: account, credentials: credentials)
         }
     }

@@ -66,6 +66,10 @@ public actor MailCache {
             mark INTEGER, json BLOB NOT NULL, body BLOB, UNIQUE (account, id));
         CREATE INDEX IF NOT EXISTS messages_by_mailbox ON messages (account, mailbox, date DESC);
         CREATE INDEX IF NOT EXISTS messages_by_date ON messages (date);
+        -- Saving texts ahead of time asks for the newest messages still without one. Without
+        -- this it read every saved message of the mailbox, texts included, and sorted them:
+        -- 26 ms a step with 54,000 messages, now 0.25 ms.
+        CREATE INDEX IF NOT EXISTS messages_without_text ON messages (account, date DESC) WHERE body IS NULL;
         CREATE TABLE IF NOT EXISTS mailboxes (account TEXT PRIMARY KEY, json BLOB NOT NULL);
         CREATE TABLE IF NOT EXISTS downloads (
             account TEXT NOT NULL, mailbox TEXT NOT NULL, position TEXT, validity TEXT, done TEXT, checked REAL, token TEXT,
@@ -571,6 +575,8 @@ public actor MailCache {
         guard var message = try? JSONDecoder().decode(MailMessage.self, from: json) else { return nil }
         // Previews saved before dividers were tidied away ("------") or HTML was recognised.
         message.snippet = HTMLText.cleanedPreview(message.snippet)
+        // Saved before the headers were kept compact.
+        message.listHeaders = InboxSplit.compact(message.listHeaders)
         message.body = body.flatMap { try? JSONDecoder().decode(MessageBody.self, from: $0) }
         return message
     }

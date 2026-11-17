@@ -136,7 +136,9 @@ final class FakeServer: @unchecked Sendable {
     private let listener: NWListener
     private let queue = DispatchQueue(label: "fake-server")
 
-    init(greeting: String, respond: @escaping @Sendable (String) -> String) async throws {
+    /// `delay` holds every answer back that long, the way a real server across the internet
+    /// takes its time (a round trip plus the server's own work).
+    init(greeting: String, delay: Duration = .zero, respond: @escaping @Sendable (String) -> String) async throws {
         let listener = try NWListener(using: .tcp, on: .any)
         self.listener = listener
         let queue = self.queue
@@ -145,7 +147,7 @@ final class FakeServer: @unchecked Sendable {
             open.add(connection)
             connection.start(queue: queue)
             connection.send(content: Data((greeting + "\r\n").utf8), completion: .contentProcessed { _ in })
-            FakeServer.receive(on: connection, buffer: Data(), respond: respond)
+            FakeServer.receive(on: connection, buffer: Data(), delay: delay, queue: queue, respond: respond)
         }
         port = try await withCheckedThrowingContinuation { continuation in
             let once = Once()
@@ -174,7 +176,8 @@ final class FakeServer: @unchecked Sendable {
         func cancelAll() { lock.withLock { all.forEach { $0.forceCancel() }; all = [] } }
     }
 
-    private static func receive(on connection: NWConnection, buffer: Data, respond: @escaping @Sendable (String) -> String) {
+    private static func receive(on connection: NWConnection, buffer: Data, delay: Duration, queue: DispatchQueue,
+                                respond: @escaping @Sendable (String) -> String) {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { data, _, complete, error in
             var buffer = buffer + (data ?? Data())
             while let newline = buffer.firstIndex(of: 0x0A) {
@@ -182,10 +185,18 @@ final class FakeServer: @unchecked Sendable {
                 if line.hasSuffix("\r") { line.removeLast() }
                 buffer = Data(buffer[(newline + 1)...])
                 let reply = respond(line)
-                if !reply.isEmpty { connection.send(content: Data(reply.utf8), completion: .contentProcessed { _ in }) }
+                guard !reply.isEmpty else { continue }
+                if delay == .zero {
+                    connection.send(content: Data(reply.utf8), completion: .contentProcessed { _ in })
+                } else {
+                    let seconds = Double(delay.components.seconds) + Double(delay.components.attoseconds) / 1e18
+                    queue.asyncAfter(deadline: .now() + seconds) {
+                        connection.send(content: Data(reply.utf8), completion: .contentProcessed { _ in })
+                    }
+                }
             }
             if complete || error != nil { connection.cancel(); return }
-            receive(on: connection, buffer: buffer, respond: respond)
+            receive(on: connection, buffer: buffer, delay: delay, queue: queue, respond: respond)
         }
     }
 }

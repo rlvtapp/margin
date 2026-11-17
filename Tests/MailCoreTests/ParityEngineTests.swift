@@ -79,6 +79,24 @@ import Testing
         #expect(found.url.path().hasPrefix("/confirm"))
     }
 
+    /// A security notice reports a sign-in; its links are help pages ("Two-factor
+    /// authentication"), not a way to sign in.
+    @Test func aSignInNoticeHasNone() {
+        let text = """
+        Your account was accessed from a new IP address near New York City, New York
+        If you recognize this activity, no further action is required.
+        Not you? Immediately change your password and enable two-factor authentication.
+        """
+        let html = #"<p>Not you?</p><a href="https://developers.cloudflare.com/fundamentals/account/account-security/two-factor-authentication/">Two-factor authentication</a> <a href="https://support.cloudflare.com/">Support</a>"#
+        #expect(SignInLink.detect(subject: "New IP address detected on your account", text: text, html: html) == nil)
+        // A help page about authentication isn't a sign-in link in other mail either.
+        let help = #"<a href="https://docs.example/guide/authentication-settings">Read about logging in</a>"#
+        #expect(SignInLink.detect(subject: "Log in tips", text: "How to log in safely.", html: help) == nil)
+        // "auth" as a part of the path still is.
+        let callback = #"<a href="https://app.example/auth/callback?code=1">Continue</a>"#
+        #expect(SignInLink.detect(subject: "Your login link", text: "Use this to log in.", html: callback)?.url.path() == "/auth/callback")
+    }
+
     @Test func ordinaryMailHasNone() {
         #expect(SignInLink.detect(subject: "Lunch?", text: "See https://maps.example/cafe", html: nil) == nil)
         #expect(SignInLink.detect(subject: "Sign in to see your order", text: "Only an unsubscribe link: https://shop.example/unsubscribe", html: nil) == nil)

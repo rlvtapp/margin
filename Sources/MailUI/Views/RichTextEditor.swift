@@ -46,6 +46,9 @@ struct RichTextEditor: NSViewRepresentable {
         } else {
             view.string = text
         }
+        // Writing starts on the first line, above the signature and anything quoted, not at
+        // the end where setting the text leaves the cursor.
+        view.setSelectedRange(NSRange(location: 0, length: 0))
         controller.textView = view
         context.coordinator.onChange = { view in
             controller.changed(view, text: $text, html: $html, attachments: attachments)
@@ -61,7 +64,7 @@ struct RichTextEditor: NSViewRepresentable {
         context.coordinator.onEscape = onEscape
         // Text set from outside (the assistant, a template, another signature): what's new comes
         // in as plain text, and what stayed the same keeps its formatting.
-        if view.string != text {
+        if Self.takesText(text, into: view) {
             let old = view.string as NSString, new = text as NSString
             var same = 0
             while same < min(old.length, new.length), old.character(at: same) == new.character(at: same) { same += 1 }
@@ -72,6 +75,17 @@ struct RichTextEditor: NSViewRepresentable {
             Self.linkLastLine(linkedLastLine, in: view)
             controller.changed(view, text: $text, html: $html, attachments: attachments)
         }
+    }
+
+    /// Whether the text from outside goes into the view now. Not while the view holds marked
+    /// text: the system's inline prediction (the grey rest of a word) and keyboards that compose
+    /// characters keep it there, and it isn't part of `text` yet. Replacing the text under it
+    /// made AppKit throw an NSRangeException in the middle of a SwiftUI update, which broke the
+    /// text's links and, minutes later, crashed the app (Observation's bookkeeping was left
+    /// pointing at the abandoned update). The text catches up once the prediction is taken or
+    /// dismissed.
+    static func takesText(_ text: String, into view: NSTextView) -> Bool {
+        !view.hasMarkedText() && view.string != text
     }
 
     static func normal(_ size: CGFloat) -> [NSAttributedString.Key: Any] {
@@ -598,6 +612,7 @@ struct RichTextEditor: View {
     var linkedLastLine: String?
     var attachments: Binding<[OutgoingAttachment]>?
     var signature: NamedSignature?
+    var initial: NSAttributedString?
 
     var body: some View {
         TextEditor(text: $text).font(.system(size: fontSize)).scrollContentBackground(.hidden)

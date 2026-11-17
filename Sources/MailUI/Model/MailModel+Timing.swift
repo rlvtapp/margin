@@ -62,43 +62,57 @@ extension MailModel {
 
     /// Closes the composer at once and sends after the undo window, so Undo can bring the
     /// message back. A failed send reopens it with the error.
+    ///
+    /// One notice follows the message the whole way: "Sending…" with a ring that fills and
+    /// Undo; once the ring is full Undo goes, and when the message is out the same notice
+    /// turns into where it was sent from (see `NoticeBar`).
     public func queueSend(_ state: ComposeState, isReply: Bool) {
         do { _ = try state.validated() } catch { show(error); return }
         if isReply { reply = nil } else { compose = nil }
         focusRequest += 1
         if let previous = pendingSend {
+            // Another message before the first has gone: the first goes now.
             pendingSend = nil
             previous.task.cancel()
-            Task { _ = await send(previous.state) }
+            Task { await deliver(previous) }
         }
         let delay = max(undoSendDelay, 0)
         let task = Task { [weak self] in
             try? await Task.sleep(for: .seconds(delay))
-            guard !Task.isCancelled, let self else { return }
-            let pending = self.pendingSend
+            // Undo cancels this task and clears `pendingSend` in one step on the main actor,
+            // with nothing awaited in between, so an undone message can't also go out.
+            guard !Task.isCancelled, let self, let pending = self.pendingSend else { return }
             self.pendingSend = nil
-            if self.notice?.undo == .send { self.notice = nil }
-            if let error = await self.attemptSend(state) {
-                if MailError.isConnectionProblem(error), let draft = try? state.validated() {
-                    // Offline: it waits in the outbox and goes out once there's a connection.
-                    self.outbox.append(ScheduledMessage(accountID: state.accountID, draft: draft, sendAt: Date(), waitsForConnection: true))
-                    self.saveOutbox()
-                    if let old = state.editedDraft { await self.apply(.trash, to: [old], announce: false) }
-                    self.notice = Notice(text: String(localized: "No connection. It'll send as soon as you're back online."))
-                } else {
-                    self.show(error)
-                    if let pending { self.reopen(pending) }
-                }
-            } else if let old = state.editedDraft {
-                await self.apply(.trash, to: [old], announce: false)
-            }
+            if self.notice?.undo == .send { self.notice?.undo = nil }
+            await self.deliver(pending)
         }
         pendingSend = PendingSend(state: state, isReply: isReply, threadID: selectedThreadID, task: task)
         let now = Date()
-        notice = Notice(text: delay > 0 ? String(localized: "Sending…") : String(localized: "Sent"), undo: delay > 0 ? .send : nil,
-                        countdown: delay > 0 ? now...now.addingTimeInterval(TimeInterval(delay)) : nil)
+        notice = Notice(text: String(localized: "Sending…"), undo: delay > 0 ? .send : nil,
+                        countdown: now...now.addingTimeInterval(TimeInterval(delay)))
     }
 
+    /// Sends a message whose undo window is over. Offline it waits in the outbox; any other
+    /// failure puts it back in the composer with the error.
+    private func deliver(_ pending: PendingSend) async {
+        let state = pending.state
+        if let error = await attemptSend(state) {
+            if MailError.isConnectionProblem(error), let draft = try? state.validated() {
+                // Offline: it waits in the outbox and goes out once there's a connection.
+                outbox.append(ScheduledMessage(accountID: state.accountID, draft: draft, sendAt: Date(), waitsForConnection: true))
+                saveOutbox()
+                if let old = state.editedDraft { await apply(.trash, to: [old], announce: false) }
+                notice = Notice(text: String(localized: "No connection. It'll send as soon as you're back online."))
+            } else {
+                show(error)
+                reopen(pending)
+            }
+        } else if let old = state.editedDraft {
+            await apply(.trash, to: [old], announce: false)
+        }
+    }
+
+    /// Takes the waiting message back: it isn't sent, and opens in the composer as it was.
     func undoSend() {
         guard let pending = pendingSend else { return }
         pending.task.cancel()
@@ -107,12 +121,16 @@ extension MailModel {
         reopen(pending)
     }
 
+    /// Puts a message back where it was written: the reply bar when its conversation is still
+    /// open, the composer otherwise. Whatever was started there meanwhile goes to Drafts first.
     private func reopen(_ pending: PendingSend) {
-        if pending.isReply, pending.threadID == selectedThreadID {
-            reply = pending.state
-        } else {
-            compose = pending.state
+        let inReplyBar = pending.isReply && pending.threadID == selectedThreadID
+        if let occupant = inReplyBar ? reply : compose, occupant != pending.state {
+            // Cleared first, so a message tucked into the top bar isn't kept twice.
+            if inReplyBar { reply = nil } else { compose = nil }
+            saveToDrafts(occupant)
         }
+        if inReplyBar { reply = pending.state } else { compose = pending.state }
     }
 
     /// Keeps the message on this Mac and sends it at `date` (while Margin is running).

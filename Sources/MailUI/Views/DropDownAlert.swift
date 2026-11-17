@@ -44,12 +44,24 @@ final class DropDownAlertWindow {
         panel.isOpaque = false
         panel.hasShadow = !fromNotch
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
-        panel.contentView = hosting
         guard let screen = NSScreen.main else { return }
         let size = hosting.fittingSize
         let width = max(size.width, 420)
         let top = fromNotch ? screen.frame.maxY : screen.visibleFrame.maxY - 8
         let target = NSRect(x: screen.frame.midX - width / 2, y: top - size.height, width: width, height: size.height)
+        // The alert is laid out and drawn once, at its full size, pinned to the top of a clipping
+        // view; growing out of the notch then uncovers it. It used to be laid out again at every
+        // size on the way, from the notch's 32 points up, and could show as an empty black box.
+        let frame = NSView(frame: NSRect(origin: .zero, size: target.size))
+        frame.wantsLayer = true
+        frame.layer?.masksToBounds = true
+        hosting.frame = NSRect(origin: .zero, size: target.size)
+        hosting.autoresizingMask = [.minXMargin, .maxXMargin, .minYMargin]
+        frame.addSubview(hosting)
+        panel.contentView = frame
+        panel.setFrame(target, display: false)
+        hosting.layoutSubtreeIfNeeded()
+        hosting.display()
         // It grows out of the notch, or slides down from behind the menu bar.
         let start = fromNotch
             ? NSRect(x: screen.frame.midX - (Self.notchWidth ?? 200) / 2, y: top - 32, width: Self.notchWidth ?? 200, height: 32)
@@ -57,6 +69,7 @@ final class DropDownAlertWindow {
         panel.setFrame(start, display: false)
         panel.alphaValue = fromNotch ? 1 : 0
         panel.orderFrontRegardless()
+        MailModel.refreshLog.notice("Notch alert shown")
         NSAnimationContext.runAnimationGroup { context in
             context.duration = model.reduceMotion ? 0 : 0.32
             context.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.3, 1)

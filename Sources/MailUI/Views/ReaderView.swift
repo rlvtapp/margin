@@ -14,6 +14,8 @@ struct ReaderView: View {
     var onBack: (() -> Void)?
     @State var addsLabel = false
     @State private var newLabel = ""
+    /// The height of the conversation's scroll area: a bigger reply fills it.
+    @State private var visibleHeight: CGFloat = 0
 
     var body: some View {
         Group {
@@ -58,7 +60,7 @@ struct ReaderView: View {
                                     .id(message.id)
                                     // A reply to an earlier message opens right under it.
                                     if drawsToolbar, model.isWritingReply, message.id == inlineReplyTarget(layout.messages) {
-                                        ReplyEditorHost(model: model)
+                                        ReplyEditorHost(model: model, expandedHeight: replyHeight)
                                             .padding(.vertical, Space.m)
                                             .id("reply")
                                     }
@@ -74,7 +76,7 @@ struct ReaderView: View {
                                     Group {
                                         // On iPhone and iPad a reply opens full screen instead.
                                         if drawsToolbar, model.isWritingReply {
-                                            ReplyEditorHost(model: model)
+                                            ReplyEditorHost(model: model, expandedHeight: replyHeight)
                                         } else {
                                             ReplyPrompt(model: model, thread: thread)
                                         }
@@ -99,6 +101,11 @@ struct ReaderView: View {
                         .onChange(of: model.isWritingReply) { _, open in
                             if open { withAnimation(Motion.quick) { proxy.scrollTo("reply", anchor: .bottom) } }
                         }
+                        // Bigger, the reply lines up with the pane; the conversation is above it.
+                        .onChange(of: model.isReplyExpanded) { _, _ in
+                            withAnimation(Motion.present) { proxy.scrollTo("reply", anchor: .bottom) }
+                        }
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { visibleHeight = $0 }
                     }
                 }
             } else if drawsToolbar, model.isAssistantOn, !model.isAsking {
@@ -122,6 +129,13 @@ struct ReaderView: View {
                 newLabel = ""
             }
         }
+    }
+
+    /// A bigger reply's height: the visible pane less the room under it, so it fills the view
+    /// when scrolled to; never shorter than the reply at its usual size.
+    private var replyHeight: CGFloat? {
+        guard drawsToolbar, visibleHeight > 0 else { return nil }
+        return max(320, visibleHeight - 40 - Space.l)
     }
 
     /// The message a reply answers when it isn't the last one shown, so the reply opens under it.

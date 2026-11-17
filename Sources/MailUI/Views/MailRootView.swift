@@ -16,12 +16,20 @@ public struct MailRootView: View {
         self.model = model
     }
 
+    private static var bodyNoted = false
+    private static func noteFirstBody() {
+        guard !bodyNoted else { return }
+        bodyNoted = true
+        MailModel.noteLaunch("first body")
+    }
+
     private func applyLook() -> String {
         Look.apply(model, systemContrast: systemContrast, systemReduceMotion: systemReduceMotion,
                    systemReduceTransparency: systemReduceTransparency)
     }
 
     public var body: some View {
+        let _ = MailRootView.noteFirstBody()
         let lookKey = applyLook()
         VStack(spacing: 0) {
             #if os(macOS)
@@ -160,6 +168,8 @@ public struct MailRootView: View {
         }
         #if os(macOS)
         .onAppear {
+            MailModel.noteLaunch("window appeared")
+            DispatchQueue.main.async { MailModel.noteLaunch("after first frame") }
             TextEditingKeys.install()
             HoldSpaceDictation.shared.install()
             HoldSpaceDictation.shared.isEnabled = model.holdSpaceDictates
@@ -275,28 +285,42 @@ enum MailLayout {
     static let windowButtonsWidth: CGFloat = 64
 }
 
-/// How long until a message goes out: a thin ring that fills, full the moment it sends.
+/// How long until a message goes out: a thin ring that fills, full the moment it sends. Once
+/// the message is out a tick draws in the full ring, in the same place.
 private struct SendRing: View {
-    let countdown: ClosedRange<Date>
+    let countdown: ClosedRange<Date>?
+    let isSent: Bool
 
     var body: some View {
-        TimelineView(.animation) { context in
-            let total = countdown.upperBound.timeIntervalSince(countdown.lowerBound)
-            let progress = total > 0 ? min(1, max(0, context.date.timeIntervalSince(countdown.lowerBound) / total)) : 1
+        TimelineView(.animation(paused: countdown == nil)) { context in
             ZStack {
                 Circle().stroke(Ink.primary.opacity(0.14), lineWidth: 2)
                 Circle()
-                    .trim(from: 0, to: progress)
+                    .trim(from: 0, to: isSent ? 1 : progress(at: context.date))
                     .stroke(Ink.primary, style: StrokeStyle(lineWidth: 2, lineCap: .round))
                     .rotationEffect(.degrees(-90))
+                Image(systemName: "checkmark")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundStyle(Ink.primary)
+                    .opacity(isSent ? 1 : 0)
+                    .scaleEffect(isSent || Look.reduceMotion ? 1 : 0.5)
             }
             .frame(width: 15, height: 15)
         }
         .accessibilityHidden(true)
     }
+
+    private func progress(at date: Date) -> Double {
+        guard let countdown else { return 1 }
+        let total = countdown.upperBound.timeIntervalSince(countdown.lowerBound)
+        return total > 0 ? min(1, max(0, date.timeIntervalSince(countdown.lowerBound) / total)) : 1
+    }
 }
 
 /// "Conversation marked done · Undo Z", and errors, at the bottom of the window.
+///
+/// A message being sent keeps one pill throughout: "Sending…" and Undo while the ring fills,
+/// then the text changes in place to where it was sent from, without the pill leaving.
 struct NoticeBar: View {
     @Bindable var model: MailModel
 
@@ -307,14 +331,18 @@ struct NoticeBar: View {
                     if notice.isError {
                         Image(systemName: "exclamationmark.circle").foregroundStyle(Status.danger)
                     }
-                    if let countdown = notice.countdown {
-                        SendRing(countdown: countdown)
+                    if notice.countdown != nil || notice.isSent {
+                        SendRing(countdown: notice.countdown, isSent: notice.isSent)
                     }
                     Text(notice.text)
                         .font(TypeScale.row)
                         .foregroundStyle(Ink.primary)
                         .lineLimit(2)
-                    if notice.canUndo {
+                        // "Sending…" becomes "Sent from …" in place; a plain fade with less motion.
+                        .contentTransition(Look.reduceMotion ? .opacity : .interpolate)
+                    // While a message is going, Undo keeps its room after the ring is full, so the
+                    // pill changes width once, when it turns into "Sent from …".
+                    if notice.canUndo || notice.countdown != nil {
                         Button { model.undo() } label: {
                             HStack(spacing: 6) {
                                 Text("Undo").font(TypeScale.rowStrong)
@@ -325,22 +353,29 @@ struct NoticeBar: View {
                         }
                         .buttonStyle(.plain)
                         .foregroundStyle(Ink.primary)
+                        .opacity(notice.canUndo ? 1 : 0)
+                        .allowsHitTesting(notice.canUndo)
+                        .accessibilityHidden(!notice.canUndo)
+                        .transition(.opacity)
                     }
                 }
                 .padding(.horizontal, Space.l)
                 .frame(minHeight: Look.gap(38))
                 .noticeSurface()
                 .frame(maxWidth: 520)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .transition(Look.reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                 .task(id: notice.id) {
                     // A message waiting to go keeps its notice (and Undo) until it's sent.
                     let waits = notice.countdown.map { $0.upperBound.timeIntervalSinceNow + 1 } ?? 0
                     try? await Task.sleep(for: .seconds(max(notice.isError ? 8 : 5, waits)))
-                    if model.notice?.id == notice.id { model.notice = nil }
+                    // Still sending: the notice stays until it turns into "Sent from …" (or an error).
+                    guard model.notice?.id == notice.id, model.notice?.countdown == nil else { return }
+                    model.notice = nil
                 }
             }
         }
-        .animation(Motion.present, value: model.notice)
+        // Under Reduce Motion the change is a short fade instead of a spring.
+        .animation(Motion.present ?? .easeInOut(duration: 0.2), value: model.notice)
     }
 }
 

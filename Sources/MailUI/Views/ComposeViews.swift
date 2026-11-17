@@ -43,10 +43,12 @@ struct ReplyPrompt: View {
 /// made writing stutter in long conversations.
 struct ReplyEditorHost: View {
     @Bindable var model: MailModel
+    /// How tall the reply is when it fills the reading pane; nil where it can't grow.
+    var expandedHeight: CGFloat?
 
     var body: some View {
         if let reply = Binding(keepingLast: $model.reply) {
-            ReplyEditor(model: model, state: reply)
+            ReplyEditor(model: model, state: reply, expandedHeight: expandedHeight)
         }
     }
 }
@@ -66,6 +68,7 @@ struct ComposeHost: View {
 struct ReplyEditor: View {
     let model: MailModel
     @Binding var state: ComposeState
+    var expandedHeight: CGFloat?
     @FocusState private var focused: Bool
     @State private var richText = RichTextController()
     @State private var toInput = RecipientInput()
@@ -73,6 +76,8 @@ struct ReplyEditor: View {
     @State private var bccInput = RecipientInput()
     /// Cc or Bcc just opened with its button: it takes the keyboard.
     @State private var opened: String?
+    /// Its formatting when the message comes back (Undo Send), read once.
+    @State private var start = EditorStart()
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s) {
@@ -112,8 +117,10 @@ struct ReplyEditor: View {
             #endif
             RichTextEditor(text: $state.draft.text, html: $state.draft.html, controller: richText, onEscape: close,
                            linkedLastLine: state.sentFrom?.trimmingCharacters(in: .whitespacesAndNewlines),
-                           attachments: $state.draft.attachments, signature: state.signatureInUse)
-                .frame(minHeight: 120)
+                           attachments: $state.draft.attachments, signature: state.signatureInUse,
+                           initial: start.text(for: state.draft))
+                // Bigger, the text takes all the room the reply gets.
+                .frame(minHeight: 120, maxHeight: isExpanded ? .infinity : nil)
                 .focused($focused)
             ComposeAttachments(state: $state)
             ReplyAssistantBar(model: model, hasText: !state.draft.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -140,6 +147,7 @@ struct ReplyEditor: View {
             #endif
         }
         .padding(12)
+        .frame(height: isExpanded ? expandedHeight : nil, alignment: .top)
         .background(Paper.sheet, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Line.edge))
         .shadow(color: .black.opacity(0.06), radius: 8, y: 2)
@@ -163,6 +171,7 @@ struct ReplyEditor: View {
             TemplatesMenu(model: model, state: $state)
             SignatureMenu(model: model, state: $state)
             ReplyReminderMenu(state: $state)
+            if expandedHeight != nil { sizeToggle }
             Button("Draft") { model.writeReply(.draft(note: nil)) }
                 .keyboardShortcut("j", modifiers: .command)
                 .opacity(0)
@@ -174,9 +183,35 @@ struct ReplyEditor: View {
     }
     #endif
 
-    /// Esc keeps what was written in Drafts; Discard throws it away.
+    private var isExpanded: Bool { model.isReplyExpanded && expandedHeight != nil }
+
+    #if !os(iOS)
+    /// Bigger or back to the usual size: one button whose symbol changes in its own frame.
+    private var sizeToggle: some View {
+        Button {
+            withAnimation(Motion.present) { model.toggleReplyExpanded() }
+        } label: {
+            Image(systemName: isExpanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                .font(.system(size: Look.size(12), weight: .medium))
+                .foregroundStyle(Ink.secondary)
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .keyboardShortcut("e", modifiers: [.command, .shift])
+        .help(isExpanded ? Text("Back to the usual size (⇧⌘E or Esc)") : Text("Write in the whole pane, the conversation above (⇧⌘E)"))
+        .accessibilityLabel(isExpanded ? Text("Smaller Reply") : Text("Bigger Reply"))
+    }
+    #endif
+
+    /// Esc makes a bigger reply its usual size again; otherwise it keeps what was written in
+    /// Drafts. Discard throws it away.
     private func close() {
-        model.closeComposer(state, isReply: true)
+        if isExpanded {
+            withAnimation(Motion.present) { model.escapeReply(state) }
+        } else {
+            model.closeComposer(state, isReply: true)
+        }
     }
 }
 
@@ -192,6 +227,8 @@ struct ComposeSheet: View {
     @State private var bccInput = RecipientInput()
     /// Cc or Bcc just opened with its button: it takes the keyboard.
     @State private var opened: String?
+    /// Its formatting when the message comes back (Undo Send), read once.
+    @State private var start = EditorStart()
     /// In the reading pane rather than a sheet: fills it, with the writing kept to a
     /// comfortable width.
     var inPane = false
@@ -269,7 +306,8 @@ struct ComposeSheet: View {
                 RichTextEditor(text: $state.draft.text, html: $state.draft.html, controller: richText,
                                onEscape: { model.closeComposer(state, isReply: false) },
                                linkedLastLine: state.sentFrom?.trimmingCharacters(in: .whitespacesAndNewlines),
-                               attachments: $state.draft.attachments, signature: state.signatureInUse)
+                               attachments: $state.draft.attachments, signature: state.signatureInUse,
+                               initial: start.text(for: state.draft))
                 .focused($field, equals: .body)
                 .padding(.horizontal, inset - 4)
                 .padding(.top, Space.l)

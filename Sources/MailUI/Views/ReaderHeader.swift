@@ -188,6 +188,7 @@ struct ReaderMoreMenu: View {
             Button("Archive all \(count) from \(thread.latest.from.displayName)") { model.archiveAll(from: thread) }
         }
         Button("Mark unread") { model.perform(.markUnread) }
+        Button(model.isJunk(thread) ? "Not Junk" : "Move to Junk") { model.perform(model.isJunk(thread) ? .notJunk : .junk) }
         Divider()
         Button(model.isPinned(thread) ? "Unpin" : "Pin to top") { model.togglePin(thread) }
         Button("Add to Reminders") { model.addToReminders(thread) }

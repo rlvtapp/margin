@@ -80,6 +80,7 @@ public actor JMAPProvider: MailProvider {
         let inbox = folders.first { $0.role == .inbox }?.id
         let archive = folders.first { $0.role == .archive }?.id
         let trash = folders.first { $0.role == .trash }?.id
+        let junk = folders.first { $0.role == .junk }?.id
         var update: [String: Any] = [:]
         for message in threads.flatMap(\.messages) {
             var patch: [String: Any] = [:]
@@ -98,6 +99,15 @@ public actor JMAPProvider: MailProvider {
             case .trash:
                 guard let trash else { throw MailError.notSupported(String(localized: "This account has no Trash folder.")) }
                 patch["mailboxIds"] = [trash: true]
+            case .junk:
+                guard let junk else { throw MailError.notSupported(String(localized: "This account has no Junk folder.")) }
+                patch["mailboxIds"] = [junk: true]
+                patch["keywords/$junk"] = true
+                patch["keywords/$notjunk"] = NSNull()
+            case .notJunk:
+                if let inbox, message.mailboxID == junk { patch["mailboxIds"] = [inbox: true] }
+                patch["keywords/$junk"] = NSNull()
+                patch["keywords/$notjunk"] = true
             case .move(let target):
                 patch["mailboxIds"] = [target: true]
             }

@@ -330,6 +330,16 @@ public actor IMAPProvider: MailProvider {
             case .trash:
                 guard let target = folder(.trash) else { throw MailError.notSupported(String(localized: "This account has no Trash folder.")) }
                 if target.id != mailboxID { try await client.move(uids: uids, to: target.id) }
+            case .junk:
+                guard let target = folder(.junk) else { throw MailError.notSupported(String(localized: "This account has no Junk folder.")) }
+                // Servers that don't keep keywords say no; the move still reports it.
+                try? await client.store(uids: uids, "-FLAGS.SILENT ($NotJunk)")
+                try? await client.store(uids: uids, "+FLAGS.SILENT ($Junk)")
+                if target.id != mailboxID { try await client.move(uids: uids, to: target.id) }
+            case .notJunk:
+                try? await client.store(uids: uids, "-FLAGS.SILENT ($Junk)")
+                try? await client.store(uids: uids, "+FLAGS.SILENT ($NotJunk)")
+                if mailboxID == folder(.junk)?.id { try await client.move(uids: uids, to: "INBOX") }
             case .move(let target):
                 if target != mailboxID { try await client.move(uids: uids, to: target) }
             }

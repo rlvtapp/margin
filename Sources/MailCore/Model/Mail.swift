@@ -218,6 +218,11 @@ public enum MailAction: Hashable, Sendable {
     case done
     case moveToInbox
     case trash
+    /// Reports junk: moves to the Junk folder and marks it `$Junk`, which teaches the server's
+    /// filter (iCloud, Fastmail and others; Gmail learns from the move itself).
+    case junk
+    /// Takes mail out of Junk, back to the inbox, marked `$NotJunk` so the filter learns.
+    case notJunk
     case move(toMailboxID: String)
 }
 

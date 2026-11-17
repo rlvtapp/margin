@@ -30,6 +30,8 @@ public struct TouchCommands: Commands {
                 .keyboardShortcut("a", modifiers: [.command, .control])
             Button("Move to Trash") { model.perform(.trash) }
                 .keyboardShortcut(.delete, modifiers: .command)
+            Button(model.targetsAreJunk ? "Not Junk" : "Move to Junk") { model.toggleJunk() }
+                .keyboardShortcut("j", modifiers: [.command, .shift])
             Button("Mark as Read or Unread") { model.toggleRead() }
                 .keyboardShortcut("u", modifiers: [.command, .shift])
             Button("Star") { model.toggleStar() }

@@ -34,6 +34,9 @@ struct MailCommand: Identifiable {
             .init(id: "star", title: "Star or unstar", symbol: "star", keys: ["S"], needsThread: true) { $0.toggleStar() },
             .init(id: "read", title: "Mark read or unread", symbol: "envelope.badge", keys: ["U"], needsThread: true) { $0.toggleRead() },
             .init(id: "trash", title: "Move to Trash", symbol: "trash", keys: ["#"], needsThread: true) { $0.perform(.trash) },
+            model.targetsAreJunk
+                ? .init(id: "junk", title: "Not Junk", symbol: "tray.and.arrow.up", keys: ["!"], needsThread: true) { $0.toggleJunk() }
+                : .init(id: "junk", title: "Move to Junk", symbol: "xmark.bin", keys: ["!"], needsThread: true) { $0.toggleJunk() },
             .init(id: "ask", title: "Ask about your mail", symbol: "text.bubble", keys: ["Q"], needsThread: false, needsAssistant: true) {
                 $0.isAsking = true
             },

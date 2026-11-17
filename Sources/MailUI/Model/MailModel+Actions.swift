@@ -47,6 +47,24 @@ extension MailModel {
         perform(targets.contains(where: \.isUnread) ? .markRead : .markUnread)
     }
 
+    /// Whether a conversation sits in its mailbox's Junk folder, so it offers Not Junk.
+    public func isJunk(_ thread: MailThread) -> Bool {
+        guard let accountID = thread.accountID, let junk = mailboxes[accountID]?.first(where: { $0.role == .junk }) else { return false }
+        return thread.messages.contains { $0.mailboxID == junk.id }
+    }
+
+    /// Whether what Junk or Not Junk would act on is all in Junk already.
+    public var targetsAreJunk: Bool {
+        let targets = actionTargets
+        return !targets.isEmpty && targets.allSatisfy(isJunk)
+    }
+
+    /// Moves to Junk, or out of it when everything chosen is in Junk already.
+    public func toggleJunk() {
+        guard !actionTargets.isEmpty else { return }
+        perform(targetsAreJunk ? .notJunk : .junk)
+    }
+
     public func undo() {
         switch notice?.undo {
         case .send: undoSend(); return
@@ -71,7 +89,7 @@ extension MailModel {
         // Filing by hand, for the rule Settings → Rules offers once it's a habit.
         if announce, case .move(let target) = action { noteFiling(threads, into: target) }
         let leaves: Bool = switch action {
-        case .done, .trash: true
+        case .done, .trash, .junk, .notJunk: true
         case .move(let target): target != "INBOX"
         default: false
         }
@@ -103,11 +121,15 @@ extension MailModel {
         }
         pendingChange = PendingChange(action: action, threads: threads, task: task, removed: removed, folder: snapshot.0, selection: snapshot.1)
         let count = threads.count
-        let text = switch (action == .trash, count == 1) {
-        case (true, true): String(localized: "Conversation moved to Trash")
-        case (true, false): String(localized: "\(count) conversations moved to Trash")
-        case (false, true): String(localized: "Conversation marked done")
-        case (false, false): String(localized: "\(count) conversations marked done")
+        let text = switch (action, count == 1) {
+        case (.trash, true): String(localized: "Conversation moved to Trash")
+        case (.trash, false): String(localized: "\(count) conversations moved to Trash")
+        case (.junk, true): String(localized: "Conversation moved to Junk")
+        case (.junk, false): String(localized: "\(count) conversations moved to Junk")
+        case (.notJunk, true): String(localized: "Conversation moved to the inbox")
+        case (.notJunk, false): String(localized: "\(count) conversations moved to the inbox")
+        case (_, true): String(localized: "Conversation marked done")
+        case (_, false): String(localized: "\(count) conversations marked done")
         }
         notice = Notice(text: text, undo: .change)
         if selectedThreadID != nil { await loadBodies() }
@@ -164,6 +186,9 @@ extension MailModel {
             mutationRevision += 1
             if let failure {
                 show(failure)
+                await reload(only: account)
+            } else if action == .notJunk || action == .moveToInbox {
+                // Back in the inbox: fetch it so it shows there now, not at the next check.
                 await reload(only: account)
             } else {
                 await saveInbox(of: account.id)

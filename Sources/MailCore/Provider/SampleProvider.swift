@@ -69,6 +69,8 @@ public actor SampleProvider: MailProvider {
             case .done: messages[index].mailboxID = "Archive"
             case .moveToInbox: messages[index].mailboxID = "INBOX"
             case .trash: messages[index].mailboxID = "Trash"
+            case .junk: messages[index].mailboxID = "Junk"
+            case .notJunk: if messages[index].mailboxID == "Junk" { messages[index].mailboxID = "INBOX" }
             case .move(let target): messages[index].mailboxID = target
             }
         }

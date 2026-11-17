@@ -605,6 +605,11 @@ struct ThreadContextMenu: View {
         }
         Button { model.startRule(for: thread) } label: { Label("Create Rule…", systemImage: "line.3.horizontal.decrease.circle") }
         Divider()
+        if model.isJunk(thread) {
+            Button { model.perform(.notJunk, on: thread) } label: { Label("Not Junk", systemImage: "tray.and.arrow.up") }
+        } else {
+            Button { model.perform(.junk, on: thread) } label: { Label("Move to Junk", systemImage: "xmark.bin") }
+        }
         Button(role: .destructive) { model.perform(.trash, on: thread) } label: { Label("Move to Trash", systemImage: "trash") }
     }
 

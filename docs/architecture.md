@@ -213,7 +213,7 @@ Tests: `Tests/MailUITests/SignInAgainTests.swift`.
 - Thread ids only need to be unique within one account, so the model prefixes them with the account id (`MailModel.tag`) and sets `thread.accountID`.
 - `Place` says what the list shows: an inbox (one account or all of them, optionally one split), Starred, one account's folder, or `.combined(role)`: the same kind of folder (Sent, Drafts, Archive, Junk, Trash) fetched from every account in parallel and merged by date. Archive falls back to an account's all-mail folder.
 - Actions are applied locally first, so the list responds straight away, and then sent to each thread's own account.
-- Done and Trash wait 5 seconds before they reach the server. Undo just cancels the wait. This works the same on every protocol, whereas reversing an IMAP move afterwards would mean guessing the messages' new ids. Anything still waiting is sent when the app quits.
+- Done, Trash, Junk and Not Junk wait 5 seconds before they reach the server. Undo just cancels the wait. This works the same on every protocol, whereas reversing an IMAP move afterwards would mean guessing the messages' new ids. Anything still waiting is sent when the app quits.
 
 ### Workspaces
 

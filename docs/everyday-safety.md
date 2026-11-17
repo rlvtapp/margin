@@ -61,6 +61,13 @@ Settings → **Rules**.
 - **Block** (a conversation's … menu): what's in the inbox from them goes to Trash, and so does new
   mail. Unblock in Settings → Rules.
 - **Mute** (a conversation's … menu): it's archived now; replies to it are archived and marked read.
+- **Move to Junk** (⌘⇧J, `!`, a conversation's … menu or right-click): reports it as junk. It moves
+  to the mailbox's Junk folder, marked with the `$Junk` keyword (and `$NotJunk` removed), which is
+  how iCloud, Fastmail and other servers learn; Gmail learns from the move itself. In
+  Junk the same places say **Not Junk**: back to the inbox, marked `$NotJunk`. Both wait out the
+  Undo window like Trash. A server that doesn't keep keywords still gets the move. Code: the
+  `.junk`/`.notJunk` actions in `IMAPProvider`, `JMAPProvider` and `MailModel+Actions.swift`.
+  Tests: `JunkTests`.
 
 They run on new inbox mail on every load while Margin is open, before alerts, each message once (the
 first run only remembers what's there). Code: `MailModel+Rules.swift`, `RulesSettings.swift`. Tests:

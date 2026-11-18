@@ -109,7 +109,8 @@ struct ReaderSuggestion: View {
     }
 
     static func spaced(_ code: String) -> String {
-        guard code.count == 6 || code.count == 8 else { return code }
+        // Digits only: "482 913" reads easier, but "Y7024GVWL0" is typed as it's written.
+        guard code.count == 6 || code.count == 8, code.allSatisfy(\.isNumber) else { return code }
         let middle = code.index(code.startIndex, offsetBy: code.count / 2)
         return "\(code[..<middle]) \(code[middle...])"
     }

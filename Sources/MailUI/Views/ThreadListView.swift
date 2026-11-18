@@ -230,7 +230,9 @@ struct ThreadListView: View {
             // Home's margin: why this conversation matters now. The margin only when the list
             // has room for it; a narrow list keeps the note on the subject line.
             marginNote: model.place.isHome && listWidth >= Self.marginWidth ? .some(model.marginNote(for: thread)) : nil,
-            inlineNote: model.place.isHome && listWidth < Self.marginWidth ? model.marginNote(for: thread) : nil
+            inlineNote: model.place.isHome && listWidth < Self.marginWidth ? model.marginNote(for: thread) : nil,
+            code: model.rowSignInCode(in: thread),
+            onCopyCode: { [model] in if let code = model.rowSignInCode(in: thread) { model.copy(code, announce: "Code copied") } }
         )
         .id(thread.id)
         .onTapGesture { tap(thread) }
@@ -291,6 +293,9 @@ struct ThreadRow: View {
     var marginNote: MarginNote?? = nil
     /// On Home in a narrow list: the note sits on the subject line instead of in a margin.
     var inlineNote: MarginNote? = nil
+    /// A new sign-in code in the latest message, copied with one click from the row.
+    var code: String? = nil
+    var onCopyCode: (() -> Void)? = nil
     @Environment(\.mailAccent) private var accent
     @State private var isHovered = false
 
@@ -402,6 +407,9 @@ struct ThreadRow: View {
                         .foregroundStyle(Ink.tertiary)
                         .lineLimit(1)
                 }
+                if let code, let onCopyCode {
+                    RowCodeChip(code: code, copy: onCopyCode).padding(.top, 4)
+                }
             }
         }
         .padding(.horizontal, 10)
@@ -428,6 +436,43 @@ struct ThreadRow: View {
         guard people.count > 1 else { return people.first?.displayName ?? "" }
         return people.map { $0.displayName.split(separator: " ").first.map(String.init) ?? $0.displayName }
             .joined(separator: ", ")
+    }
+}
+
+/// A sign-in code on its row: the code, and a click copies it. The icon turns into a tick for a
+/// moment; both sit in the same frame, so nothing shifts.
+struct RowCodeChip: View {
+    let code: String
+    let copy: () -> Void
+    @Environment(\.mailAccent) private var accent
+    @State private var copied = false
+
+    var body: some View {
+        Button {
+            copy()
+            copied = true
+            Task {
+                try? await Task.sleep(for: .seconds(1.5))
+                copied = false
+            }
+        } label: {
+            HStack(spacing: 6) {
+                Text(verbatim: ReaderSuggestion.spaced(code))
+                    .font(.system(size: Look.size(13), weight: .semibold, design: .monospaced))
+                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    .font(.system(size: Look.size(11), weight: .medium))
+                    .frame(width: Look.size(13))
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .foregroundStyle(accent)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .tip("Copy code")
+        .accessibilityLabel(Text("Copy code \(code)"))
     }
 }
 

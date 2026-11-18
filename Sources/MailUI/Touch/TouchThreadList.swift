@@ -186,7 +186,9 @@ struct TouchThreadList: View {
             labels: model.place.isHome ? [] : model.labels(for: thread),
             snoozedUntil: model.snoozedUntil(thread),
             compact: model.compactRows,
-            isPinned: model.isPinned(thread)
+            isPinned: model.isPinned(thread),
+            code: model.rowSignInCode(in: thread),
+            onCopyCode: { [model] in if let code = model.rowSignInCode(in: thread) { model.copy(code, announce: "Code copied") } }
         )
         .tag(thread.id)
         .listRowInsets(EdgeInsets(top: 1, leading: 8, bottom: 1, trailing: 8))

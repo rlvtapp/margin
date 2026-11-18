@@ -96,6 +96,16 @@ extension MailModel {
         return found
     }
 
+    /// How long a code shows on its row in the list: codes stop working within minutes, and an
+    /// hour-old one in the list is only clutter.
+    static let rowCodeWindow: TimeInterval = 60 * 60
+
+    /// The code to show on a conversation's row, while it's new enough to still be wanted.
+    public func rowSignInCode(in thread: MailThread, now: Date = Date()) -> String? {
+        guard now.timeIntervalSince(thread.latest.date) < Self.rowCodeWindow else { return nil }
+        return signInCode(in: thread)
+    }
+
     /// A link in the newest message that signs in or confirms an address.
     public func signInLink(in thread: MailThread) -> (url: URL, kind: SignInLink.Kind)? {
         let latest = thread.latest

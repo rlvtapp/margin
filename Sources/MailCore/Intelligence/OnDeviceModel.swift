@@ -103,7 +103,7 @@ struct AppleModel: MailLanguageModel {
     }
 
     @Generable struct Suggestions {
-        @Guide(description: "Three replies of 2 to 6 words that answer what the latest message says or asks, each going a different way.", .count(3))
+        @Guide(description: "Three replies of 2 to 6 words that answer what the latest message says or asks, each going a different way; none when nobody would answer it (a notice, receipt or automated mail).", .count(0...3))
         var replies: [String]
     }
 

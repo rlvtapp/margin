@@ -158,7 +158,9 @@ public actor MailIntelligence {
             actually says or asks and answer it: each reply is 2 to 6 words that only make sense for this message, \
             picking up its question, plan, time or news in your own words. The three go in different directions. \
             Never a one-word reply or one that would fit any email. Use the language of the latest message. \
-            Write one per line, with no numbering, quotes or greeting.
+            Write one per line, with no numbering, quotes or greeting. The replies are from \(me.displayName) to the \
+            sender, so never address \(me.displayName). If nobody would answer the latest message (a notice, receipt, \
+            confirmation, alert or other automated mail), write nothing at all.
             """ + (style.map { "\n\nTone: " + $0.components(separatedBy: "\n").filter { $0.contains("casual") || $0.contains("polished") || $0.contains("emoji") || $0.contains("exclamation") }.joined(separator: " ") } ?? ""),
             prompt: "The conversation, oldest first:\n\n" + Transcript.build(thread, bodies: bodies, budget: min(budget, 6_000))
                 + "\n\n===\n\nThe latest message, from \(latest.from.displayName), to answer:\n\n" + latestText

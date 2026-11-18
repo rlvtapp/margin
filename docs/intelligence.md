@@ -22,6 +22,8 @@ Margin has two optional ways to use AI. Both are off unless you turn them on, an
 
 "On this Mac" is the default when it's available; otherwise the assistant starts off. Keys are kept in the Keychain. Requests go straight from Margin to the provider.
 
+**Suggested replies.** Under mail from a person, the quick assistant offers up to three short replies (`MailModel.suggestReplies`, `MailIntelligence.suggestReplies`). The model decides whether the mail wants an answer at all: for a notice, receipt or other automated mail that reached People it gives none (Apple's model answers with zero to three, `.count(0...3)`). It's told the replies are yours, to the sender, so it doesn't greet you with the mail's own "Hello …". No word lists filter what it writes. Tests: `IntelligenceTests.suggestionsCanBeNone`.
+
 Nothing runs by itself. Each request starts with something you did: **Summarize** (M), **Suggest labels** (L), **Draft a reply** (D, or ⌘J in the reply box), and **Shorter**, **Friendlier** and **More formal** on what you've typed. Text the assistant writes is labelled with where it came from ("on this Mac", "by Claude").
 
 ### How it's built

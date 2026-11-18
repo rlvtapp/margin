@@ -76,6 +76,16 @@ final class FakeModel: MailLanguageModel, @unchecked Sendable {
         #expect(suggestions == ["not yet", "Not much, you?", "Call you tonight?"])
     }
 
+    @Test func suggestionsCanBeNone() async throws {
+        // The model decides when mail wants no answer (a notice, a receipt) and then gives none.
+        let request = MailIntelligence.suggestionsRequest(thread(), bodies: [:], me: me, style: nil, budget: 1000)
+        #expect(request.instructions.contains("write nothing at all"))
+        #expect(request.instructions.contains("never address \(me.displayName)"))
+        let fake = FakeModel()
+        fake.replyAnswer = ""
+        #expect(try await MailIntelligence(model: fake).suggestReplies(thread(), bodies: [:], me: me).isEmpty)
+    }
+
     @Test func oneWordSuggestionsAreDropped() {
         #expect(MailIntelligence.cleanedSuggestions("Yeah\nSure!\nOK\nSounds good to me") == ["Sounds good to me"])
         // Japanese and Chinese have no spaces: a short phrase is fine there, a single character isn't.

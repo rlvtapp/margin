@@ -24,6 +24,11 @@
   address", "new sign-in", "if this was you") has none: its links are help pages and settings.
   "auth" in an address counts only as a whole part of the path, so a help page about two-factor
   authentication isn't one. A code ends at a full stop or comma too ("…to continue: 056459.").
+  Codes of capitals and digits mixed ("Your login code is: Y7024GVWL0", "K7Q-9XM2") count when
+  "code", "verification" and the like come right before them (16 characters at most), since
+  capitals and digits together are also order numbers; they're kept as written, never spaced out.
+- **On its row in the list:** a code from the last hour shows under the preview as a chip; a click
+  copies it (`RowCodeChip`, `rowSignInCode`). Tests: `RowCodeTests`, `MailHelperTests`.
 - **Sign-in codes** are copied when they arrive (see [siri.md](siri.md)). On the Mac they can
   also be typed into the field you're in (off by default; needs Accessibility permission, and
   only works in the direct download, since App Store apps can't type into other apps).

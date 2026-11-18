@@ -170,12 +170,10 @@ public enum SignInCode {
     /// or comma may end the sentence after it ("…to continue: 056459."), just not start a
     /// decimal ("1234.50"). Built once.
     private static let codePattern = try? NSRegularExpression(pattern: #"(?<![\d\w€$£.,:/=?&#+])(\d{3,4}[ -]\d{3,4}|\d{4,8})(?![\d\w%/:]|[.,]\d)"#)
-    /// Capital letters and digits mixed, 5–12 of them, optionally split once by a dash
-    /// ("Y7024GVWL0", "K7Q-9XM2"). Checked in `mixedCode` for at least one letter and two digits.
-    private static let mixedPattern = try? NSRegularExpression(pattern: #"(?<![\w€$£.,:/=?&#+-])([A-Z0-9]{3,6}-[A-Z0-9]{3,6}|[A-Z0-9]{5,12})(?![\w%/:-]|[.,]\w)"#)
-    /// How far before a mixed code its cue may be: right before it ("code is: …"), since capitals
-    /// and digits together are also order numbers and references ("code SUMMER on order AB12345").
-    private static let mixedReach = 16
+    /// Whatever stands right after "code" ("code: …", "code is …", "code is:\n…"), in any form:
+    /// "Y7024GVWL0", "VXSUUZLFJA", "K7Q-9XM2", "x7k2pq". `codeAfterCue` drops plain words.
+    private static let afterCuePattern = try? NSRegularExpression(
+        pattern: #"(?i)\b(?:code|passcode|codice|código|otp|pin)\b[ \t]*(?:is|was|lautet|est|es|è)?[ \t]*[:=]?\s{0,4}([A-Za-z0-9]{3,12}-[A-Za-z0-9]{3,6}|[A-Za-z0-9]{4,12})(?![\w@/%-]|[.,]\w)"#)
     private static let linkPattern = try? NSRegularExpression(pattern: #"(https?://|www\.)\S+"#)
 
     public static func detect(subject: String, text: String) -> String? {
@@ -192,10 +190,10 @@ public enum SignInCode {
         let haystack = subject + "\n" + words
         let lower = haystack.lowercased()
         guard cues.contains(where: lower.contains) else { return nil }
-        // Whichever comes first: digits only, or capitals and digits mixed.
+        // Whichever comes first: digits near a cue ("482 913"), or whatever follows "code".
         let digits = digitCode(in: haystack)
-        let mixed = mixedCode(in: haystack)
-        if let digits, let mixed { return digits.at < mixed.at ? digits.code : mixed.code }
+        let mixed = codeAfterCue(in: haystack)
+        if let digits, let mixed { return digits.at <= mixed.at ? digits.code : mixed.code }
         return (digits ?? mixed)?.code
     }
 
@@ -214,16 +212,18 @@ public enum SignInCode {
         return nil
     }
 
-    /// "Your login code is: Y7024GVWL0". Kept as written, dash and all, since some sites want it so.
-    private static func mixedCode(in haystack: String) -> (code: String, at: String.Index)? {
-        guard let regex = mixedPattern else { return nil }
+    /// "Your login code is: VXSUUZLFJA". Kept as written, dash and all, since some sites want it
+    /// so. A word ("your code is ready", "code in this PR") isn't a code: a code has a digit or
+    /// is all capitals. Years are left out as with digits.
+    private static func codeAfterCue(in haystack: String) -> (code: String, at: String.Index)? {
+        guard let regex = afterCuePattern else { return nil }
         let range = NSRange(haystack.startIndex..., in: haystack)
         for match in regex.matches(in: haystack, range: range) {
             guard let found = Range(match.range(at: 1), in: haystack) else { continue }
             let token = haystack[found]
-            guard token.contains(where: \.isLetter), token.filter(\.isNumber).count >= 2 else { continue }
-            let before = haystack[..<found.lowerBound].suffix(mixedReach).lowercased()
-            guard nearCues.contains(where: before.contains) else { continue }
+            let letters = token.filter(\.isLetter)
+            guard token.contains(where: \.isNumber) || letters.allSatisfy(\.isUppercase) else { continue }
+            if letters.isEmpty, token.count == 4, let year = Int(token), (1900...2100).contains(year) { continue }
             return (String(token), found.lowerBound)
         }
         return nil

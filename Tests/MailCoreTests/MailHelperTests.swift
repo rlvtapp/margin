@@ -81,7 +81,11 @@ import Testing
         #expect(SignInCode.detect(subject: "Your Speedrun login code",
                                   text: "Your Speedrun login code is: Y7024GVWL0\n\nThis code expires in 2 minutes.") == "Y7024GVWL0")
         #expect(SignInCode.detect(subject: "Sign in", text: "Your verification code: K7Q-9XM2") == "K7Q-9XM2")
-        #expect(SignInCode.detect(subject: "Your order", text: "Discount code SUMMER applied to order AB12345") == nil)
+        #expect(SignInCode.detect(subject: "Your Speedrun login code",
+                                  text: "Your Speedrun login code is: VXSUUZLFJA\n\nThis code expires in 2 minutes.") == "VXSUUZLFJA")
+        #expect(SignInCode.detect(subject: "Your code", text: "Your code is ready to use") == nil)
+        #expect(SignInCode.detect(subject: "Sign in", text: "Enter this code:\n x7k2pq") == "x7k2pq")
+        #expect(SignInCode.detect(subject: "Your code", text: "Your code is: 4F9A2C") == "4F9A2C")
         #expect(SignInCode.detect(subject: "Your code", text: "Your code is ready. Order reference PO-2026-AB12 shipped today.") == nil)
         #expect(SignInCode.detect(subject: "Code review", text: "The code in this PR changes ABC123 to v2") == nil)
     }

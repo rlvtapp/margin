@@ -170,13 +170,20 @@ public enum SignInCode {
     /// or comma may end the sentence after it ("…to continue: 056459."), just not start a
     /// decimal ("1234.50"). Built once.
     private static let codePattern = try? NSRegularExpression(pattern: #"(?<![\d\w€$£.,:/=?&#+])(\d{3,4}[ -]\d{3,4}|\d{4,8})(?![\d\w%/:]|[.,]\d)"#)
+    /// Capital letters and digits mixed, 5–12 of them, optionally split once by a dash
+    /// ("Y7024GVWL0", "K7Q-9XM2"). Checked in `mixedCode` for at least one letter and two digits.
+    private static let mixedPattern = try? NSRegularExpression(pattern: #"(?<![\w€$£.,:/=?&#+-])([A-Z0-9]{3,6}-[A-Z0-9]{3,6}|[A-Z0-9]{5,12})(?![\w%/:-]|[.,]\w)"#)
+    /// How far before a mixed code its cue may be: right before it ("code is: …"), since capitals
+    /// and digits together are also order numbers and references ("code SUMMER on order AB12345").
+    private static let mixedReach = 16
     private static let linkPattern = try? NSRegularExpression(pattern: #"(https?://|www\.)\S+"#)
 
     public static func detect(subject: String, text: String) -> String? {
         let start = text.prefix(2_000)
-        // No three digits in a row anywhere: no code. Most mail stops here, before any of the
-        // work below (this is asked for every recent conversation).
-        guard hasDigitRun(subject.utf8) || hasDigitRun(start.utf8) else { return nil }
+        // No three digits in a row and no code in the subject: no code. Most mail stops here,
+        // before any of the work below (this is asked for every recent conversation).
+        guard hasDigitRun(subject.utf8) || hasDigitRun(start.utf8) || subject.localizedCaseInsensitiveContains("code")
+            || start.range(of: "code", options: .caseInsensitive) != nil else { return nil }
         // Links carry ids that look like codes ("LinkId=521839"), so they go first.
         var words = String(start)
         if let linkPattern, words.contains("://") || words.contains("www.") {
@@ -185,6 +192,14 @@ public enum SignInCode {
         let haystack = subject + "\n" + words
         let lower = haystack.lowercased()
         guard cues.contains(where: lower.contains) else { return nil }
+        // Whichever comes first: digits only, or capitals and digits mixed.
+        let digits = digitCode(in: haystack)
+        let mixed = mixedCode(in: haystack)
+        if let digits, let mixed { return digits.at < mixed.at ? digits.code : mixed.code }
+        return (digits ?? mixed)?.code
+    }
+
+    private static func digitCode(in haystack: String) -> (code: String, at: String.Index)? {
         guard let regex = codePattern else { return nil }
         let range = NSRange(haystack.startIndex..., in: haystack)
         for match in regex.matches(in: haystack, range: range) {
@@ -194,7 +209,22 @@ public enum SignInCode {
             if digits.count == 4, let year = Int(digits), (1900...2100).contains(year) { continue }
             let before = haystack[..<found.lowerBound].suffix(reach).lowercased()
             guard nearCues.contains(where: before.contains) else { continue }
-            return String(digits)
+            return (String(digits), found.lowerBound)
+        }
+        return nil
+    }
+
+    /// "Your login code is: Y7024GVWL0". Kept as written, dash and all, since some sites want it so.
+    private static func mixedCode(in haystack: String) -> (code: String, at: String.Index)? {
+        guard let regex = mixedPattern else { return nil }
+        let range = NSRange(haystack.startIndex..., in: haystack)
+        for match in regex.matches(in: haystack, range: range) {
+            guard let found = Range(match.range(at: 1), in: haystack) else { continue }
+            let token = haystack[found]
+            guard token.contains(where: \.isLetter), token.filter(\.isNumber).count >= 2 else { continue }
+            let before = haystack[..<found.lowerBound].suffix(mixedReach).lowercased()
+            guard nearCues.contains(where: before.contains) else { continue }
+            return (String(token), found.lowerBound)
         }
         return nil
     }

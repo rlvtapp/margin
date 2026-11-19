@@ -1,6 +1,6 @@
 # OAuth sign-in (Google and Microsoft)
 
-Google and Microsoft sign in through OAuth 2.0 (authorization code with PKCE). The sign-in page opens in the system's web authentication sheet. The tokens are exchanged directly with the provider and stored in the Keychain. Margin sends them to IMAP and SMTP with SASL `XOAUTH2`, or `OAUTHBEARER` where a server offers only that.
+Google and Microsoft sign in through OAuth 2.0 (authorization code with PKCE). The sign-in page opens in the system's web authentication sheet. The tokens are exchanged directly with the provider and stored in the Keychain. Margin sends Google's to IMAP and SMTP with SASL `XOAUTH2`, or `OAUTHBEARER` where a server offers only that. Microsoft mail goes through Microsoft Graph with the token as a bearer token (see Architecture → Microsoft mail through Graph).
 
 OAuth client ids belong to whoever distributes a build. This repository doesn't ship one. Without an id, Google and Microsoft accounts are offered app passwords instead (Microsoft accounts then can't sign in, because Microsoft has turned off password access).
 
@@ -27,7 +27,7 @@ The build copies them into Info.plist (`MarginGoogleClientID`, `MarginMicrosoftC
 
 1. In Microsoft Entra, register an app for **personal Microsoft accounts and any organisational directory**.
 2. Add a **Mobile and desktop** platform with the redirect URI `msauth.<your bundle id>://auth`.
-3. Add these delegated permissions: `IMAP.AccessAsUser.All` and `SMTP.Send` (Office 365 Exchange Online), plus `offline_access` and `email`.
+3. Add these delegated Microsoft Graph permissions: `Mail.ReadWrite`, `Mail.Send` and `Mail.ReadBasic` (asked at sign-in), `Mail.ReadWrite.Shared` and `Mail.Send.Shared` (asked when a shared mailbox is added; work and school accounts only), plus `offline_access`, `openid`, `email` and `profile`. The extras turned on later (contacts, calendar, rooms, automatic reply) add their own.
 4. Microsoft 365 tenants may need an administrator to allow the app.
 
 ## Refreshing tokens without flooding the provider

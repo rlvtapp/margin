@@ -144,7 +144,11 @@ editor is plain text.
 The block editor that used to be in Settings → Experimental is gone: Margin has no dependency on
 Relevate's native editor, and the composer above is the one editor.
 
-The forgotten-attachment reminder can be turned off in Settings → Writing.
+**Forgotten attachment:** before sending with nothing attached, the quick assistant reads what
+you wrote (not the quoted mail) and says whether it says a file is coming with it, in any language
+(`MailModel.forgotAttachment`, `MailIntelligence.mentionsAttachment`). It waits 3 seconds at most,
+then sends. With AI off there's no reminder: no word list guesses it. It can be turned off in
+Settings → Writing.
 
 ## Recipients
 
@@ -191,6 +195,19 @@ usual size again. After that, Esc closes the reply as before and keeps it in Dra
   a reply opens full screen anyway.
 - Code: `MailModel+ReplySize.swift`, `ReplyEditor` in `ComposeViews.swift`, `ReaderView`.
   Tests: `ReplySizeTests`.
+
+## Attachments
+
+Drop files on the message or use the paperclip. Mail can carry about 25 MB in all
+(`ComposeAttachments.sizeLimit`, the common provider limit): files that would go over it, or that
+can't be read, aren't attached, and a red line under the attachments names them and suggests
+sharing big files by link; it goes at the next try or with ✕.
+
+In a received message, an attachment's menu has **Quick Look** (a preview in place, never
+running anything, so it's safe for apps and scripts too), Open and Save As…; a message with more
+than one file has **Save All…**, which asks for a folder once (Downloads to start), saves each
+file marked as downloaded, and numbers names that are taken ("report 2.pdf") rather than
+overwriting.
 
 ## Sending and Undo Send
 

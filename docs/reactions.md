@@ -43,17 +43,17 @@ message") with the subject, and **Show message** shows the email as sent.
 
 Recognised as reactions, only in replies:
 
-- **Outlook's email**, from the plain text or the preview: `[like]`, `[heart]`, `[celebrate]`,
-  `[laugh]`, `[surprised]`, `[sad]` (or an emoji, the picture's link, or the picture in the
-  formatted version), then "reacted to your message" in any of Margin's languages. Only the English
-  and French wording are confirmed from real mail; the others are Margin's best guess.
-- **Outlook's "taken back" email** removes that person's reaction.
+Only structure is read, never the words, so it works the same in every language:
+
+- **Outlook's email shape**: Outlook's reaction (`[like]`, `[heart]`, `[celebrate]`, `[laugh]`,
+  `[surprised]`, `[sad]`: its own identifiers, an emoji, its picture's link, or the picture in the
+  formatted version), then the sender's name ("Jane Jolie" or the header's "Jolie, Jane") and a
+  few words before a colon. A tag Margin can't read (`[EXTERNAL]`) or a name alone
+  (`👍 Jane: sure`) doesn't count.
+- **Outlook's "taken back" email** (`[0]`) removes that person's reaction.
 - **Gmail's reaction part.**
-- **The same shape in other languages**: a known reaction, then the sender's name and a few words
-  before a colon (`👍 Jane Jolie reagerade på ditt meddelande:`). A tag Margin can't read
-  (`[EXTERNAL]`) or a name alone (`👍 Jane: sure`) doesn't count.
-- **A reply that is only an emoji** (up to three), maybe with "Sent from my iPhone" or the quoted
-  original after it. `👍 on it` is an ordinary reply.
+- **A reply that is only an emoji** (up to three), with nothing after it but the quoted original
+  (`>` lines) or a separator line. `👍 on it`, or a signature line after it, is an ordinary reply.
 
 Reaction emails sort into **Updates**, not People, so they don't count as mail that needs you. In
 the list, a conversation's row leaves its reactions out (names, preview, count), and replies and
@@ -91,13 +91,12 @@ The `x-ms-reactions` header is fetched with the list (IMAP `HEADER.FIELDS`, JMAP
 Tests: `ReactionTests` (including the shape of a real Outlook reaction email). Snapshot mode:
 `-snapshot-select "Launch plan" -snapshot-reactions`.
 
-## Outlook's own reactions (opt-in, unofficial)
+## Outlook's own reactions (unofficial)
 
-Between two Microsoft 365 mailboxes no email is sent, so these only show when **Show Outlook
-reactions** is on: Mailboxes → Edit… → **Reactions**, Microsoft accounts only, off by default. Turning
-it on asks the account for `Mail.Read` in the sign-in sheet (sign-in itself never asks for it).
-Turning it off stops using that permission and forgets what was read; the permission stays granted in
-the Microsoft account until removed there (My Apps or account.microsoft.com → Privacy → Apps).
+Between two Microsoft 365 mailboxes no email is sent, so Margin reads these from the mailbox. It does
+so on every Microsoft mailbox of the person's own, with the mail sign-in itself: Microsoft mail goes
+through Graph with `Mail.ReadWrite`, so nothing more is asked and there's nothing to turn on. Shared
+mailboxes are left out (the lookup is on `/me`).
 
 How it works: when a conversation opens, Margin asks Graph for its newest 12 messages by Message-ID
 (`/me/messages?$filter=internetMessageId eq '<…>'`, any folder, Sent included), each at most every
@@ -113,5 +112,5 @@ Outlook stop appearing; nothing else breaks. Untested against a real mailbox. Re
 short reply: writing these properties only changes your own copy, it doesn't reach the sender.
 
 Code: `OutlookReactions` and `MicrosoftGraphClient.outlookReactions(messageID:)`
-(`Sources/MailCore/Contacts/OutlookReactions.swift`), `APIAccess.reactions`,
-`MailModel.loadOutlookReactions(for:)`, `OutlookReactionsSection`. Tests: `OutlookReactionsTests`.
+(`Sources/MailCore/Contacts/OutlookReactions.swift`),
+`MailModel.loadOutlookReactions(for:)`. Tests: `OutlookReactionsTests`.

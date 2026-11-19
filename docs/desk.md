@@ -28,6 +28,7 @@ menu when something unread arrives. Deleting the workspace in view goes back to 
 
 ## Reading and privacy
 
+- **Add to Notes (Mac):** the same menu makes a note in the Notes app with the message and a link back (docs/calendar.md).
 - **Block trackers** (Settings → General → Privacy, on by default): removes the hidden pictures that report
   when you open mail, even when pictures are allowed, and takes tracking parameters out of links.
   The reader says how many were blocked and from whom. Code: `MailCore/MIME/TrackerBlocker.swift`.

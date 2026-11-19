@@ -61,12 +61,6 @@ invitation itself, reply emails (an iTIP `REPLY` updates the one person answerin
 account's calendar is connected, Microsoft 365 or Google directly (by the event's iCalendar UID).
 Meetings sent from here open on their own (next meeting bar, Home) with the same guest list.
 
-## With Daybook
-
-When Daybook (the calendar app) is installed, invitations show **Open in Daybook** instead of Add
-to Calendar, meetings open there, and New Meeting can hand over to Daybook to find a time. Daybook's
-Email Guests and Show Invitation Email open here. See [daybook.md](daybook.md).
-
 ## Adapters
 
 The model talks to two interfaces, not to providers:

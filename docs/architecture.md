@@ -9,7 +9,7 @@ Sources/MailUI                SwiftUI views and MailModel (state for all account
         │
 Sources/MailCore              Protocols, parsing, accounts, secrets. No UI, no AppKit.
         │
-mail servers                  Each account's own IMAP/SMTP or JMAP server, reached directly
+mail servers                  Each account's own IMAP/SMTP, JMAP or Microsoft Graph server, reached directly
 ```
 
 MailCore uses only Foundation, Security and CryptoKit, so it runs unchanged on macOS, iOS and iPadOS. MailUI uses SwiftUI and keeps platform-specific code behind `#if os(macOS)`. Both build for iOS today (`xcodebuild -scheme Margin-Package -destination 'generic/platform=iOS Simulator' build`).
@@ -20,9 +20,54 @@ Every account has a `MailProvider` (an actor). All of them connect from the devi
 
 - `IMAPProvider` reads with IMAP4rev1/rev2 (RFC 3501, RFC 9051) and sends with SMTP submission (RFC 6409).
 - `JMAPProvider` does both over HTTPS (RFC 8620, RFC 8621).
+- `GraphMailProvider` does both for Microsoft 365 and Outlook.com over Microsoft Graph (see below).
 - `SampleProvider` keeps made-up mail in memory, so you can try the app without signing in.
 
 `LineConnection` is the TCP transport for IMAP and SMTP. It's built on `URLSessionStreamTask` because that can upgrade a live connection to TLS, which STARTTLS needs. Unencrypted connections are refused unless the host is this machine (which Proton Mail Bridge needs).
+
+## Microsoft mail through Graph
+
+Many organizations turn IMAP off, so Microsoft mailboxes don't use it at all: the Microsoft entry in
+`ProviderCatalog` (and any custom domain whose MX points at Microsoft) sets up `.graph`, and the
+person never picks a protocol. `GraphMailProvider` (MailCore/Graph) talks to
+`graph.microsoft.com/v1.0` with the mailbox's own sign-in:
+
+- **Folders:** `mailFolders`, then each folder's `childFolders`, following `@odata.nextLink`. The
+  roles come from Graph's well-known names (`inbox`, `sentitems`, `drafts`, `archive`,
+  `deleteditems`, `junkemail`), asked in one JSON batch.
+- **Lists and changes:** the first refresh of a folder lists its newest messages and starts a
+  `messages/delta` query from the oldest of them. Later refreshes follow only the delta link:
+  removed messages go, changed ones take their read state, flag and categories, new ones are read
+  whole in batches of 20. A delta link Graph no longer knows (410) lists the folder afresh.
+  Conversations are Graph's `conversationId`. Every request asks for immutable ids
+  (`Prefer: IdType="ImmutableId"`), so a message keeps its id when it moves.
+- **Bodies:** the message itself (`$value`), parsed like IMAP's, so invitations, inline pictures
+  and attachments come out the same. Reading ahead asks only the readable text (`body`) in
+  batches and marks mail with files partial.
+- **Changes:** read, flagged and categories are `PATCH`es; Done, Trash, Junk and moves are
+  `move` (Trash on mail already in Deleted Items deletes it). All go in JSON batches.
+  Outlook's categories are the mailbox's labels (`MailMessage.labels`, plain names, never
+  folders), changed with `changeLabel(_:adding:on:)`; `threadID` is Graph's `conversationId`.
+- **Sending:** a reply is `createReply` on the message it answers (found by its Message-ID), filled
+  in and sent, so Outlook keeps the conversation together. New mail is `sendMail`; files over
+  3 MB go through a draft and an upload session. Invitation answers and reactions go as the MIME
+  message (`sendMail` with base64 text), the only form with room for their parts. Drafts are
+  `POST /messages`.
+- **Search:** typed operators become KQL in `$search` (`from:`, `to:`, `subject:`,
+  `hasAttachments:true`, `received>=` / `received<`), and `in:` searches that folder. Graph won't
+  take `$filter` beside `$search`, so `is:unread` and `is:starred` narrow the results on the
+  device, or go as `$filter` when nothing else was typed.
+- **Outlook's reactions** are read with the same sign-in (it already reads mail), on the
+  person's own mailboxes; nothing more is asked (see reactions.md).
+- **Shared mailboxes:** in a Microsoft mailbox's settings, "Shared mailboxes" adds another
+  address the person may open. It becomes a mailbox of its own (`.graph(sharedMailbox:)`), read
+  and sent from at `/users/{address}`. Adding one signs in once more with
+  `Mail.ReadWrite.Shared` and `Mail.Send.Shared`, which only work and school accounts can grant,
+  so they aren't asked at sign-in. A shared mailbox keeps its own tokens, is checked on a timer
+  (no push subscription), and goes when the mailbox it was added from is removed.
+
+Tests: `Tests/MailCoreTests/GraphMailTests.swift`, answered from recorded Graph responses in
+`Tests/MailCoreTests/Fixtures/Graph`.
 
 The only third-party request the app makes is during setup. For a domain it doesn't know, it may ask the public ISP database for that domain's server settings. It sends the domain only, never the address.
 
@@ -198,6 +243,8 @@ The message being written lives in the model (`compose`, `reply`), and every key
 
 A mailbox whose sign-in stopped working (an expired or withdrawn Google or Microsoft sign-in, a changed password) doesn't have to be removed and added back. **Sign in again** replaces only the secret in the Keychain; the saved mail, labels, rules, settings and the mailbox's place in the list stay as they are (`MailModel+SignIn.swift`, `SignInAgain.swift`).
 
+Signing in again also asks for everything the mailbox uses on one page: for Microsoft, the mail permissions plus each extra that was turned on (contacts, calendar, rooms), so permissions added since it was connected are granted in one go. A Microsoft mailbox set up over IMAP before mail went through Graph moves to Graph with that sign-in (`movesOnSignIn`, `adoptConnection`): same id, settings, rules and place in the list; the mail saved over IMAP is dropped and loads again. Until then Settings → Mailboxes shows a Sign In Again… button on its row, and the status line offers it. Tests: `MicrosoftMoveTests` in `Tests/MailUITests/SignInAgainTests.swift`.
+
 - Where: Settings → Mailboxes → the mailbox's ⋯ menu → Sign In Again… and a right-click on the mailbox in the account column (always there); and, when the provider refused the sign-in, a "Sign in again" button under the error in the sidebar, next to the status line at the foot of the list (Mac, iPhone and iPad), and in the empty list's message.
 - Google and Microsoft open the provider's own sign-in page with the address filled in. Whether it's the right account is proved by the mail server taking the new sign-in for this mailbox, not by comparing names (the name a provider signs people in under is often an alias or a work name on another domain). When the server refuses it, the old sign-in is put back and the message says who signed in. Errors show in the window the button was pressed in; Settings also confirms when it worked. Other mailboxes ask for the password (or token); a password that doesn't work is thrown away and the old one put back.
 - Afterwards the connection is made afresh, pauses on token refreshes are lifted, the mailbox reloads and waits for new mail again. For Microsoft, extras that were turned on (contacts, calendar…) and no longer answer are renewed from the same sign-in.
@@ -226,7 +273,7 @@ The empty part of the window bar stands in for a title bar (`TitleBarArea`). New
 ## Triage on the device
 
 - `Threader` groups messages by `In-Reply-To` and `References` first. A reply whose parent wasn't fetched joins by its normalised subject.
-- `InboxSplit` sorts mail into People, Updates and Newsletters from standard headers: `List-Id`, `List-Unsubscribe`, `Precedence`, `Auto-Submitted`, and no-reply style senders.
+- `InboxSplit` sorts mail into People, Updates and Newsletters from standard headers: `List-Id`, `List-Unsubscribe`, `Precedence`, `Auto-Submitted` and bulk-sending headers. Automated mail without them moves to Updates only on the assistant's verdict (`MailVerdicts`, keyed by Message-ID, saved in `verdicts.json`); no word lists on addresses or subjects.
 - `SearchQuery` searches the loaded mail with `from:`, `to:`, `subject:`, `is:unread`, `is:starred`, `has:attachment`, `in:people` and quoted phrases.
 
 ## HTML mail
@@ -356,7 +403,7 @@ A file from before row numbers is brought up to date the first time it's opened:
 
 Snoozes (`snoozes.json`) and the outbox (`outbox.json`) are JSON files in Application Support. The app does the work, so no server is needed:
 
-- **The clock.** A clock in `MailModel+Timing.swift` ticks every 20 seconds. It wakes due snoozes and sends due scheduled messages, and checks for new mail about every 3 minutes, posting notifications for new mail from people. Scheduled mail only goes out while Margin is running.
+- **The clock.** A clock in `MailModel+Timing.swift` ticks every 20 seconds. It wakes due snoozes and sends due scheduled messages, and checks for new mail about every 3 minutes, posting notifications for new mail from people. Scheduled mail only goes out while Margin is running; Settings → General → **Open at login** (Mac, `SMAppService.mainApp`) keeps it running after a restart, and when macOS wants the person's say-so first, the setting says so and opens Login Items.
 - **Undo send.** Sending holds the message in memory for the undo delay before it reaches SMTP or JMAP.
 - **Waiting for reply.** Sent mail where you wrote last counts as waiting when no inbox message answers it, by `In-Reply-To`/`References`, or by the same subject from a recipient. A recipient who has since sent a meeting invitation, or a new email on the same subject, in any saved folder (Outlook moves answered invitations to Deleted Items), counts as having answered.
 - **Unsubscribe.** Uses RFC 8058 one-click (a cookie-less POST) when the sender supports it, otherwise the list's mail address, otherwise its web page.
@@ -438,7 +485,7 @@ redraws the window once. Mail's own HTML is left at the sender's size; plain-tex
 
 `-snapshot <file.png>` launches the app with the sample mailboxes, renders the window to a PNG and quits. Add `-appearance light|dark`, `-snapshot-palette`, `-snapshot-compose`, `-snapshot-mailbox 0`, `-snapshot-combined sent`, `-snapshot-select "Issue 212"` or `-snapshot-size 1520x940` (the window at that size in points, drawn two pixels a point). `-snapshot-cc "maya@example.com, no"` (with `-snapshot-compose`) opens Cc and Bcc with that in Cc. Put flags that take no value last: AppKit reads `-flag value` pairs, so a bare flag swallows the next one and a stray word after that is taken for a file to open, and no window comes up. Add `-snapshot-glass` to save the system's own picture of the real window instead, with Liquid Glass and scrolling parts in it; the window shows on a Retina screen for a moment. The website's pictures are made that way. Web content is drawn in another process, so snapshot mode paints each web view's own snapshot over its frame. A sandboxed build can only write inside its container, so build without the sandbox entitlement for snapshots:
 
-`-snapshot-settings <page>` pictures the Settings window on a page (`general`, `assistant`, `writingStyle`…), `-snapshot-settings search:undo` with those words in its search field, and `-snapshot-ai-off` with Use AI switched off; add `-snapshot-glass` to see the sidebar, which only the real window draws.
+`-snapshot-settings <page>` pictures the Settings window on a page (`general`, `assistant`, `writingStyle`…), `-snapshot-settings search:undo` with those words in its search field, `-snapshot-settings server-rule` the rule editor changing a rule kept on the server, and `-snapshot-ai-off` with Use AI switched off; add `-snapshot-glass` to see the sidebar, which only the real window draws. `-snapshot-event-editor` pictures the Calendar's New Event editor with two sample colleagues in People, its suggested times and who's busy at the time it starts with.
 
 ```bash
 cd Apps && xcodebuild -scheme Margin -derivedDataPath ../.build/xcode-snapshot CODE_SIGN_ENTITLEMENTS= MARGIN_BUNDLE_ID=app.relevate.margin.snapshot build

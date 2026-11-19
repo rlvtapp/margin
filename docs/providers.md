@@ -13,7 +13,7 @@ Margin uses each provider's published, standard access: IMAP with SMTP, or JMAP.
 | Provider | Protocol | Sign-in | Tried against the real service |
 | --- | --- | --- | --- |
 | Google (Gmail, Workspace) | IMAP + SMTP | OAuth (needs a client id, see [oauth.md](oauth.md)) or an app password | Not yet |
-| Microsoft (Outlook.com, Microsoft 365) | IMAP + SMTP (STARTTLS) | OAuth (needs a client id). Microsoft no longer accepts passwords | Not yet |
+| Microsoft (Outlook.com, Microsoft 365) | Microsoft Graph (works where IMAP is off) | OAuth (needs a client id). Microsoft no longer accepts passwords | Not yet |
 | iCloud Mail | IMAP + SMTP (STARTTLS) | App-specific password | Not yet |
 | Yahoo Mail, AOL | IMAP + SMTP | App password | Not yet |
 | Fastmail | JMAP | API token | Not yet |
@@ -30,7 +30,7 @@ When you try a provider, please update the last column in a pull request, noting
 
 ## Behaviour per provider
 
-- **Done** moves conversations to the account's Archive folder (the `\Archive` special-use folder). If there isn't one, it uses the all-mail folder (`\All`, which is what Gmail has). On JMAP it removes the inbox from the message's mailboxes and adds the archive.
+- **Done** moves conversations to the account's Archive folder (the `\Archive` special-use folder). If there isn't one, it uses the all-mail folder (`\All`). On a server that keeps labels (`X-GM-EXT-1`, the Gmail account type) it takes the `\Inbox` label off instead, and moving swaps labels; see [labels.md](labels.md). On JMAP it removes the inbox from the message's mailboxes and adds the archive.
 - **Sent copies.** SMTP doesn't keep a copy, so after sending Margin appends one to Sent. The exceptions are Gmail and Microsoft, which file it themselves. JMAP files it in the same request.
 - **MOVE.** Uses RFC 6851 `MOVE` when the server offers it. Otherwise it copies, marks the original deleted and expunges just those messages with `UID EXPUNGE` (RFC 4315).
 

@@ -35,9 +35,12 @@ Canadian English only differs in spelling (colour, centre, cancelled), so it lis
 
 ## Changing the language
 
-Margin follows the system language. Settings → General → Language opens the place where the
-system keeps each app's language (Settings → Margin on iPhone and iPad; System Settings → Language &
-Region → Applications on the Mac). To try one while developing, launch with
+Margin follows the system language unless told otherwise. On the Mac, Settings → General →
+Language is a menu: **Same as Mac**, then every language Margin is translated into, each named in
+itself. Picking one saves it as Margin's own `AppleLanguages` (the same place System Settings →
+Language & Region → Applications writes), and **Restart Margin** appears beside it, since a
+language is read when Margin starts (`LanguageSetting`). Same as Mac removes it again. On iPhone
+and iPad, Settings → General → Language opens Settings → Margin, where iOS keeps it. To try one while developing, launch with
 `-AppleLanguages "(nl)"`.
 
 ## Translating mail

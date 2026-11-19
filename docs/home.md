@@ -51,8 +51,8 @@ search, AI apps, backups.
 - **With the assistant on**, it reads each conversation and picks one group, or none
   (`MailIntelligence.classify`). That uses whichever model is chosen in Settings → AI,
   on the device or with the person's own key.
-- **Without it**, only clear cases are sorted, by rules (`EmailSorter.ruleGroup`): invoices,
-  receipts, orders, travel, invitations, account notices and newsletters.
+- **Without it**, only what standard headers say is sorted (`EmailSorter.ruleGroup`): mailing
+  lists go to Newsletters. There are no keyword rules; everything else waits for an assistant.
 - **Sort now** works through the inbox, shows how far it is, and can be stopped. It looks at conversations it hasn't seen, or that got a new message since. Taking one out of its group with the label's ✕ lets it look again; **Not in a group** (Move to group) keeps it out for good (`MailModel.keptOut`). With nothing new, it looks once more at the conversations nothing fitted (`MailModel.lookedAgain` marks them, so a further click doesn't go round again until new mail arrives in them), and says "Nothing new to sort" when there are none, or "None of them fit a group" when a run sorts nothing.
 - **Sort new mail as it arrives** sorts the last few hours' mail every minute or so.
 
@@ -67,16 +67,15 @@ saying why it matters now (`MailModel.marginNote(for:)`, first match wins):
 
 - **code**: it holds a sign-in code;
 - **at 15:00** / **Thu 10:00** / **now**: a meeting from its invitation;
-- **bill**: it's in Bills to Pay and asks you to pay: a pay link or "pay now", bank transfer
-  details (IBAN, overmaken), a payment reminder, overdue, or a charge that failed
-  (`MailNotice.asksForPayment`, read on the device from its words). An invoice that only says
-  it's there (amount, due date, PDF) is taken automatically as a rule, and a receipt is paid, so
-  neither gets a note. Ask's "bills not opened yet" leaves the same ones out;
+- **bill**: it's in Bills to Pay and the assistant read that it asks you to pay something still
+  open (`MailVerdict.asksToPay`). An invoice taken automatically or a receipt gets no note. Ask's
+  "bills not opened yet" leaves the same ones out;
 - **reply owed** / **owed 3d**: the last word is from someone you know, in the last three weeks,
-  and you haven't answered, and it isn't a reminder, confirmation, receipt or system message
-  (`MailNotice.expectsNoReply`: an appointment reminder from your dentist asks nothing). Addresses
-  like `service@`, `invoice@` or `reminders@` count as automated in the inbox split too. Ask's
-  "what needs a reply" uses the same check.
+  you haven't answered, and the assistant read that they're waiting on you
+  (`MailVerdict.needsReply`). Ask's "what needs a reply" uses the same check.
+
+Both come from the assistant's verdict on new mail (see [intelligence.md](intelligence.md)). With
+AI off, or no assistant, there are no "bill" or "reply owed" notes: no word lists guess them.
 
 Under the date, one sentence sums it up ("Two replies to write and a bill to open. Planning at
 10:00."), from `MailModel.homeSummary`. AI apps connected to Margin get the same list and sentence

@@ -56,8 +56,8 @@ Each needs a short written reason. Draft wording:
 
 | Permission | Kind | What Margin does with it |
 | --- | --- | --- |
-| `https://mail.google.com/` | Restricted | Reads, sends, organises and deletes mail over IMAP and SMTP, which only accept this permission. Also used to start Gmail push notifications. Mail stays on the device. |
-| `gmail.settings.basic` | Sensitive | Turns the out-of-office reply on or off and changes its message when the person asks. |
+| `https://mail.google.com/` | Restricted | Reads, sends, organises and deletes mail over IMAP and SMTP, which only accept this permission. Also used to start Gmail push notifications and to read label colours, which IMAP doesn't carry. Mail stays on the device. |
+| `gmail.settings.basic` | Sensitive | Turns the out-of-office reply on or off and changes its message when the person asks. Lists, adds, changes and removes the person's filters from Settings → Rules, so their rules run while their devices are off. |
 | `contacts.readonly` | Sensitive | Suggests addresses and shows names when writing a message. Kept on the device. |
 | `contacts.other.readonly` | Sensitive | The same, for people the person has emailed but not saved as contacts. |
 | `calendar.events` | Sensitive | Creates the event when the person sends a new meeting invitation from Margin. |

@@ -54,7 +54,9 @@ final class RecordingModel: MailLanguageModel, @unchecked Sendable {
         return model
     }
 
-    var today: Date { Calendar.current.startOfDay(for: Date()) }
+    /// The day the sample meetings start on. "Roadmap review" ended ten minutes ago, which just
+    /// after midnight is yesterday, so the week is counted from the day two hours back.
+    var today: Date { Calendar.current.startOfDay(for: Date().addingTimeInterval(-2 * 3600)) }
 
     func waitForAnswer(_ model: MailModel) async throws {
         for _ in 0..<500 where model.isWorking("ask") { try await Task.sleep(for: .milliseconds(10)) }

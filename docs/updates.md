@@ -16,6 +16,7 @@ on until the company's Apple Developer membership and Developer ID certificate e
   default; when on, updates download in the background and install when Margin quits).
 - When an update is found, Sparkle's standard window shows the release notes (the GitHub release
   page) with Install, Remind Me Later and Skip This Version.
+- After the update installs, Margin opens its own What's New sheet once ([changelog.md](changelog.md)).
 
 A build without an update feed (built from source, a fork, snapshot and benchmark runs) has no
 updater: no menu item and nothing in Settings.
@@ -91,11 +92,29 @@ In this order, once the Apple Developer Program membership is active:
 To switch iCloud sync on for these builds as well, see [icloud.md](icloud.md) before the first
 release: the Developer ID profile then needs the iCloud container too.
 
+## Before the paid membership: development releases
+
+Without the App Store Connect key, `scripts/release-mac.sh` makes a development release
+(`DEVELOPMENT_TEAM=… scripts/release-mac.sh`): the app is signed with the Apple Development
+certificate, not notarized, and the version defaults to today (`2026.11.19`, or `.1`, `.2` when
+that tag is taken). The feed is GitHub's own "latest release" address,
+`https://github.com/rlvtapp/margin/releases/latest/download/appcast.xml`, so nothing else has to
+be deployed; drafts and prereleases are never "latest". The Sparkle key is in the login keychain
+(`generate_keys -p` prints the public half, which is in `Margin.local.xcconfig`).
+
+- **First install:** people open the disk image, drag Margin to Applications, open it, and choose
+  **Open Anyway** in System Settings → Privacy & Security (once).
+- **After that:** updates are found, downloaded and installed by Margin itself; every version is
+  signed with the same certificate, so the Keychain items stay readable without asking.
+- **Off until the paid membership:** iCloud sync and push, which need Apple's provisioning.
+- Build numbers use local time everywhere (`install-mac.sh`, `build-share.sh`, releases), so a
+  release is always newer than the build it replaces.
+
 ## Making a release
 
 1. Make sure `main` is what should ship, and set nothing by hand: the script sets the version
    from the tag and the build number from the clock.
-2. Tag and push: `git tag v0.2.0 && git push origin v0.2.0`.
+2. Tag and push the day as the version: `git tag v2026.11.19 && git push origin v2026.11.19`.
 3. The **Release Mac app** workflow builds, signs, notarizes and makes a draft release with the
    four files (20–40 minutes, most of it notarization).
 4. Open the draft, edit the notes (generated from the commits), and download `Margin.dmg` once to

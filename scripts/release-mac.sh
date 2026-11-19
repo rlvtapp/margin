@@ -6,9 +6,16 @@
 #   margin.rb      the Homebrew cask for this version
 # It publishes nothing: .github/workflows/release-mac.yml uploads these to the GitHub release.
 #
-#   MARGIN_VERSION=0.2.0 DEVELOPMENT_TEAM=ABCDE12345 \
+#   MARGIN_VERSION=2026.11.19 DEVELOPMENT_TEAM=ABCDE12345 \
 #   NOTARY_KEY_PATH=~/keys/AuthKey_XXXX.p8 NOTARY_KEY_ID=XXXX NOTARY_ISSUER_ID=… \
 #   scripts/release-mac.sh
+#
+# Without the NOTARY_* keys (before the paid Apple membership), it makes a development release:
+# signed with your Apple Development certificate, not notarized. People choose Open Anyway once
+# (System Settings → Privacy & Security); every update after that installs by itself.
+#   DEVELOPMENT_TEAM=ABCDE12345 scripts/release-mac.sh
+# MARGIN_VERSION defaults to today (2026.11.19), or the next free one (2026.11.19.1) when today's
+# tag is taken.
 #
 # Needs a Developer ID Application certificate in the keychain, and Margin.local.xcconfig with the
 # production values, MARGIN_UPDATE_FEED_URL and MARGIN_UPDATE_PUBLIC_KEY among them. The App
@@ -16,22 +23,37 @@
 # key comes from the login keychain, or from SPARKLE_PRIVATE_KEY when set (on CI).
 set -euo pipefail
 ROOT=${0:A:h:h}
-: ${MARGIN_VERSION:?Set MARGIN_VERSION to the version being released, like 0.2.0}
-: ${DEVELOPMENT_TEAM:?Set DEVELOPMENT_TEAM to the company Apple developer team id}
-: ${NOTARY_KEY_PATH:?Set NOTARY_KEY_PATH to the App Store Connect API key (.p8)}
-: ${NOTARY_KEY_ID:?Set NOTARY_KEY_ID to that key id}
-: ${NOTARY_ISSUER_ID:?Set NOTARY_ISSUER_ID to the key issuer id}
+: ${DEVELOPMENT_TEAM:?Set DEVELOPMENT_TEAM to the Apple developer team id}
+# Notarized (Developer ID) when the App Store Connect key is given; otherwise a development release.
+NOTARIZE=${NOTARY_KEY_PATH:+yes}
+if [[ -n $NOTARIZE ]]; then
+  : ${NOTARY_KEY_ID:?Set NOTARY_KEY_ID to that key id}
+  : ${NOTARY_ISSUER_ID:?Set NOTARY_ISSUER_ID to the key issuer id}
+fi
+if [[ -z ${MARGIN_VERSION:-} ]]; then
+  MARGIN_VERSION=$(date +%Y.%-m.%-d)
+  next=1
+  base=$MARGIN_VERSION
+  while git -C "$ROOT" rev-parse -q --verify "refs/tags/v$MARGIN_VERSION" >/dev/null \
+    || gh release view "v$MARGIN_VERSION" --repo "${MARGIN_GITHUB_REPO:-rlvtapp/margin}" >/dev/null 2>&1; do
+    MARGIN_VERSION=$base.$next
+    next=$((next + 1))
+  done
+fi
 REPO=${MARGIN_GITHUB_REPO:-rlvtapp/margin}
 DOWNLOADS=${MARGIN_DOWNLOAD_BASE:-https://github.com/$REPO/releases/download/v$MARGIN_VERSION}
 # Same scheme as every other build (docs/release.md): the date and time, which also keeps each
 # release's number higher than the last, as Sparkle needs.
-BUILD=${MARGIN_BUILD_NUMBER:-$(date -u +%Y%m%d.%H%M)}
+BUILD=${MARGIN_BUILD_NUMBER:-$(date +%Y%m%d.%H%M)}
 OUT=$ROOT/.build/release/$MARGIN_VERSION
 DATA=$ROOT/.build/xcode-release
 ARCHIVE=$OUT/Margin.xcarchive
 EXPORTED=$OUT/export
-AUTH=(-authenticationKeyPath "$NOTARY_KEY_PATH" -authenticationKeyID "$NOTARY_KEY_ID" -authenticationKeyIssuerID "$NOTARY_ISSUER_ID")
-NOTARY=(--key "$NOTARY_KEY_PATH" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID")
+typeset -a AUTH NOTARY
+if [[ -n $NOTARIZE ]]; then
+  AUTH=(-authenticationKeyPath "$NOTARY_KEY_PATH" -authenticationKeyID "$NOTARY_KEY_ID" -authenticationKeyIssuerID "$NOTARY_ISSUER_ID")
+  NOTARY=(--key "$NOTARY_KEY_PATH" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID")
+fi
 
 rm -rf "$OUT"
 mkdir -p "$OUT"
@@ -55,6 +77,7 @@ if [[ -z $FEED || -z $PUBLIC_KEY ]]; then
   exit 1
 fi
 
+if [[ -n $NOTARIZE ]]; then
 log "Signing with Developer ID"
 cat > "$OUT/ExportOptions.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -83,17 +106,28 @@ ditto -c -k --sequesterRsrc --keepParent "$APP" "$OUT/notarize.zip"
 xcrun notarytool submit "$OUT/notarize.zip" "${NOTARY[@]}" --wait
 xcrun stapler staple "$APP"
 rm "$OUT/notarize.zip"
+else
+  # A development release: the archived app, signed with your Apple Development certificate.
+  log "Development release: signed with your certificate, not notarized"
+  APP=$ARCHIVE/Products/Applications/Margin.app
+  codesign --verify --deep --strict "$APP"
+fi
 
 # The updater gets a zip of the stapled app; the website and Homebrew get the disk image.
 ditto -c -k --sequesterRsrc --keepParent "$APP" "$OUT/Margin.zip"
 
 log "Making the disk image"
 "$ROOT/scripts/dmg/make-dmg.sh" "$APP" "$OUT/Margin.dmg"
-IDENTITY=$(codesign -dvv "$APP" 2>&1 | awk -F= '/^Authority=Developer ID Application/ {print $2; exit}')
-codesign --sign "$IDENTITY" --timestamp "$OUT/Margin.dmg"
-xcrun notarytool submit "$OUT/Margin.dmg" "${NOTARY[@]}" --wait
-xcrun stapler staple "$OUT/Margin.dmg"
-spctl --assess --type open --context context:primary-signature "$OUT/Margin.dmg"
+if [[ -n $NOTARIZE ]]; then
+  IDENTITY=$(codesign -dvv "$APP" 2>&1 | awk -F= '/^Authority=Developer ID Application/ && !found {print $2; found=1}')
+  codesign --sign "$IDENTITY" --timestamp "$OUT/Margin.dmg"
+  xcrun notarytool submit "$OUT/Margin.dmg" "${NOTARY[@]}" --wait
+  xcrun stapler staple "$OUT/Margin.dmg"
+  spctl --assess --type open --context context:primary-signature "$OUT/Margin.dmg"
+else
+  IDENTITY=$(codesign -dvv "$APP" 2>&1 | awk -F= '/^Authority=Apple Development/ && !found {print $2; found=1}')
+  codesign --sign "$IDENTITY" "$OUT/Margin.dmg"
+fi
 
 log "Signing the update"
 SIGN_UPDATE=$DATA/SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update
@@ -129,6 +163,7 @@ DMG_SHA=$(shasum -a 256 "$OUT/Margin.dmg" | awk '{print $1}')
 sed -e "s|@VERSION@|$MARGIN_VERSION|g" -e "s|@SHA256@|$DMG_SHA|g" -e "s|@REPO@|$REPO|g" \
   "$ROOT/scripts/homebrew/margin.rb.in" > "$OUT/margin.rb"
 
-rm -rf "$EXPORTED"
+rm -rf "$EXPORTED" "$ARCHIVE"
+print "Version $MARGIN_VERSION (build $BUILD)"
 log "Done: $OUT"
 ls -la "$OUT" | awk 'NR > 1 {print $5, $9}'

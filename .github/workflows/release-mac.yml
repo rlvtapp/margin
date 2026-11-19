@@ -1,4 +1,4 @@
-# Builds a Mac release when a version tag is pushed (git tag v0.2.0 && git push origin v0.2.0)
+# Builds a Mac release when a version tag is pushed (git tag v2026.11.19 && git push origin v2026.11.19)
 # and puts it in a draft GitHub release. Nothing reaches anyone until the draft is published:
 # the update feed and the website link follow the latest published release. docs/updates.md
 # lists the secrets and variables this needs.

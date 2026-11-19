@@ -40,10 +40,15 @@ What to test:
 4. Copy the **Application (client) ID** into `MARGIN_MICROSOFT_CLIENT_ID`.
 5. Under Authentication, set **Allow public client flows** to Yes. There's no client secret.
 6. Under API permissions, add these delegated permissions so the consent screen lists them up front:
-   - Office 365 Exchange Online: `IMAP.AccessAsUser.All`, `SMTP.Send`
-   - Microsoft Graph: `offline_access`, `email`, `Mail.ReadBasic` (push), `Contacts.Read`,
-     `People.Read`, `Calendars.ReadWrite`, `MailboxSettings.ReadWrite`, `Place.Read.All` (rooms;
-     needs an admin in work accounts), `Mail.Read` (Outlook reactions, only when turned on)
+   - Microsoft Graph, at sign-in: `offline_access`, `openid`, `email`, `profile`, `Mail.ReadWrite`,
+     `Mail.Send` (mail goes through Graph), `Mail.ReadBasic` (push)
+   - Microsoft Graph, when turned on: `Mail.ReadWrite.Shared`, `Mail.Send.Shared` (shared mailboxes),
+     `Contacts.Read`, `People.Read`, `User.ReadBasic.All` (contacts and colleagues),
+     `Calendars.ReadWrite`, `Calendars.Read.Shared` (calendar and suggested meeting times),
+     `MailboxSettings.ReadWrite` (automatic reply, server rules), `Place.Read.All` (rooms; needs an
+     admin in work accounts)
+   - `IMAP.AccessAsUser.All` and `SMTP.Send` are no longer asked for; they can be removed once
+     Graph mail has been tested.
 7. Under Branding & properties, add the homepage, terms and privacy links on margin.relevate.app,
    and the logo.
 8. **Publisher verification** (Branding & properties → verify publisher) with the company's free
@@ -120,10 +125,12 @@ so only the newest build is there to send.
 
 ### Telling builds apart
 
-The version (`MARKETING_VERSION`, 0.1.0) changes with a release. The build number is what tells
-two builds apart: both scripts set `CURRENT_PROJECT_VERSION` to the date and time the build was
-made, as `YYYYMMDD.HHMM` (`20261112.1742`). Settings → About shows it next to the version, as
-"0.1.0 (20261112.1742)", it's in the shared files' names, and it's in crash reports. A build made
+The version is the day it's released, `year.month.day` (`2026.11.19`, tag `v2026.11.19`; a second
+release the same day adds `.1`). Both scripts set `MARKETING_VERSION` to it (`install-mac.sh` to
+today). The build number is what tells two builds apart: `CURRENT_PROJECT_VERSION` is the date
+and time the build was made, `YYYYMMDD.HHMM` (`20261112.1742`), which the updater compares.
+Settings → About shows "Version 2026.11.19", with the build number on hover; it's in the shared
+files' names and in crash reports. A build made
 straight from Xcode keeps the project's number, 1.
 
 `scripts/install-mac.sh` is the same for your own Mac: it builds with your development

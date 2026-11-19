@@ -146,6 +146,7 @@ public struct MailRootView: View {
         }
         .sheet(isPresented: $model.isNewMeetingOpen) { NewMeetingView(model: model) }
         .sheet(isPresented: $model.isShowingOnboarding) { OnboardingView(model: model).interactiveDismissDisabled() }
+        .sheet(isPresented: $model.isShowingWhatsNew) { WhatsNewView(model: model) }
         .sheet(item: Binding(get: { model.shownMeetingID.map(ShownMeeting.init) }, set: { model.shownMeetingID = $0?.id })) {
             MeetingDetail(model: model, id: $0.id)
         }
@@ -254,6 +255,7 @@ extension Look {
         theme = model.appearance
         density = model.density
         LabelColors.chosen = model.labelColors
+        LabelColors.server = model.serverLabelColorIndexes
         reduceTransparency = systemReduceTransparency || ProcessInfo.processInfo.arguments.contains("-reduce-transparency")
         return key
     }

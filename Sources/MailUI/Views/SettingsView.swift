@@ -143,6 +143,7 @@ struct SettingsDetail: View {
         case .signInCodes: SignInCodeSettings(model: model)
         case .vips: VIPSettings(model: model)
         case .experimental: ExperimentalSettings(model: model)
+        case .changelog: ChangelogSettings()
         case .about: AboutSettings(model: model)
         }
     }

@@ -11,7 +11,7 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
     case appearance, layout, shortcuts
     case assistant, ask, permissions, writingStyle, connections
     case signInCodes, vips
-    case backup, backupFiles, restore, experimental, about
+    case backup, backupFiles, restore, experimental, changelog, about
 
     var id: String { rawValue }
 
@@ -65,7 +65,7 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
                pages: [.notifications, .signInCodes, .vips, .reading, .writing, .signatures, .templates, .sorting, .rules]),
          Group(id: "look", title: String(localized: "Look and feel"), pages: [.appearance, .layout, .shortcuts]),
          Group(id: "ai", title: String(localized: "AI"), pages: [.assistant, .ask, .permissions, .writingStyle, .connections]),
-         Group(id: "data", title: String(localized: "Your data"), pages: [.backup, .backupFiles, .restore, .experimental, .about])]
+         Group(id: "data", title: String(localized: "Your data"), pages: [.backup, .backupFiles, .restore, .experimental, .changelog, .about])]
             .map { Group(id: $0.id, title: $0.title, pages: $0.pages.filter(available.contains)) }
     }
 
@@ -110,6 +110,7 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
         case .connections: String(localized: "AI Apps")
         case .backup: String(localized: "Backup and Devices")
         case .experimental: String(localized: "Experimental")
+        case .changelog: String(localized: "What's New")
         case .about: String(localized: "About")
         }
     }
@@ -146,6 +147,7 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
         case .connections: "point.3.connected.trianglepath.dotted"
         case .backup: "externaldrive.fill"
         case .experimental: "flask.fill"
+        case .changelog: "sparkles"
         case .about: "info.circle.fill"
         }
     }
@@ -171,6 +173,7 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
         case .signInCodes, .vips: Palette.account(6)
         case .backup, .backupFiles, .restore: Palette.account(1)
         case .experimental: Palette.account(4)
+        case .changelog: Palette.account(3)
         case .about: Ink.tertiary
         }
     }
@@ -178,7 +181,7 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
     /// Words a search finds this page by, besides its title and the names of its settings.
     var keywords: [String] {
         switch self {
-        case .general: ["language", "default mail app", "email links", "mailto", "privacy", "tracker", "screen sharing", "recording",
+        case .general: ["language", "default mail app", "email links", "mailto", "login", "startup", "launch", "privacy", "tracker", "screen sharing", "recording",
                         "storage", "offline", "download", "disk", "saved mail", "cache"]
         case .mailboxes: ["account", "add", "remove", "signature", "alias", "send as", "server", "password", "picture", "imap", "smtp", "all inboxes", "sign in"]
         case .contacts: ["people", "address book", "carddav", "microsoft", "google", "outlook", "rooms", "calendar", "suggestions"]
@@ -200,13 +203,14 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
         case .ask: ["ai", "ask", "answer", "questions", "chat", "instructions"]
         case .permissions: ["ai", "permissions", "allow", "changes", "sending", "activity", "actions"]
         case .writingStyle: ["ai", "instructions", "style", "voice", "tone", "writing profile", "learn", "suggest", "replies", "drafts"]
-        case .rules: ["rules", "filters", "block", "blocked", "mute", "muted", "move", "auto archive"]
+        case .rules: ["rules", "filters", "block", "blocked", "mute", "muted", "move", "auto archive", "server rules", "sieve", "inbox rules"]
         case .connections: ["ai", "mcp", "agent", "cursor", "codex", "claude code", "vs code", "permissions", "connections", "token"]
         case .backup: ["icloud", "sync", "keychain", "link device", "another device", "devices"]
         case .backupFiles: ["backup", "export", "recovery key", "automatic", "password", "schedule"]
         case .restore: ["restore", "bring back", "undo restore", "import"]
         case .experimental: ["labs", "beta", "early", "dictate", "dictation", "voice", "speak", "space bar", "microphone"]
-        case .about: ["version", "made by", "welcome", "feedback", "problem", "update", "upgrade", "new version"]
+        case .changelog: ["changelog", "release notes", "what's new", "new version", "update", "changes"]
+        case .about: ["version", "made by", "welcome", "feedback", "problem", "update", "upgrade"]
         }
     }
 
@@ -280,7 +284,8 @@ extension SettingsPage {
         case .connections: String(localized: "Let AI apps on this Mac use your mail over MCP.")
         case .backup: String(localized: "Keep your setup the same on every device, or move it to another one.")
         case .experimental: String(localized: "Early features to try. They may change or go away.")
-        case .about: String(localized: "Version \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
+        case .changelog: String(localized: "What changed in each version of Margin.")
+        case .about: String(localized: "Version \(Changelog.currentVersion)")
         }
     }
 
@@ -292,7 +297,7 @@ extension SettingsPage {
             var names = [String(localized: "Language"), String(localized: "Block trackers, even when pictures are loaded"),
                          String(localized: "Keep on this device"), String(localized: "Open recent mail instantly"), String(localized: "Clear Downloaded Mail")]
             #if os(macOS)
-            names += [String(localized: "Email links"), String(localized: "Make Margin the default mail app"),
+            names += [String(localized: "Email links"), String(localized: "Make Margin the default mail app"), String(localized: "Open at login"),
                       String(localized: "Hide Margin from screen sharing and recordings")]
             #endif
             return names
@@ -384,6 +389,8 @@ extension SettingsPage {
             return [String(localized: "Restore from Backup…"), String(localized: "Undo Restore")]
         case .experimental:
             return [String(localized: "Hold Space to dictate")]
+        case .changelog:
+            return Changelog.releases.flatMap { $0.changes.map(\.title) }
         case .about:
             return [String(localized: "Show Welcome"), String(localized: "Something broken?"), String(localized: "Check for Updates…"),
                     String(localized: "Check for updates automatically"), String(localized: "Download and install updates")]
@@ -811,6 +818,7 @@ struct GeneralSettings: View {
                         Button("Make Margin the default mail app") { Task { await model.becomeDefaultMailApp() } }
                     }
                 } label: { SettingLabel("Email links", detail: "What opens when you click an email address anywhere on this Mac.") }
+                OpenAtLoginSetting()
                 #endif
             }
             Section {
@@ -914,3 +922,44 @@ struct ExperimentalSettings: View {
         .formStyle(.grouped)
     }
 }
+
+#if os(macOS)
+import ServiceManagement
+
+/// Open at login, through the system's own login items. Scheduled mail, snoozes, reminders and
+/// rules run on this Mac, so they need Margin open; this keeps it open after a restart.
+private struct OpenAtLoginSetting: View {
+    @State private var status = SMAppService.mainApp.status
+    @State private var problem: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle(isOn: Binding(get: { status == .enabled || status == .requiresApproval }, set: set)) {
+                SettingLabel("Open at login", detail: "So scheduled mail goes out, snoozed mail comes back and rules keep running after you restart.")
+            }
+            if status == .requiresApproval {
+                HStack(spacing: 6) {
+                    Text("Allow Margin in System Settings to finish.").font(TypeScale.caption).foregroundStyle(Ink.secondary)
+                    Button("Open Login Items") { SMAppService.openSystemSettingsLoginItems() }
+                        .buttonStyle(.link)
+                        .font(TypeScale.caption)
+                }
+            }
+            if let problem {
+                Text(verbatim: problem).font(TypeScale.caption).foregroundStyle(Status.danger)
+            }
+        }
+        .onAppear { status = SMAppService.mainApp.status }
+    }
+
+    private func set(_ on: Bool) {
+        do {
+            if on { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+            problem = nil
+        } catch {
+            problem = error.localizedDescription
+        }
+        status = SMAppService.mainApp.status
+    }
+}
+#endif

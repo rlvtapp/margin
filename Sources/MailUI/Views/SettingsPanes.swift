@@ -27,8 +27,19 @@ struct MailboxesSettings: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(account.label)
                             Text(account.serverDescription).font(TypeScale.caption).foregroundStyle(.secondary)
+                            if model.movesOnSignIn(account) {
+                                Text("Sign in again to keep getting mail. Margin asks for everything it needs at once.")
+                                    .font(TypeScale.caption)
+                                    .foregroundStyle(Status.danger)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
                         }
                         Spacer()
+                        if model.needsSignIn(account.id) && model.canSignInAgain(account) {
+                            Button("Sign In Again…") { signingIn = account }
+                                .buttonStyle(.borderedProminent)
+                                .tint(Ink.primary)
+                        }
                         Button("Edit…") { editing = account.id }
                         Menu {
                             Button("Move Up") { withAnimation(Motion.quick) { model.moveAccount(account.id, by: -1) } }
@@ -848,6 +859,7 @@ struct AboutSettings: View {
                     .foregroundStyle(Ink.tertiary)
                     .textSelection(.enabled)
                     .padding(.top, 4)
+                    .help(Text("Build \(Changelog.build)"))
                 #if os(macOS)
                 if let updates = model.updates {
                     UpdateSettings(updates: updates)
@@ -870,9 +882,9 @@ struct AboutSettings: View {
                 .accessibilityLabel(Text("Made by Relevate"))
                 .padding(.top, 32)
                 Button("Show Welcome") { showingWelcome = true }
-                    .buttonStyle(.borderless)
-                    .font(TypeScale.label)
-                    .padding(.top, 10)
+                .buttonStyle(.borderless)
+                .font(TypeScale.label)
+                .padding(.top, 10)
             }
             .padding(.horizontal, Space.xl)
             .padding(.vertical, 44)
@@ -882,11 +894,8 @@ struct AboutSettings: View {
         .sheet(isPresented: $showingWelcome) { OnboardingView(model: model) }
     }
 
-    static var version: String {
-        let short = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? ""
-        return build.isEmpty || build == short ? short : "\(short) (\(build))"
-    }
+    /// The version is the release date (2026.11.19); the build number is for telling builds apart.
+    static var version: String { Changelog.currentVersion }
 }
 
 #if os(macOS)

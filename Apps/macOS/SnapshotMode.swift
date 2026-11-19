@@ -67,6 +67,11 @@ struct SnapshotMode {
             if let mailbox, model.accounts.indices.contains(mailbox) {
                 model.go(to: .inbox(account: model.accounts[mailbox].id, split: nil))
             }
+            // -snapshot-labels: the first mailbox keeps labels on its server, some nested and coloured.
+            if ProcessInfo.processInfo.arguments.contains("-snapshot-labels") {
+                UserDefaults.standard.set("Projects", forKey: "sidebarOpenFolders")
+                model.addSampleLabels()
+            }
             if let combined { model.go(to: .combined(combined)) }
             if let select, let thread = model.visibleThreads.first(where: { $0.subject.localizedCaseInsensitiveContains(select) }) {
                 model.select(thread.id)
@@ -99,6 +104,10 @@ struct SnapshotMode {
 
                 case "snoozed": model.go(to: .snoozed(account: nil))
                 case "calendar":
+                    // -snapshot-calendar-mode agenda|day|week|month
+                    if let index = arguments.firstIndex(of: "-snapshot-calendar-mode"), index + 1 < arguments.count {
+                        UserDefaults.standard.set(arguments[index + 1], forKey: "calendarMode")
+                    }
                     model.addSampleCalendar()
                     model.go(to: .calendar)
                 case "subscriptions":
@@ -111,6 +120,17 @@ struct SnapshotMode {
                     if let id = model.openSubscriptionID { model.select(model.issues(of: id).first?.id) }
                 default: break
                 }
+                try? await Task.sleep(for: .seconds(1))
+                if let first = model.visibleThreads.first { model.select(first.id) }
+            }
+            // -snapshot-search "from:maya has:attachment": that search, kept as a saved search
+            // too, so the sidebar shows one.
+            if let index = arguments.firstIndex(of: "-snapshot-search"), index + 1 < arguments.count {
+                let text = arguments[index + 1]
+                model.saveSearch(text)
+                model.notice = nil
+                model.searchText = text
+                model.runSearch(text)
                 try? await Task.sleep(for: .seconds(1))
                 if let first = model.visibleThreads.first { model.select(first.id) }
             }
@@ -141,6 +161,8 @@ struct SnapshotMode {
             // -snapshot-ask "…": open Ask and send that question or command.
             if let index = arguments.firstIndex(of: "-snapshot-ask"), index + 1 < arguments.count {
                 await model.refreshNewsletterHistory()
+                // A sample week, so calendar questions have something to read.
+                model.addSampleCalendar()
                 model.isAsking = true
                 try? await Task.sleep(for: .seconds(0.5))
                 for input in arguments[index + 1].components(separatedBy: "|") { model.send(askInput: input) }
@@ -168,6 +190,9 @@ struct SnapshotMode {
                     ? NSHostingView(rootView: AnyView(MailboxSettingsSnapshot(model: model).frame(width: 560, height: 1300)))
                     : arguments[index + 1] == "signature"
                     ? NSHostingView(rootView: AnyView(SignatureSheetSnapshot()))
+                    // "server-rule": the editor for a rule kept on the server, filled in.
+                    : arguments[index + 1] == "server-rule"
+                    ? NSHostingView(rootView: AnyView(ServerRuleEditorSnapshot(model: model)))
                     // "nested": Settings on the first mailbox, picked under Mailboxes in the sidebar.
                     : arguments[index + 1] == "nested"
                     ? NSHostingView(rootView: AnyView(MailSettingsView(firstMailboxOf: model)))
@@ -226,6 +251,29 @@ struct SnapshotMode {
                 window.titlebarAppearsTransparent = true
                 let id = arguments[index + 1]
                 window.contentView = NSHostingView(rootView: id == "list" ? AccountSetupView(model: model) : AccountSetupView(model: model, provider: id))
+                window.makeKeyAndOrderFront(nil)
+                settingsWindow = window
+                try? await Task.sleep(for: .seconds(1.5))
+            }
+            // -snapshot-event-editor: a new event with two colleagues, its suggested times, and
+            // "Sam Ortiz is busy then" for the time it starts with (tomorrow 13:30).
+            if arguments.contains("-snapshot-event-editor") {
+                model.addSampleCalendar()
+                let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: Date())) ?? Date()
+                let people = model.comparedPeople.map(\.address)
+                let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 820, height: 640), styleMask: [.titled, .fullSizeContentView],
+                                      backing: .buffered, defer: false)
+                window.contentView = NSHostingView(rootView: EventEditorSnapshot(model: model, start: tomorrow.addingTimeInterval(13.5 * 3600),
+                                                                                 invitees: people))
+                window.makeKeyAndOrderFront(nil)
+                settingsWindow = window
+                try? await Task.sleep(for: .seconds(2))
+            }
+            // -snapshot-whats-new: the What's New sheet for the newest release.
+            if arguments.contains("-snapshot-whats-new") {
+                let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 460, height: 600), styleMask: [.titled, .fullSizeContentView],
+                                      backing: .buffered, defer: false)
+                window.contentView = NSHostingView(rootView: WhatsNewSnapshot(model: model))
                 window.makeKeyAndOrderFront(nil)
                 settingsWindow = window
                 try? await Task.sleep(for: .seconds(1.5))

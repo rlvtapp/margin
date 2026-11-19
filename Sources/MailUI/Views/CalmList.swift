@@ -192,11 +192,15 @@ enum GroupStyle {
     }
 }
 
-/// Each label's colour: the one you picked (right-click a label → Color), else the starter
-/// group's own, else one worked out from the name that stays the same on every launch and device.
+/// Each label's colour: the one you picked (right-click a label → Color), else the server's,
+/// else the starter group's own, else one worked out from the name that stays the same on every
+/// launch and device.
 enum LabelColors {
     /// Picked colours by lowercased label name, set from the model before drawing.
     nonisolated(unsafe) static var chosen: [String: Int] = [:]
+    /// Colours the server keeps for its labels, as the nearest palette colour, by lowercased
+    /// name; a colour picked here comes first.
+    nonisolated(unsafe) static var server: [String: Int] = [:]
 
     /// The palette's colours in order, for the Color menu.
     static var names: [String] {
@@ -207,6 +211,7 @@ enum LabelColors {
     static func index(for name: String) -> Int {
         let key = name.lowercased()
         if let picked = chosen[key] { return picked }
+        if let kept = server[key] { return kept }
         if let starter = EmailGroup.starters.firstIndex(where: { $0.name.lowercased() == key }) { return starter % names.count }
         // A stable hash (Swift's own changes every launch, which shuffled colours).
         var hash: UInt32 = 5381

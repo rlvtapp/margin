@@ -59,9 +59,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     override init() {
         // Before anything reads them: mailboxes and settings kept by the sandboxed Margin of
         // earlier versions come over once (the container itself is left as it was).
-        if snapshot == nil && benchmark == nil { SandboxMigration.runIfNeeded() }
-        model = MailModel(environment: snapshot == nil && benchmark == nil ? .standard : (benchmark?.environment ?? .preview()))
-        updates = snapshot == nil && benchmark == nil ? Updates.makeIfConfigured() : nil
+        let real = snapshot == nil && benchmark == nil && !SampleMode.isOn
+        if real { SandboxMigration.runIfNeeded() }
+        model = MailModel(environment: SampleMode.isOn ? SampleMode.environment()
+                          : snapshot == nil && benchmark == nil ? .standard : (benchmark?.environment ?? .preview()))
+        updates = real ? Updates.makeIfConfigured() : nil
         model.updates = updates
         super.init()
     }
@@ -69,6 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     func applicationDidFinishLaunching(_ notification: Notification) {
         snapshot?.run(model: model)
         benchmark?.run(model: model)
+        if SampleMode.isOn, snapshot == nil, benchmark == nil { SampleMode.start(model) }
         if snapshot == nil, benchmark == nil {
             MailModel.noteLaunch("did finish launching")
             model.applyAppIcon()
@@ -148,12 +151,22 @@ struct MarginCommands: Commands {
             }
         }
         CommandGroup(after: .toolbar) {
-            Button("Bigger Text") { model.textScale = min(model.textScale + 0.1, 2) }
-                .keyboardShortcut("+")
-            Button("Smaller Text") { model.textScale = max(model.textScale - 0.1, 0.8) }
-                .keyboardShortcut("-")
-            Button("Actual Size") { model.textScale = 1 }
-                .keyboardShortcut("0")
+            // In the Calendar's Day and Week, the same keys make the hours taller or shorter.
+            if model.zoomsCalendar {
+                Button("Taller Hours") { model.zoomCalendar(1) }
+                    .keyboardShortcut("+")
+                Button("Shorter Hours") { model.zoomCalendar(-1) }
+                    .keyboardShortcut("-")
+                Button("Actual Size") { model.zoomCalendar(0) }
+                    .keyboardShortcut("0")
+            } else {
+                Button("Bigger Text") { model.textScale = min(model.textScale + 0.1, 2) }
+                    .keyboardShortcut("+")
+                Button("Smaller Text") { model.textScale = max(model.textScale - 0.1, 0.8) }
+                    .keyboardShortcut("-")
+                Button("Actual Size") { model.textScale = 1 }
+                    .keyboardShortcut("0")
+            }
         }
         CommandGroup(before: .toolbar) {
             Button(model.isSidebarHidden ? "Show Sidebar" : "Hide Sidebar") { model.toggleSidebar() }

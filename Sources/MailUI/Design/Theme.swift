@@ -249,6 +249,20 @@ public enum Palette {
         (0x4D7C0F, 0xA3E635), // lime
     ]
 
+    /// The account colour closest to another colour (0xRRGGBB), so a calendar's own colour
+    /// becomes one of the app's.
+    public static func nearestAccountIndex(to rgb: UInt32) -> Int {
+        func parts(_ value: UInt32) -> (Double, Double, Double) {
+            (Double(value >> 16 & 0xFF), Double(value >> 8 & 0xFF), Double(value & 0xFF))
+        }
+        let (r, g, b) = parts(rgb)
+        let distances = standardHues.map { hue -> Double in
+            let (hr, hg, hb) = parts(hue.0)
+            return (r - hr) * (r - hr) * 0.3 + (g - hg) * (g - hg) * 0.59 + (b - hb) * (b - hb) * 0.11
+        }
+        return distances.indices.min { distances[$0] < distances[$1] } ?? 0
+    }
+
     public static func account(_ index: Int) -> Color {
         let hue = hues[((index % hues.count) + hues.count) % hues.count]
         return Color.adaptive(hue.0, hue.1)

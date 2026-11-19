@@ -101,7 +101,7 @@ extension MailModel {
         guard let account = account(state.accountID) else { throw MCPToolError("No mailbox to save the draft in.") }
         var draft = state.draft
         if !signed {
-            draft.text = withSignature(inYourStyle(draft.text, language: WritingProfile.language(of: draft.text)), of: account,
+            draft.text = withSignature(draft.text, of: account,
                                        isReply: draft.inReplyTo != nil)
         }
         draft.to = EmailAddress.parseList(state.to) ?? []

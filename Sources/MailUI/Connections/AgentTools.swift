@@ -78,7 +78,7 @@ enum AgentTools {
             MCPTool(name: "add_to_calendar", description: "Adds the invitation in a conversation to the person's calendar.",
                     inputSchema: #"{"type":"object","properties":{"id":{"type":"string"}},"required":["id"],"additionalProperties":false}"#),
             MCPTool(name: "undo_last",
-                    description: "Undoes the last change made through this connection (never one the person made). Sending, unsubscribing and answering invitations can't be undone.",
+                    description: "Undoes the last change made through this connection (never one the person made). Sending, unsubscribing, answering invitations, and calendar and reminder changes can't be undone here (Margin offers Undo for a calendar change on its own screen).",
                     inputSchema: empty),
         ]
     }
@@ -87,8 +87,9 @@ enum AgentTools {
         [
             MCPTool(name: "send_now", description: "Sends a scheduled message right away.",
                     inputSchema: #"{"type":"object","properties":{"id":{"type":"string"}},"required":["id"],"additionalProperties":false}"#),
-            MCPTool(name: "respond_to_invite", description: "Answers the invitation in a conversation; the organizer is told by email.",
-                    inputSchema: #"{"type":"object","properties":{"id":{"type":"string"},"response":{"type":"string","enum":["accept","maybe","decline"]}},"required":["id","response"],"additionalProperties":false}"#),
+            MCPTool(name: "respond_to_invite",
+                    description: "Answers an invitation: the one in a conversation (id), or an event from get_events (event_id) that can_answer. The organizer is told: by email for invitations from the mail, by the calendar for events in a connected Microsoft 365 or Google calendar.",
+                    inputSchema: #"{"type":"object","properties":{"id":{"type":"string","description":"A conversation id."},"event_id":{"type":"string","description":"An event id from get_events."},"response":{"type":"string","enum":["accept","maybe","decline"]}},"required":["response"],"additionalProperties":false}"#),
         ]
     }
 
@@ -445,13 +446,14 @@ extension MailModel {
             sendScheduledNow(item.id)
             return "Sending “\(item.draft.subject)” now."
         case "respond_to_invite":
-            let found = try await toolInvite(arguments)
             let response: CalendarInvite.Response = switch arguments["response"]?.string {
             case "accept": .accepted
             case "maybe": .tentative
             case "decline": .declined
             default: throw MCPToolError("“response” must be accept, maybe or decline.")
             }
+            if arguments["event_id"]?.string != nil { return try await respondToEvent(arguments, with: response) }
+            let found = try await toolInvite(arguments)
             guard found.invite.organizer != nil else { throw MCPToolError("This invitation has no organizer to answer.") }
             respond(to: found.invite, in: found.thread, with: response)
             return "\(response.verb) “\(found.invite.summary)”. The organizer is being told."

@@ -110,6 +110,7 @@ struct MailToolbox: MCPToolbox {
         tools += GroupTools.tools(allowChanges: settings.allowChanges)
         tools += RuleTools.tools(allowChanges: settings.allowChanges)
         tools += PeopleTools.tools()
+        tools += CalendarTools.tools(allowChanges: settings.allowChanges)
         if settings.allowChanges { tools += AgentTools.changing() }
         if settings.allowSettings { tools += AgentTools.settings() }
         if settings.allowSending {
@@ -144,7 +145,10 @@ struct MailToolbox: MCPToolbox {
     func call(_ name: String, arguments: [String: MCPValue]) async throws -> String {
         let allowed = await tools().contains { $0.name == name }
         guard allowed else { throw MCPToolError("“\(name)” isn't available. The person can allow it in Margin's settings.") }
-        return try await model.runTool(name, arguments)
+        // Tools that decide per call (the calendar's guests) check the same switches.
+        let settings: ConnectionSettings
+        if let permissions { settings = permissions } else { settings = await model.connectionSettings }
+        return try await ToolPermissions.$current.withValue(settings) { try await model.runTool(name, arguments) }
     }
 }
 
@@ -154,6 +158,7 @@ extension MailModel {
         if let answer = try await runGroupTool(name, arguments) { return answer }
         if let answer = try await runRuleTool(name, arguments) { return answer }
         if let answer = try await runPeopleTool(name, arguments) { return answer }
+        if let answer = try await runCalendarTool(name, arguments) { return answer }
         switch name {
         case "list_mailboxes":
             return json(visibleAccounts.map { ["name": $0.label, "address": $0.address.address, "unread": unreadCount(account: $0.id)] })
@@ -233,13 +238,13 @@ extension MailModel {
             // Reuse the existing spelling of a label, so "invoices" lands on "Invoices".
             let name = allLabels.first { $0.caseInsensitiveCompare(label) == .orderedSame } ?? label
             recordLabels()
-            for thread in threads { addLabel(name, to: thread) }
+            for thread in threads { addLabel(name, to: thread, onServer: true) }
             return "Labelled \(Self.count(threads)) “\(name)”."
         case "remove_label":
             let threads = try await toolThreads(arguments)
             let label = try Self.labelName(arguments["label"]?.string)
             recordLabels()
-            for thread in threads { removeLabel(label, from: thread) }
+            for thread in threads { removeLabel(label, from: thread, onServer: true) }
             return "Removed “\(label)” from \(Self.count(threads))."
         case "rename_label":
             let label = try Self.labelName(arguments["label"]?.string)
@@ -441,7 +446,7 @@ extension MailModel {
                 "end": invite.end.map { ISO8601DateFormatter().string(from: $0) } ?? "",
                 "all_day": invite.isAllDay, "location": invite.location ?? "",
                 "organizer": invite.organizer?.headerValue ?? "", "cancelled": invite.isCancelled,
-                "answered": rsvps[invite.uid]?.rawValue.lowercased() ?? "",
+                "answered": answer(to: invite)?.rawValue.lowercased() ?? "",
             ] as [String: Any]
         }
                 result["thread"] = thread.messages.map { message -> [String: Any] in

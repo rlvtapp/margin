@@ -11,12 +11,15 @@ enum MCPBridge {
     /// The settings as they are now: read again for every message, so turning things on in
     /// Margin applies without restarting the AI app.
     private static var settings: ConnectionSettings {
-        UserDefaults.standard.data(forKey: "connectionSettings")
+        defaults.data(forKey: "connectionSettings")
             .flatMap { try? JSONDecoder().decode(ConnectionSettings.self, from: $0) } ?? ConnectionSettings()
     }
 
+    /// With `-sample-mail`, the sample app's settings and token (SampleMode.swift).
+    private static var defaults: UserDefaults { SampleMode.isOn ? SampleMode.defaults : .standard }
+
     static func run() -> Never {
-        let keychain = Keychain(service: Bundle.main.bundleIdentifier ?? "app.relevate.margin")
+        let keychain = Keychain(service: SampleMode.isOn ? SampleMode.service : Bundle.main.bundleIdentifier ?? "app.relevate.margin")
         watchPermissions()
 
         while let line = readLine(strippingNewline: true) {
@@ -84,6 +87,11 @@ enum MCPBridge {
         if refused && launchingIfNeeded {
             let configuration = NSWorkspace.OpenConfiguration()
             configuration.activates = false
+            if SampleMode.isOn {
+                // Its own copy beside the real Margin, never the real one.
+                configuration.arguments = ["-sample-mail"]
+                configuration.createsNewApplicationInstance = true
+            }
             NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration)
             for _ in 0..<30 {
                 Thread.sleep(forTimeInterval: 0.5)
@@ -108,10 +116,10 @@ enum MCPBridge {
     /// thread).
     private static func watchPermissions() {
         Thread.detachNewThread { @Sendable in
-            var last = UserDefaults.standard.data(forKey: "connectionSettings")
+            var last = defaults.data(forKey: "connectionSettings")
             while true {
                 Thread.sleep(forTimeInterval: 1.5)
-                let now = UserDefaults.standard.data(forKey: "connectionSettings")
+                let now = defaults.data(forKey: "connectionSettings")
                 guard now != last else { continue }
                 last = now
                 let notice = Data(#"{"jsonrpc":"2.0","method":"notifications/tools/list_changed"}"#.utf8)

@@ -1,10 +1,9 @@
 #!/bin/zsh
 # Makes everything one Mac release needs, in .build/release/<version>/ (docs/updates.md):
-#   Margin.dmg     the download for the website and Homebrew, signed and notarized
+#   Margin.dmg     the download for the website, signed (and notarized with the paid membership)
 #   Margin.zip     what the updater downloads, holding the same notarized app
 #   appcast.xml    the update feed, listing this version and its Sparkle signature
-#   margin.rb      the Homebrew cask for this version
-# It publishes nothing: .github/workflows/release-mac.yml uploads these to the GitHub release.
+# It publishes nothing: the files go up to a GitHub release by hand (docs/updates.md).
 #
 #   MARGIN_VERSION=2026.11.19 DEVELOPMENT_TEAM=ABCDE12345 \
 #   NOTARY_KEY_PATH=~/keys/AuthKey_XXXX.p8 NOTARY_KEY_ID=XXXX NOTARY_ISSUER_ID=… \
@@ -113,7 +112,7 @@ else
   codesign --verify --deep --strict "$APP"
 fi
 
-# The updater gets a zip of the stapled app; the website and Homebrew get the disk image.
+# The updater gets a zip of the app; the website gets the disk image.
 ditto -c -k --sequesterRsrc --keepParent "$APP" "$OUT/Margin.zip"
 
 log "Making the disk image"
@@ -157,11 +156,6 @@ cat > "$OUT/appcast.xml" <<XML
   </channel>
 </rss>
 XML
-
-log "Writing the Homebrew cask"
-DMG_SHA=$(shasum -a 256 "$OUT/Margin.dmg" | awk '{print $1}')
-sed -e "s|@VERSION@|$MARGIN_VERSION|g" -e "s|@SHA256@|$DMG_SHA|g" -e "s|@REPO@|$REPO|g" \
-  "$ROOT/scripts/homebrew/margin.rb.in" > "$OUT/margin.rb"
 
 rm -rf "$EXPORTED" "$ARCHIVE"
 print "Version $MARGIN_VERSION (build $BUILD)"

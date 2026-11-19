@@ -1,4 +1,5 @@
 import Foundation
+import MailCore
 import Testing
 @testable import MailUI
 
@@ -37,5 +38,33 @@ import Testing
         #expect(model.calendarHourHeight == 30)
         model.zoomCalendar(0)
         #expect(model.calendarHourHeight == MailModel.defaultHourHeight)
+    }
+}
+
+@MainActor @Suite struct CalendarSnapTests {
+    /// A swipe still moving locks onto the day it was heading for, even short of halfway.
+    @Test func followsTheSwipe() {
+        #expect(CalendarScroll.settle(slide: -30, column: 100, velocity: -3).days == 1)
+        #expect(CalendarScroll.settle(slide: 30, column: 100, velocity: 3).days == -1)
+        // Flicked back: it returns to where it was.
+        #expect(CalendarScroll.settle(slide: -60, column: 100, velocity: 4).days == 0)
+    }
+}
+
+@MainActor @Suite struct MonthSheetTests {
+    /// Events are shared out by day once: a two-day all-day event is on both days, a meeting on its own.
+    @Test func sharesEventsOutByDay() async throws {
+        let model = MailModel(environment: .preview())
+        await model.reload()
+        let account = try #require(model.accounts.first)
+        let day = Calendar.current.startOfDay(for: Date()).addingTimeInterval(5 * 86_400)
+        model.calendarEvents[account.id] = [
+            CalendarEvent(id: "a", title: "Offsite", start: day, end: day.addingTimeInterval(2 * 86_400), isAllDay: true),
+            CalendarEvent(id: "b", title: "Sync", start: day.addingTimeInterval(10 * 3600), end: day.addingTimeInterval(11 * 3600)),
+        ]
+        let byDay = MonthBoard.byDay(model.agenda(from: day, to: day.addingTimeInterval(3 * 86_400)))
+        #expect(byDay[day]?.map(\.title) == ["Offsite", "Sync"])
+        #expect(byDay[day.addingTimeInterval(86_400)]?.map(\.title) == ["Offsite"])
+        #expect(byDay[day.addingTimeInterval(2 * 86_400)] == nil)
     }
 }

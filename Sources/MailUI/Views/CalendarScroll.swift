@@ -5,13 +5,19 @@ import AppKit
 
 /// The arithmetic behind sliding and zooming the Day and Week grid, kept apart so it can be tested.
 enum CalendarScroll {
-    /// Letting go mid-slide: the days lock onto the nearer whole column. Returns the days to move
-    /// and the slide left over (which then animates to zero).
-    static func settle(slide: CGFloat, column: CGFloat) -> (days: Int, slide: CGFloat) {
-        if slide < -column / 2 { return (1, slide + column) }
-        if slide > column / 2 { return (-1, slide - column) }
-        return (0, slide)
+    /// Letting go mid-slide: the days lock onto a whole column, the one the swipe was heading
+    /// for (where it would coast to at `velocity`, points per step), else the nearer one. Returns
+    /// the days to move and the slide left over (which then springs to zero).
+    static func settle(slide: CGFloat, column: CGFloat, velocity: CGFloat = 0) -> (days: Int, slide: CGFloat) {
+        guard column > 0 else { return (0, 0) }
+        let heading = slide + velocity * 10
+        let days = Int((-heading / column).rounded())
+        return (days, slide + CGFloat(days) * column)
     }
+
+    /// Below this speed (points per scroll event) a coasting swipe stops coasting and locks on,
+    /// instead of drifting to a halt and then jumping.
+    static let lockSpeed: CGFloat = 2
 
     /// The hour height after a pinch, between the smallest that fills the view and 120.
     static func zoomed(_ height: Double, by magnification: CGFloat, smallest: Double) -> Double {
@@ -30,8 +36,11 @@ enum CalendarScroll {
 /// never sideways). Momentum carries on after the fingers lift; then `end` lets the days settle
 /// on whole columns. A mouse wheel with Shift moves one day per notch.
 struct DayScroller: NSViewRepresentable {
+    /// A new sideways swipe has begun.
+    let start: () -> Void
     let move: (CGFloat) -> Void
-    let end: () -> Void
+    /// Locks on, given the last speed (points per scroll event).
+    let end: (CGFloat) -> Void
     let step: (Int) -> Void
 
     func makeNSView(context: Context) -> ScrollerView {
@@ -43,17 +52,23 @@ struct DayScroller: NSViewRepresentable {
     func updateNSView(_ view: ScrollerView, context: Context) { update(view) }
 
     private func update(_ view: ScrollerView) {
+        view.start = start
         view.move = move
         view.end = end
         view.step = step
     }
 
     final class ScrollerView: NSView {
+        var start: () -> Void = {}
         var move: (CGFloat) -> Void = { _ in }
-        var end: () -> Void = {}
+        var end: (CGFloat) -> Void = { _ in }
         var step: (Int) -> Void = { _ in }
         private var monitor: Any?
-        private enum Lock { case sideways, upDown }
+        /// How much of the trackpad's momentum a coasting swipe keeps.
+        static let coast: CGFloat = 0.8
+        /// `settled`: the days already locked on; the rest of the swipe's momentum is used up.
+        private enum Lock { case sideways, upDown, settled }
+        private var lastDX: CGFloat = 0
         private var lock: Lock?
         private var pending = CGSize.zero
         private var waitingForMomentum = false
@@ -77,13 +92,24 @@ struct DayScroller: NSViewRepresentable {
             let dx = event.scrollingDeltaX, dy = event.scrollingDeltaY
             // Momentum of a sideways swipe: keep moving, then settle when it stops.
             if !event.momentumPhase.isEmpty {
+                let over = event.momentumPhase.contains(.ended) || event.momentumPhase.contains(.cancelled)
+                if lock == .settled {
+                    if over { lock = nil }
+                    return true
+                }
                 guard lock == .sideways else { return false }
                 waitingForMomentum = false
-                if event.momentumPhase.contains(.ended) || event.momentumPhase.contains(.cancelled) {
+                if over {
                     lock = nil
-                    end()
+                    end(lastDX)
+                } else if abs(dx) < CalendarScroll.lockSpeed {
+                    // Slow enough: lock on now, carrying the last of the speed.
+                    lock = .settled
+                    end(dx)
                 } else {
-                    move(dx)
+                    // Coasting carries less than the fingers did, as in Apple's calendars.
+                    lastDX = dx * Self.coast
+                    move(dx * Self.coast)
                 }
                 return true
             }
@@ -112,19 +138,24 @@ struct DayScroller: NSViewRepresentable {
                     guard let self, self.waitingForMomentum else { return }
                     self.waitingForMomentum = false
                     self.lock = nil
-                    self.end()
+                    self.end(self.lastDX)
                 }
                 return true
             }
+            if lock == .settled { lock = nil }
             if lock == nil {
                 pending.width += dx
                 pending.height += dy
                 guard abs(pending.width) + abs(pending.height) > 3 else { return true }
                 lock = abs(pending.width) > abs(pending.height) ? .sideways : .upDown
-                if lock == .sideways { move(pending.width) }
+                if lock == .sideways {
+                    start()
+                    move(pending.width)
+                }
                 return lock == .sideways
             }
             guard lock == .sideways else { return false }
+            lastDX = dx
             move(dx)
             return true
         }

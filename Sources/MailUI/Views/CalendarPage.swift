@@ -24,7 +24,6 @@ enum CalendarMode: String, CaseIterable, Identifiable {
 /// Calendar app and Reminders when they're turned on. Events are made, moved and changed here.
 struct CalendarPage: View {
     @Bindable var model: MailModel
-    var showsTitle = true
     @AppStorage("calendarMode") private var chosenMode = CalendarMode.agenda.rawValue
     @State private var month = Calendar.current.dateInterval(of: .month, for: Date())?.start ?? Date()
     @State private var day = Calendar.current.startOfDay(for: Date())
@@ -34,9 +33,8 @@ struct CalendarPage: View {
     @State private var showsSources = false
     @State private var editor: CalendarEditor
 
-    init(model: MailModel, showsTitle: Bool = true) {
+    init(model: MailModel) {
         self.model = model
-        self.showsTitle = showsTitle
         _editor = State(initialValue: CalendarEditor(model: model))
     }
 
@@ -49,27 +47,34 @@ struct CalendarPage: View {
             let mode = modes.contains(chosen) ? chosen : .day
             let side = wide ? CGFloat(28) : Space.l
             // The month and the list of calendars sit on the left when there's room.
-            let hasSidebar = proxy.size.width >= 820
-            VStack(alignment: .leading, spacing: 0) {
-                toolbar(mode: mode, modes: modes, hasSidebar: hasSidebar)
-                    .padding(.horizontal, side)
-                    .padding(.top, wide ? 12 : Space.s)
-                    .padding(.bottom, wide ? 22 : Space.m)
-                HStack(alignment: .top, spacing: 0) {
-                    if hasSidebar {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 28) {
-                                monthView
-                                CalendarSources(model: model, month: month)
-                            }
-                            .padding(.leading, side)
-                            .padding(.trailing, 20)
-                            .padding(.top, 8)
-                            .padding(.bottom, 32)
+            // Day and Week need the room for their columns first.
+            let hasSidebar = !model.calendarSidebarHidden && proxy.size.width >= (mode == .week ? 1100 : 820)
+            // The sidebar runs from the top; the toolbar sits over the calendar beside it.
+            HStack(alignment: .top, spacing: 0) {
+                if hasSidebar {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 28) {
+                            monthView
+                            CalendarSources(model: model, month: month)
                         }
-                        .frame(width: 236 + side)
-                        .scrollIndicators(.never)
+                        // The same left edge as the mailbox list's rows.
+                        .padding(.leading, 18)
+                        .padding(.trailing, 16)
+                        // Its month's name sits level with the toolbar beside it.
+                        .padding(.top, wide ? 15 : Space.s + 3)
+                        .padding(.bottom, 32)
                     }
+                    .frame(width: 236 + side)
+                    .scrollIndicators(.never)
+                }
+                VStack(alignment: .leading, spacing: 0) {
+                    toolbar(mode: mode, modes: modes, hasSidebar: hasSidebar)
+                        // Lined up with the edge of the grid below.
+                        .padding(.leading, hasSidebar ? 12 : side)
+                        // The same right edge as the inbox's buttons.
+                        .padding(.trailing, Space.m)
+                        .padding(.top, wide ? 12 : Space.s)
+                        .padding(.bottom, wide ? 22 : Space.m)
                     switch mode {
                     case .agenda:
                         agendaPage(hasSidebar: hasSidebar, side: side)
@@ -78,12 +83,22 @@ struct CalendarPage: View {
                                          scrollDays: { scrollDays($0, mode: mode) })
                             .id(mode)
                     case .month:
-                        MonthBoard(model: model, month: month) { go(to: $0, mode: .day) }
+                        MonthBoard(model: model, month: $month, openDay: { go(to: $0, mode: .day) })
                     }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .background(Paper.panel)
+            // The sidebar on the mailbox list's grey, the whole height, with a hairline beside it.
+            .background {
+                HStack(spacing: 0) {
+                    if hasSidebar {
+                        Paper.sidebar.frame(width: 236 + side)
+                        Rectangle().fill(Line.hairline).frame(width: 1)
+                    }
+                    Paper.panel
+                }
+                .ignoresSafeArea()
+            }
         }
         .task(id: month) { await model.refreshCalendar(around: month) }
         .calendarEditing(editor)
@@ -91,18 +106,13 @@ struct CalendarPage: View {
 
     private func toolbar(mode: CalendarMode, modes: [CalendarMode], hasSidebar: Bool) -> some View {
         HStack(spacing: 12) {
-            if showsTitle {
-                Text("Calendar").font(.system(size: Look.size(24), weight: .bold)).foregroundStyle(Ink.primary)
-                    .fixedSize()
-                    // With the sidebar, the rest starts where the page does.
-                    .frame(width: hasSidebar ? 236 - 12 : nil, alignment: .leading)
-            }
             if mode != .agenda {
                 // Back, Today, forward: one glass capsule, as in Apple's calendars.
                 HStack(spacing: 0) {
                     GlassIconButton("chevron.left", help: "Previous") { step(mode, by: -1) }
                     Button { go(to: Date(), mode: mode) } label: {
                         Text("Today")
+                            .fixedSize()
                             .font(TypeScale.label.weight(.medium))
                             .foregroundStyle(Ink.primary)
                             .padding(.horizontal, 6)
@@ -114,14 +124,19 @@ struct CalendarPage: View {
                 }
                 .padding(.horizontal, 3)
                 .glassCapsule(tint: nil)
+                .fixedSize()
+                // The first thing to give way when the window narrows.
                 Text(verbatim: Self.title(for: mode, day: day, month: month, week: shownDays(.week)))
                     .font(.system(size: Look.size(15), weight: .semibold))
                     .foregroundStyle(Ink.primary)
                     .lineLimit(1)
+                    .truncationMode(.tail)
                     .minimumScaleFactor(0.8)
+                    .layoutPriority(-1)
             }
             Spacer(minLength: 8)
             CalendarModeSwitcher(modes: modes, mode: mode) { chosenMode = $0.rawValue }
+                .fixedSize()
             HStack(spacing: 0) {
                 GlassIconButton("plus", help: editor.canAdd ? "New Event" : "Show the Calendar app or connect a mailbox's calendar to add events") {
                     editor.newEvent(start: Self.newEventStart(on: day))
@@ -143,6 +158,7 @@ struct CalendarPage: View {
             }
             .padding(.horizontal, 3)
             .glassCapsule(tint: nil)
+            .fixedSize()
             if !hasSidebar {
                 IconButton("tray.full", help: "Where meetings come from") { showsSources.toggle() }
                     .popover(isPresented: $showsSources) {
@@ -267,6 +283,7 @@ struct CalendarPage: View {
 /// A month of days, Monday or Sunday first as the region likes it, with a dot under days that
 /// have something on. Today is in the accent colour; the chosen day sits on a soft circle.
 struct MonthGrid: View {
+    @Environment(\.mailAccent) private var accent
     @Binding var month: Date
     @Binding var day: Date
     let marked: Set<Date>
@@ -324,15 +341,6 @@ struct MonthGrid: View {
             }
             .id(month)
             .transition(.opacity)
-            Button("Today") {
-                day = Calendar.current.startOfDay(for: Date())
-                month = Calendar.current.dateInterval(of: .month, for: day)?.start ?? month
-            }
-            .buttonStyle(.plain)
-            .font(TypeScale.label.weight(.medium))
-            .foregroundStyle(Palette.accent)
-            .opacity(Calendar.current.isDateInToday(day) ? 0 : 1)
-            .disabled(Calendar.current.isDateInToday(day))
         }
     }
 
@@ -342,6 +350,7 @@ struct MonthGrid: View {
 }
 
 private struct DayCell: View {
+    @Environment(\.mailAccent) private var accent
     let date: Date
     let inMonth: Bool
     let isChosen: Bool
@@ -355,11 +364,11 @@ private struct DayCell: View {
                 Text(verbatim: "\(Calendar.current.component(.day, from: date))")
                     .font(.system(size: Look.size(13), weight: isToday ? .bold : .regular))
                     .monospacedDigit()
-                    .foregroundStyle(isToday ? Palette.accent : inMonth ? Ink.primary : Ink.quaternary)
+                    .foregroundStyle(isToday ? accent : inMonth ? Ink.primary : Ink.quaternary)
                     .frame(width: 30, height: 30)
-                    .background { if isChosen { Circle().fill(Palette.accent.opacity(0.14)) } }
+                    .background { if isChosen { Circle().fill(accent.opacity(0.14)) } }
                 Circle()
-                    .fill(isMarked ? Palette.accent.opacity(inMonth ? 1 : 0.4) : .clear)
+                    .fill(isMarked ? accent.opacity(inMonth ? 1 : 0.4) : .clear)
                     .frame(width: 4, height: 4)
             }
             .frame(maxWidth: .infinity)
@@ -375,6 +384,7 @@ private struct DayCell: View {
 /// meetings beside it. Meetings that have ended are left out; today has a quiet line for now,
 /// gaps of half an hour or more say so, and a meeting that clashes with the one before says it.
 private struct AgendaList: View {
+    @Environment(\.mailAccent) private var accent
     let model: MailModel
     let items: [AgendaItem]
     let from: Date
@@ -444,7 +454,7 @@ private struct AgendaList: View {
                         HStack(spacing: 8) {
                             Text(verbatim: Self.title(for: entry.day))
                                 .font(.system(size: Look.size(13), weight: .semibold))
-                                .foregroundStyle(isToday ? Palette.accent : Ink.primary)
+                                .foregroundStyle(isToday ? accent : Ink.primary)
                             if !Calendar.current.isDateInToday(entry.day) && !Calendar.current.isDateInTomorrow(entry.day) {
                                 EmptyView()
                             } else {
@@ -548,15 +558,16 @@ enum Countdown {
 
 /// Where now is in today's meetings: a dot, the time and a thin line in the accent colour.
 private struct NowLine: View {
+    @Environment(\.mailAccent) private var accent
     let time: Date
 
     var body: some View {
         HStack(spacing: 8) {
-            Circle().fill(Palette.accent).frame(width: 7, height: 7)
+            Circle().fill(accent).frame(width: 7, height: 7)
             Text(verbatim: time.formatted(date: .omitted, time: .shortened))
                 .font(.system(size: Look.size(11), weight: .semibold).monospacedDigit())
-                .foregroundStyle(Palette.accent)
-            Rectangle().fill(Palette.accent.opacity(0.5)).frame(height: 1)
+                .foregroundStyle(accent)
+            Rectangle().fill(accent.opacity(0.5)).frame(height: 1)
         }
         .padding(.leading, 9)
         .padding(.vertical, 4)
@@ -569,6 +580,7 @@ private struct NowLine: View {
 /// the next one), what and where, Going? with Yes, Maybe and No, and Join. Clicking it opens the
 /// email its invitation came in.
 struct AgendaRow: View {
+    @Environment(\.mailAccent) private var accent
     let model: MailModel
     @Environment(CalendarEditor.self) private var editor: CalendarEditor?
     let item: AgendaItem
@@ -599,7 +611,7 @@ struct AgendaRow: View {
                 if let startsIn {
                     Text(verbatim: startsIn)
                         .font(.system(size: Look.size(12), weight: .semibold))
-                        .foregroundStyle(Palette.accent)
+                        .foregroundStyle(accent)
                 }
             }
             .frame(width: 120, alignment: .leading)
@@ -663,6 +675,7 @@ struct AgendaRow: View {
 
 /// Yes, Maybe and No; your answer is filled in the accent colour.
 struct GoingPicker: View {
+    @Environment(\.mailAccent) private var accent
     let response: CalendarInvite.Response?
     /// An answer is on its way: the picker waits, so it can't be sent twice.
     var isSending = false
@@ -678,7 +691,7 @@ struct GoingPicker: View {
                         .foregroundStyle(isOn ? Ink.inverse : Ink.secondary)
                         .padding(.horizontal, 11)
                         .frame(height: Look.gap(24))
-                        .background(isOn ? Palette.accent : Fill.one, in: Capsule())
+                        .background(isOn ? accent : Fill.one, in: Capsule())
                         .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -695,15 +708,16 @@ struct GoingPicker: View {
 /// Join: filled in the accent colour when the meeting is about to start or on now, a soft
 /// tint of it before that.
 struct JoinButtonStyle: ButtonStyle {
+    @Environment(\.mailAccent) private var accent
     let prominent: Bool
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: Look.size(12), weight: .semibold))
-            .foregroundStyle(prominent ? Ink.inverse : Palette.accent)
+            .foregroundStyle(prominent ? Ink.inverse : accent)
             .padding(.horizontal, 16)
             .frame(height: Look.gap(28))
-            .background(prominent ? Palette.accent : Palette.accent.opacity(0.12), in: Capsule())
+            .background(prominent ? accent : accent.opacity(0.12), in: Capsule())
             .opacity(configuration.isPressed ? 0.75 : 1)
     }
 }
@@ -712,14 +726,19 @@ struct JoinButtonStyle: ButtonStyle {
 /// whole calendar once connected), the calendars in this device's Calendar app, and Reminders.
 /// Each in its own colour, as on the page. Connecting and showing more happens here too.
 struct CalendarSources: View {
+    @Environment(\.mailAccent) private var accent
     let model: MailModel
     let month: Date
     @Environment(\.webAuthenticationSession) private var webAuthentication
     @State private var connecting: UUID?
     @State private var problem: String?
     @State private var working: String?
-    /// Mailboxes whose list of calendars is folded away.
-    @State private var foldedMailboxes: Set<UUID> = []
+    /// Mailboxes whose list of calendars is folded away, kept between launches.
+    @AppStorage("calendar.foldedMailboxes") private var foldedList = ""
+    private var foldedMailboxes: Set<UUID> {
+        get { Set(foldedList.split(separator: ",").compactMap { UUID(uuidString: String($0)) }) }
+        nonmutating set { foldedList = newValue.map(\.uuidString).sorted().joined(separator: ",") }
+    }
 
     private var mailboxes: [MailAccount] { model.accounts }
 
@@ -838,7 +857,7 @@ struct CalendarSources: View {
                     }
                     .buttonStyle(.plain)
                     .font(TypeScale.label.weight(.semibold))
-                    .foregroundStyle(Palette.accent)
+                    .foregroundStyle(accent)
                 }
             }
         }
@@ -882,7 +901,7 @@ struct CalendarSources: View {
             Button("Connect") { Task { await connect(account) } }
                 .buttonStyle(.plain)
                 .font(TypeScale.label.weight(.semibold))
-                .foregroundStyle(Palette.accent)
+                .foregroundStyle(accent)
                 .tip("Show this mailbox's whole calendar")
         }
     }
@@ -986,6 +1005,7 @@ private struct FoldButton: View {
 /// A calendar in the list: a box in its colour, ticked while it's shown, its name, and
 /// whatever goes on the right.
 private struct CalendarCheckRow<Trailing: View>: View {
+    @Environment(\.mailAccent) private var accent
     let title: String
     /// Nil for the app's accent colour.
     let colorIndex: Int?
@@ -997,7 +1017,7 @@ private struct CalendarCheckRow<Trailing: View>: View {
         HStack(spacing: 8) {
             Button { set(!isOn) } label: {
                 HStack(spacing: 8) {
-                    let color = colorIndex.map(Palette.account) ?? Palette.accent
+                    let color = colorIndex.map(Palette.account) ?? accent
                     ZStack {
                         RoundedRectangle(cornerRadius: 4, style: .continuous)
                             .fill(isOn ? color : .clear)
@@ -1069,6 +1089,7 @@ struct ReminderRow: View {
 
 /// The circle that ticks a reminder done, here and in the Reminders app.
 struct ReminderCheck: View {
+    @Environment(\.mailAccent) private var accent
     let model: MailModel
     let reminder: DueReminder
     var size: CGFloat = 16
@@ -1076,9 +1097,9 @@ struct ReminderCheck: View {
     var body: some View {
         Button { withAnimation(Motion.quick) { model.setDone(!reminder.isDone, reminder: reminder) } } label: {
             ZStack {
-                Circle().strokeBorder(reminder.isDone ? Palette.accent : Ink.quaternary, lineWidth: 1.5)
+                Circle().strokeBorder(reminder.isDone ? accent : Ink.quaternary, lineWidth: 1.5)
                 if reminder.isDone {
-                    Circle().fill(Palette.accent).padding(3)
+                    Circle().fill(accent).padding(3)
                 }
             }
             .frame(width: Look.size(size), height: Look.size(size))

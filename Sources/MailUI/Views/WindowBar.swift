@@ -42,14 +42,22 @@ struct WindowBar: View {
                 // Next up column lists them all, so the badge steps aside while it shows.
                 .overlay(alignment: .trailing) {
                     HStack(spacing: Space.s) {
+                        // The next thing first, so the icons sit together at the end. In a narrow
+                        // window there's no room beside search; the Calendar shows it already.
+                        if MailModel.nextUpAvailable && !model.isNextUpOnScreen && !model.isWindowNarrow && model.place != .calendar {
+                            NextUpBadge(model: model)
+                        }
                         // Whether mail is up to date, and the Outbox while something waits to go.
                         if !model.outbox.isEmpty, !model.isWindowNarrow {
                             OutboxButton(model: model)
                         }
                         SyncStatusButton(model: model)
-                        // In a narrow window there's no room for either beside search.
-                        if MailModel.nextUpAvailable && !model.isNextUpOnScreen && !model.isWindowNarrow { NextUpBadge(model: model) }
-                        if MailModel.nextUpAvailable && model.layout == .panels && !model.isWindowNarrow {
+                        if model.place == .calendar {
+                            // On the Calendar, the same place puts its sidebar away and back.
+                            IconButton("sidebar.left", help: model.calendarSidebarHidden ? "Show Sidebar" : "Hide Sidebar") {
+                                withAnimation(Motion.quick) { model.calendarSidebarHidden.toggle() }
+                            }
+                        } else if MailModel.nextUpAvailable && model.layout == .panels && !model.isWindowNarrow {
                             IconButton("sidebar.right", help: model.showsNextUp ? "Hide Next up" : "Show Next up") {
                                 withAnimation(Motion.quick) { model.showsNextUp.toggle() }
                             }

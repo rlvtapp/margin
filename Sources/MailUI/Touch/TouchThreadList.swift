@@ -115,7 +115,7 @@ struct TouchThreadList: View {
         } else if model.place == .subscriptions {
             SubscriptionsPage(model: model, showsTitle: true)
         } else if model.place == .calendar {
-            CalendarPage(model: model, showsTitle: false)
+            CalendarPage(model: model)
         } else {
             List(selection: Binding(get: { model.selectedThreadID }, set: { model.select($0) })) {
                 // Home leads with what needs you, then the rest by day; other places are one list.

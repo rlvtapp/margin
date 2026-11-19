@@ -466,6 +466,8 @@ public final class MailModel {
     public var calendarHourHeight: Double = 48 { didSet { environment.defaults.set(calendarHourHeight, forKey: "calendar.hourHeight") } }
     /// The shortest an hour may be: the whole day just fills the view. Set by the view.
     public var smallestHourHeight: Double = 20
+    /// The Calendar's own sidebar (its month and list of calendars) put away; kept.
+    public var calendarSidebarHidden = false { didSet { environment.defaults.set(calendarSidebarHidden, forKey: "calendar.sidebarHidden") } }
     /// When each of them is busy, by lowercased address, for `colleagueRange`.
     public internal(set) var colleagueBusy: [String: [BusyTime]] = [:]
     /// Those whose calendar couldn't be seen.
@@ -737,6 +739,7 @@ public final class MailModel {
         hiddenCalendars = Set(environment.defaults.stringArray(forKey: "calendar.hidden") ?? [])
         comparedPeople = (environment.defaults.data(forKey: "calendar.compare")).flatMap { try? JSONDecoder().decode([ComparedPerson].self, from: $0) } ?? []
         calendarHourHeight = environment.defaults.object(forKey: "calendar.hourHeight") as? Double ?? Self.defaultHourHeight
+        calendarSidebarHidden = environment.defaults.bool(forKey: "calendar.sidebarHidden")
         singleKeyShortcuts = environment.defaults.object(forKey: "singleKeyShortcuts") as? Bool ?? true
         colorBlindSafe = environment.defaults.bool(forKey: "colorBlindSafe")
         increaseContrast = environment.defaults.bool(forKey: "increaseContrast")

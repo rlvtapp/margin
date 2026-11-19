@@ -54,6 +54,7 @@ struct PlacedMeeting: Identifiable {
 /// A day or a week: a column per day with the hours down the side, all-day events and
 /// reminders in a strip above, and a line for now.
 struct CalendarTimeline: View {
+    @Environment(\.mailAccent) private var accent
     let model: MailModel
     let visibleDays: [Date]
     /// Clicking a day's heading in a week opens that day.
@@ -61,17 +62,17 @@ struct CalendarTimeline: View {
     /// Scrolling sideways: moves the days in view by this many.
     var scrollDays: (Int) -> Void = { _ in }
 
-    /// Sideways scrolling: how far the days have moved, in points, short of a whole day.
-    @State private var slide: CGFloat = 0
-    /// True from the first sideways movement until the days settle on whole columns.
-    @State private var sliding = false
+    /// Sideways scrolling, kept in its own object so a move redraws only the sliding layers,
+    /// not the whole week (which would re-sort every event at each step of the fingers).
+    @State private var slider = DaySlider()
     @State private var columnWidth: CGFloat = 100
     /// A swipe in Day with colleagues: one day per swipe, as their columns can't slide.
     @State private var swipe: CGFloat = 0
     @State private var position = ScrollPosition(edge: .top)
     /// Where the hours are scrolled to, and how tall the view is, for zooming in place.
-    @State private var scrollY: CGFloat = 0
-    @State private var viewportHeight: CGFloat = 600
+    /// Where the hours are scrolled to, for zooming in place. Not observed: it changes every
+    /// frame of scrolling, and the week mustn't be rebuilt for that.
+    @State private var scroll = ScrollMetrics()
     /// A pinch in progress: the hour height, scroll and finger position it started from.
     @State private var pinch: (height: Double, scroll: CGFloat, anchor: CGFloat)?
 
@@ -84,11 +85,13 @@ struct CalendarTimeline: View {
     /// down the side of every day.
     private var people: [ComparedPerson] { model.comparedPeople }
     private var sideBySide: Bool { visibleDays.count == 1 && !people.isEmpty }
-    /// While sliding, a day either side comes along, so there's never a gap at the edge.
+    /// While sliding, as many days again come along on each side, so the fingers only move a
+    /// picture: nothing is rebuilt until the days settle.
+    private var buffer: Int { max(visibleDays.count, 2) }
     private var days: [Date] {
-        guard sliding, let first = visibleDays.first, let last = visibleDays.last else { return visibleDays }
+        guard slider.isSliding, let first = visibleDays.first else { return visibleDays }
         let calendar = Calendar.current
-        return [calendar.date(byAdding: .day, value: -1, to: first) ?? first] + visibleDays + [calendar.date(byAdding: .day, value: 1, to: last) ?? last]
+        return (-buffer..<(visibleDays.count + buffer)).compactMap { calendar.date(byAdding: .day, value: $0, to: first) }
     }
 
     var body: some View {
@@ -111,7 +114,6 @@ struct CalendarTimeline: View {
                             rolling(width: width, column: column) { allDayStrip(items) } gutter: { Paper.panel }
                                 .background(Paper.panel)
                                 .overlay(alignment: .bottom) { Rectangle().fill(Line.hairline).frame(height: 1) }
-                                .shadow(color: .black.opacity(allDayRows(items) > 1 ? 0.08 : 0), radius: 6, y: 3)
                         }
                         .zIndex(1)
                     hours(items, now: context.date, width: width, column: column)
@@ -121,7 +123,7 @@ struct CalendarTimeline: View {
             .onChange(of: column) { _, new in columnWidth = new }
         }
         #if os(macOS)
-        .background(DayScroller(move: slideBy, end: settle, step: { scrollDays($0) }))
+        .background(DayScroller(start: { slider.travel = 0 }, move: slideBy, end: { settle(velocity: $0) }, step: { scrollDays($0) }))
         #endif
     }
 
@@ -129,13 +131,8 @@ struct CalendarTimeline: View {
     @ViewBuilder
     private func rolling<Content: View, Gutter: View>(width: CGFloat, column: CGFloat, @ViewBuilder _ content: () -> Content,
                                                       @ViewBuilder gutter: () -> Gutter) -> some View {
-        if sliding {
-            content()
-                .frame(width: width + 2 * column)
-                .offset(x: -column + slide)
-                .frame(width: width, alignment: .leading)
-                .clipped()
-                .overlay(alignment: .leading) { gutter().frame(width: self.gutter).allowsHitTesting(false) }
+        if slider.isSliding {
+            RollingContent(slider: slider, width: width, column: column, buffer: buffer, gutterWidth: self.gutter, content: content(), gutter: gutter())
         } else {
             content()
         }
@@ -149,25 +146,40 @@ struct CalendarTimeline: View {
             swipe += dx
             return
         }
-        sliding = true
-        var next = slide + dx
-        while next <= -columnWidth { scrollDays(1); next += columnWidth }
-        while next >= columnWidth { scrollDays(-1); next -= columnWidth }
-        slide = next
+        if !slider.isSliding { slider.isSliding = true }
+        // One swipe moves at most the days in view (a week, or a day), however hard it's flicked.
+        let cap = CGFloat(visibleDays.count) * columnWidth
+        let travel = min(max(slider.travel + dx, -cap), cap)
+        let dx = travel - slider.travel
+        slider.travel = travel
+        var next = slider.offset + dx
+        // Only past the extra days drawn on each side do the days in view change mid-swipe.
+        let reach = CGFloat(buffer - 1) * columnWidth
+        while next <= -reach { scrollDays(1); next += columnWidth }
+        while next >= reach { scrollDays(-1); next -= columnWidth }
+        slider.offset = next
     }
 
     /// Lets go: the days lock onto whole columns, to the nearer day.
-    private func settle() {
+    private func settle(velocity: CGFloat = 0) {
         guard !sideBySide else {
             if abs(swipe) > 60 { withAnimation(Motion.quick) { scrollDays(swipe < 0 ? 1 : -1) } }
             swipe = 0
             return
         }
-        let snap = CalendarScroll.settle(slide: slide, column: columnWidth)
+        // Heading on only as far as the swipe may still go.
+        let room = CGFloat(visibleDays.count) * columnWidth - abs(slider.travel)
+        let carry = max(min(velocity * 10, room), -room) / 10
+        let snap = CalendarScroll.settle(slide: slider.offset, column: columnWidth, velocity: carry)
         if snap.days != 0 { scrollDays(snap.days) }
-        slide = snap.slide
-        // A quick spring that carries the swipe's speed, so the days click into place.
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) { slide = 0 } completion: { if slide == 0 { sliding = false } }
+        slider.offset = snap.slide
+        // The spring starts at the speed the days were moving (points per event, about 120 a
+        // second), so there's no catch where the fingers' movement hands over to the snap.
+        let speed = velocity * 120
+        let initial = snap.slide == 0 ? 0 : speed / -snap.slide
+        withAnimation(.interpolatingSpring(stiffness: 170, damping: 26, initialVelocity: initial)) { slider.offset = 0 } completion: {
+            if slider.offset == 0 { slider.isSliding = false }
+        }
     }
 
     // MARK: Zooming
@@ -176,7 +188,7 @@ struct CalendarTimeline: View {
     private var pinchGesture: some Gesture {
         MagnifyGesture()
             .onChanged { value in
-                if pinch == nil { pinch = (model.calendarHourHeight, scrollY, value.startLocation.y - scrollY) }
+                if pinch == nil { pinch = (model.calendarHourHeight, scroll.y, value.startLocation.y - scroll.y) }
                 guard let pinch else { return }
                 let height = CalendarScroll.zoomed(pinch.height, by: value.magnification, smallest: model.smallestHourHeight)
                 model.calendarHourHeight = height
@@ -196,12 +208,12 @@ struct CalendarTimeline: View {
                     HStack(spacing: 5) {
                         Text(verbatim: day.formatted(.dateTime.weekday(.abbreviated)))
                             .font(.system(size: Look.size(12), weight: .medium))
-                            .foregroundStyle(isToday ? Palette.accent : Ink.tertiary)
+                            .foregroundStyle(isToday ? accent : Ink.tertiary)
                         Text(verbatim: "\(Calendar.current.component(.day, from: day))")
                             .font(.system(size: Look.size(13), weight: .semibold).monospacedDigit())
                             .foregroundStyle(isToday ? Ink.inverse : Ink.primary)
                             .frame(minWidth: 24, minHeight: 24)
-                            .background { if isToday { Circle().fill(Palette.accent) } }
+                            .background { if isToday { Circle().fill(accent) } }
                     }
                     .frame(maxWidth: .infinity)
                     .contentShape(Rectangle())
@@ -332,7 +344,7 @@ struct CalendarTimeline: View {
                     // own column has the strong line and its dot.
                     if days.contains(where: { Calendar.current.isDateInToday($0) }) {
                         let y = offset(of: now, on: Calendar.current.startOfDay(for: now))
-                        Rectangle().fill(Palette.accent.opacity(0.4)).frame(height: 1)
+                        Rectangle().fill(accent.opacity(0.4)).frame(height: 1)
                             .padding(.leading, gutter)
                             .offset(y: y)
                             .allowsHitTesting(false)
@@ -341,7 +353,7 @@ struct CalendarTimeline: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 5)
                             .frame(height: 16)
-                            .background(Palette.accent, in: Capsule())
+                            .background(accent, in: Capsule())
                             .frame(width: gutter - 3, alignment: .trailing)
                             .offset(y: y - 8)
                             .allowsHitTesting(false)
@@ -362,8 +374,8 @@ struct CalendarTimeline: View {
             }
             .scrollPosition($position)
             .onScrollGeometryChange(for: CGRect.self) { CGRect(origin: $0.contentOffset, size: $0.containerSize) } action: { _, frame in
-                scrollY = frame.origin.y
-                viewportHeight = frame.height
+                scroll.y = frame.origin.y
+                scroll.height = frame.height
                 // The day always fills the view: a taller window can't leave a gap below.
                 let smallest = max(Double(frame.height / 24 * 48 / Look.gap(48)).rounded(.up), 20)
                 if model.smallestHourHeight != smallest { model.smallestHourHeight = smallest }
@@ -378,7 +390,7 @@ struct CalendarTimeline: View {
             .onChange(of: model.calendarHourHeight) { old, new in
                 // ⌘+ and ⌘−: keep the middle of the view where it was.
                 guard pinch == nil, old > 0 else { return }
-                position.scrollTo(y: CalendarScroll.anchoredScroll(scroll: scrollY, anchor: viewportHeight / 2, ratio: new / old))
+                position.scrollTo(y: CalendarScroll.anchoredScroll(scroll: scroll.y, anchor: scroll.height / 2, ratio: new / old))
             }
     }
 
@@ -448,8 +460,8 @@ struct CalendarTimeline: View {
                 }
                 if Calendar.current.isDate(now, inSameDayAs: day) {
                     HStack(spacing: 0) {
-                        Circle().fill(Palette.accent).frame(width: 7, height: 7)
-                        Rectangle().fill(Palette.accent).frame(height: 1.5)
+                        Circle().fill(accent).frame(width: 7, height: 7)
+                        Rectangle().fill(accent).frame(height: 1.5)
                     }
                     .offset(x: -3.5, y: offset(of: now, on: day) - 3.5)
                     .allowsHitTesting(false)
@@ -616,6 +628,7 @@ private struct MeetingBlock: View {
 /// The empty part of a day's column: drag to make an event as long as the drag, or
 /// double-click for an hour from there. Snaps to the quarter hour.
 private struct NewEventSurface: View {
+    @Environment(\.mailAccent) private var accent
     let day: Date
     let hourHeight: CGFloat
     let width: CGFloat
@@ -629,12 +642,12 @@ private struct NewEventSurface: View {
                 if let span {
                     let top = min(span.from, span.to), bottom = max(span.from, span.to)
                     RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Palette.accent.opacity(0.18))
+                        .fill(accent.opacity(0.18))
                         .overlay(alignment: .topLeading) {
                             Text(verbatim: time(at: top).formatted(date: .omitted, time: .shortened) + " – "
                                  + time(at: max(bottom, top + hourHeight / 4)).formatted(date: .omitted, time: .shortened))
                                 .font(.system(size: Look.size(11), weight: .semibold).monospacedDigit())
-                                .foregroundStyle(Palette.accent)
+                                .foregroundStyle(accent)
                                 .padding(5)
                         }
                         .frame(width: width - 6, height: max(bottom - top, hourHeight / 4))
@@ -798,33 +811,28 @@ struct EventDetail: View {
     }
 }
 
-/// A month as a calendar page: a box per day with what's on in it. Clicking a day opens it.
+/// Month: one continuous sheet of weeks, as Apple's Calendar has it. Scrolling moves week by
+/// week and settles on a whole row, a month at most per swipe; the month in the middle of the
+/// view is the month shown (its days in full ink, the others faded), and its name is the page's
+/// title. The first of each month says which month it is.
 struct MonthBoard: View {
     let model: MailModel
-    let month: Date
+    @Binding var month: Date
     let openDay: (Date) -> Void
 
+    private var calendar: Calendar { Calendar.current }
+
     private var weekdaySymbols: [String] {
-        let calendar = Calendar.current
         let symbols = calendar.shortStandaloneWeekdaySymbols
         let start = calendar.firstWeekday - 1
         return Array(symbols[start...] + symbols[..<start])
     }
 
-    /// Five or six weeks: as many as the month needs.
-    private var weeks: Int {
-        let calendar = Calendar.current
-        let first = MonthGrid.firstShown(in: month)
-        let last = calendar.dateInterval(of: .month, for: month)?.end ?? month
-        let days = calendar.dateComponents([.day], from: first, to: last).day ?? 35
-        return days > 35 ? 6 : 5
-    }
-
     var body: some View {
-        let calendar = Calendar.current
-        let first = MonthGrid.firstShown(in: month)
-        let end = calendar.date(byAdding: .day, value: weeks * 7, to: first) ?? first
-        let items = model.agenda(from: first, to: end)
+        // Everything on in the months around the one shown (what's been read), worked out once
+        // and shared out by day; scrolling itself never redoes it.
+        let byDay = Self.byDay(model.agenda(from: calendar.date(byAdding: .month, value: -2, to: month) ?? month,
+                                            to: calendar.date(byAdding: .month, value: 3, to: month) ?? month))
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
@@ -836,31 +844,137 @@ struct MonthBoard: View {
                 }
             }
             .padding(.bottom, 6)
-            GeometryReader { proxy in
-                let rowHeight = proxy.size.height / CGFloat(weeks)
-                VStack(spacing: 0) {
-                    ForEach(0..<weeks, id: \.self) { week in
-                        HStack(spacing: 0) {
-                            ForEach(0..<7, id: \.self) { weekday in
-                                let day = calendar.date(byAdding: .day, value: week * 7 + weekday, to: first) ?? first
-                                MonthDayBox(model: model, day: day,
-                                            inMonth: calendar.isDate(day, equalTo: month, toGranularity: .month),
-                                            items: items.filter { CalendarTimeline.covers($0, day) },
-                                            height: rowHeight) { openDay(day) }
-                            }
-                        }
-                        .frame(height: rowHeight)
-                    }
-                }
-                .overlay(alignment: .top) { Rectangle().fill(Line.hairline).frame(height: 1) }
-            }
+            .overlay(alignment: .bottom) { Rectangle().fill(Line.hairline).frame(height: 1) }
+            MonthSheet(model: model, month: $month, byDay: byDay, openDay: openDay)
         }
         .padding(.horizontal, 12)
         .padding(.bottom, 12)
     }
+
+    /// Items by the days they're on (an all-day or long event on each of its days).
+    static func byDay(_ items: [AgendaItem]) -> [Date: [AgendaItem]] {
+        let calendar = Calendar.current
+        var result: [Date: [AgendaItem]] = [:]
+        for item in items {
+            var day = calendar.startOfDay(for: item.start)
+            let last = item.end > item.start ? item.end.addingTimeInterval(-1) : item.start
+            var count = 0
+            while day <= last && count < 62 {
+                result[day, default: []].append(item)
+                guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
+                day = next
+                count += 1
+            }
+        }
+        return result
+    }
+}
+
+/// The scrolling weeks. Only this redraws while scrolling; the month changes (and the page with
+/// it) once a new month reaches the middle.
+private struct MonthSheet: View {
+    let model: MailModel
+    @Binding var month: Date
+    let byDay: [Date: [AgendaItem]]
+    let openDay: (Date) -> Void
+    /// The first week in view, kept so the buttons and the scroll agree.
+    @State private var topWeek: Date?
+    /// The month the list of weeks is built around; it moves only on a jump (‹ › or Today),
+    /// so scrolling never rebuilds the list.
+    @State private var anchor: Date?
+    /// Set while the sheet itself moved the month, so it doesn't scroll to it again.
+    @State private var settingFromScroll = false
+    @State private var scroll = ScrollMetrics()
+
+    private var calendar: Calendar { Calendar.current }
+
+    /// Two years of weeks around the anchor.
+    private var weeks: [Date] {
+        let start = MonthGrid.firstShown(in: anchor ?? month)
+        return (-60...60).compactMap { calendar.date(byAdding: .weekOfYear, value: $0, to: start) }
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            // Five weeks to a view, like a month at a glance.
+            let rowHeight = max(proxy.size.height / 5, 60)
+            ScrollView(.vertical) {
+                LazyVStack(spacing: 0) {
+                    ForEach(weeks, id: \.self) { week in
+                        MonthWeekRow(model: model, week: week, month: month, byDay: byDay, rowHeight: rowHeight, openDay: openDay)
+                            .frame(height: rowHeight)
+                            .id(week)
+                    }
+                }
+                .scrollTargetLayout()
+            }
+            .scrollIndicators(.never)
+            .scrollTargetBehavior(WeekRows(row: rowHeight, maxRows: 5, scroll: scroll))
+            .scrollPosition(id: $topWeek, anchor: .top)
+            .onScrollGeometryChange(for: CGFloat.self) { $0.contentOffset.y } action: { _, y in scroll.y = y }
+            .onAppear {
+                anchor = anchor ?? month
+                topWeek = MonthGrid.firstShown(in: month)
+            }
+            .onChange(of: topWeek) { _, week in
+                // The month is the one in the middle of the view: the week two rows down.
+                guard let week, let middle = calendar.date(byAdding: .day, value: 2 * 7 + 3, to: week),
+                      let shown = calendar.dateInterval(of: .month, for: middle)?.start, shown != month else { return }
+                settingFromScroll = true
+                month = shown
+            }
+            .onChange(of: month) { _, newMonth in
+                if settingFromScroll { settingFromScroll = false; return }
+                // A jump beyond the weeks built: build them around it.
+                if let first = weeks.first, let last = weeks.last, !(first...last).contains(MonthGrid.firstShown(in: newMonth)) {
+                    anchor = newMonth
+                }
+                withAnimation(Motion.quick) { topWeek = MonthGrid.firstShown(in: newMonth) }
+            }
+        }
+    }
+}
+
+/// Where a swipe through the month sheet lands: wherever the trackpad's own deceleration takes
+/// it (nothing snaps), but no more than `maxRows` weeks away, however hard it's flicked.
+private struct WeekRows: ScrollTargetBehavior {
+    let row: CGFloat
+    let maxRows: Int
+    let scroll: ScrollMetrics
+
+    func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
+        guard row > 0 else { return }
+        let from = scroll.y
+        let reach = row * CGFloat(maxRows)
+        target.rect.origin.y = max(min(max(target.rect.minY, from - reach), from + reach), 0)
+    }
+}
+
+/// One week of the month sheet.
+private struct MonthWeekRow: View {
+    let model: MailModel
+    let week: Date
+    let month: Date
+    let byDay: [Date: [AgendaItem]]
+    let rowHeight: CGFloat
+    let openDay: (Date) -> Void
+
+    var body: some View {
+        let calendar = Calendar.current
+        HStack(spacing: 0) {
+            ForEach(0..<7, id: \.self) { weekday in
+                let day = calendar.date(byAdding: .day, value: weekday, to: week) ?? week
+                MonthDayBox(model: model, day: day,
+                            inMonth: calendar.isDate(day, equalTo: month, toGranularity: .month),
+                            items: byDay[calendar.startOfDay(for: day)] ?? [],
+                            height: rowHeight) { openDay(day) }
+            }
+        }
+    }
 }
 
 private struct MonthDayBox: View {
+    @Environment(\.mailAccent) private var accent
     @Environment(CalendarEditor.self) private var editor: CalendarEditor?
     let model: MailModel
     let day: Date
@@ -879,11 +993,15 @@ private struct MonthDayBox: View {
         let shown = total > room ? max(0, room - 1) : room
         Button(action: open) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(verbatim: "\(Calendar.current.component(.day, from: day))")
-                    .font(.system(size: Look.size(12), weight: isToday ? .bold : .medium).monospacedDigit())
+                // The first of a month says which month, so the sheet reads as it scrolls.
+                let first = Calendar.current.component(.day, from: day) == 1
+                Text(verbatim: first && !isToday ? day.formatted(.dateTime.day().month(.abbreviated))
+                                                 : "\(Calendar.current.component(.day, from: day))")
+                    .font(.system(size: Look.size(12), weight: isToday || first ? .bold : .medium).monospacedDigit())
                     .foregroundStyle(isToday ? Ink.inverse : inMonth ? Ink.primary : Ink.quaternary)
+                    .padding(.horizontal, first && !isToday ? 4 : 0)
                     .frame(minWidth: 22, minHeight: 22)
-                    .background { if isToday { Circle().fill(Palette.accent) } }
+                    .background { if isToday { Circle().fill(accent) } }
                     .padding(.bottom, 2)
                 ForEach(items.prefix(shown)) { item in
                     line(item)
@@ -1156,4 +1274,43 @@ private struct FreeTogetherBand: View {
             .offset(y: top + 1)
             .frame(maxHeight: .infinity, alignment: .top)
     }
+}
+
+/// Where a sideways swipe has the days: observed only by the layers that slide.
+@MainActor @Observable
+final class DaySlider {
+    /// How far the days have moved, in points, short of a whole day.
+    var offset: CGFloat = 0
+    /// From the first sideways movement until the days settle on whole columns.
+    var isSliding = false
+    /// How far this swipe has moved the days, to keep it within one week.
+    @ObservationIgnored var travel: CGFloat = 0
+}
+
+/// A layer of the grid while it slides: a day wider on each side, moved under a fixed gutter.
+/// Only this reads the offset, so each step of the fingers just moves it.
+private struct RollingContent<Content: View, Gutter: View>: View {
+    let slider: DaySlider
+    let width: CGFloat
+    let column: CGFloat
+    /// Days drawn on each side of the ones in view.
+    let buffer: Int
+    let gutterWidth: CGFloat
+    let content: Content
+    let gutter: Gutter
+
+    var body: some View {
+        content
+            .frame(width: width + 2 * CGFloat(buffer) * column)
+            .offset(x: -CGFloat(buffer) * column + slider.offset)
+            .frame(width: width, alignment: .leading)
+            .clipped()
+            .overlay(alignment: .leading) { gutter.frame(width: gutterWidth).allowsHitTesting(false) }
+    }
+}
+
+/// The hours' scroll position, kept without telling SwiftUI (see `CalendarTimeline.scroll`).
+final class ScrollMetrics {
+    var y: CGFloat = 0
+    var height: CGFloat = 600
 }

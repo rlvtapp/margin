@@ -116,6 +116,7 @@ private struct CalendarEditingModifier: ViewModifier {
 /// where it lives; people are chips, with suggestions floating over the form; suggested times
 /// stay folded until asked for, with a choice of which of your calendars count. ⌘↩ saves.
 private struct EventEditorView: View {
+    @Environment(\.mailAccent) private var accent
     let editor: CalendarEditor
     let sheet: CalendarEditor.Sheet
     @Environment(\.dismiss) private var dismiss
@@ -504,7 +505,7 @@ private struct EventEditorView: View {
                 Text("Add a video call").font(TypeScale.row)
             }
             .buttonStyle(.plain)
-            .foregroundStyle(Palette.accent)
+            .foregroundStyle(accent)
             .help(Text("Moves the event to \(model.title(of: mailboxCalendar))"))
         } else {
             Text("No video calls in this calendar").font(TypeScale.row).foregroundStyle(Ink.quaternary)

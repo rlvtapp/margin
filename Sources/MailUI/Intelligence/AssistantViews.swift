@@ -81,10 +81,10 @@ struct LabelRow: View {
         if !labels.isEmpty || !suggestions.isEmpty || isAdding {
             FlowRow(spacing: 6) {
                 ForEach(labels, id: \.self) { label in
-                    LabelChip(text: label, style: .applied) { model.removeLabel(label, from: thread) }
+                    LabelChip(text: label, style: .applied) { model.removeLabel(label, from: thread, onServer: true) }
                 }
                 ForEach(suggestions, id: \.self) { label in
-                    LabelChip(text: label, style: .suggested) { model.addLabel(label, to: thread) }
+                    LabelChip(text: label, style: .suggested) { model.addLabel(label, to: thread, onServer: true) }
                 }
                 if isAdding {
                     TextField("Label", text: $newLabel)
@@ -94,7 +94,7 @@ struct LabelRow: View {
                         .padding(.horizontal, 8)
                         .background(Fill.one, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
                         .onSubmit {
-                            model.addLabel(newLabel, to: thread)
+                            model.addLabel(newLabel, to: thread, onServer: true)
                             newLabel = ""
                             isAdding = false
                         }

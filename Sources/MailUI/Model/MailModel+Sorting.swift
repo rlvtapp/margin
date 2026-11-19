@@ -241,7 +241,7 @@ extension MailModel {
         guard let bills = emailGroups.first(where: { $0.name == EmailGroup.starters[3].name }) else { return [] }
         // Only ones that ask you to pay: invoices taken automatically and receipts ask nothing.
         return inboxThreads(labelled: bills.name)
-            .filter { $0.isUnread && MailNotice.asksForPayment(subject: $0.latest.subject, text: latestText(of: $0)) }
+            .filter { $0.isUnread && MailVerdicts.shared[$0.latest]?.asksToPay == true }
             .sorted { $0.date > $1.date }
     }
 }

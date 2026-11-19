@@ -1,19 +1,14 @@
 import Foundation
-import MailCore
+@testable import MailCore
 import Testing
 @testable import MailUI
 
 @MainActor @Suite struct AskSpeedTests {
-    @Test func questionsTheFactsAnswerSkipTheMailSearch() {
-        #expect(MailModel.askTopic("What's on my calendar this week?") == .schedule)
-        #expect(MailModel.askTopic("Wat staat er in mijn agenda?") == .schedule)
-        #expect(MailModel.askTopic("Any meetings tomorrow?") == .schedule)
-        #expect(MailModel.askTopic("Any bills I still need to pay?") == .bills)
-        #expect(MailModel.askTopic("What needs a reply from me?") == .replies)
-        #expect(MailModel.askTopic("When does my flight to Lisbon leave?") == .general)
-        // Naming someone or something else still searches mail.
-        #expect(MailModel.askTopic("What did Noor say about the meeting?") == .general)
-        #expect(MailModel.askTopic("When is my meeting with Sam?") == .general)
+    /// What to look up is the model's call; its answer is read back as given.
+    @Test func theModelPlansWhatToLookUp() {
+        #expect(MailIntelligence.parsePlan(#"{"search": "Sam invoice", "calendar": false}"#) == AskPlan(search: "Sam invoice", calendar: false))
+        #expect(MailIntelligence.parsePlan(#"Plan: {"search": "", "calendar": true}"#) == AskPlan(search: "", calendar: true))
+        #expect(MailIntelligence.parsePlan("no idea") == AskPlan(search: "", calendar: false))
     }
 
     @Test func waitingStopsAtItsLimitAndTheWorkGoesOn() async {

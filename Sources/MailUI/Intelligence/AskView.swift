@@ -180,7 +180,7 @@ struct AskView: View {
                 .foregroundStyle(Ink.tertiary)
                 .padding(.top, 60)
             VStack(spacing: 6) {
-                Text("Ask about your mail").font(.system(size: Look.size(22), weight: .semibold)).foregroundStyle(Ink.primary)
+                Text("Ask about your mail and calendar").font(.system(size: Look.size(22), weight: .semibold)).foregroundStyle(Ink.primary)
                 Text("Your meetings, bills and conversations, answered from what's on this device.")
                     .font(TypeScale.row).foregroundStyle(Ink.secondary).multilineTextAlignment(.center)
             }
@@ -273,7 +273,7 @@ struct AskView: View {
                 Image(systemName: "paperclip").font(.system(size: Look.size(13))).foregroundStyle(Ink.tertiary).frame(width: 26, height: 30)
             }
             .buttonStyle(.plain).accessibilityLabel("Attach a picture or PDF")
-            TextField("Ask about your mail…", text: $question, axis: .vertical)
+            TextField("Ask about your mail and calendar…", text: $question, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(.system(size: Look.size(15)))
                 .lineLimit(1...6)
@@ -343,6 +343,12 @@ private struct TurnView: View {
             } else {
                 AnswerText(text: turn.answer)
                     .textSelection(.enabled)
+            }
+            if let events = turn.events, !events.isEmpty, !turn.isError {
+                AskEventList(model: model, events: events)
+            }
+            if let actions = turn.actions, !actions.isEmpty {
+                ForEach(actions) { action in AskActionRow(model: model, action: action) }
             }
             if !turn.sources.isEmpty { sources }
         }
@@ -418,6 +424,186 @@ private struct QuestionBubble: View {
     }
 }
 
+/// The events an answer was written from, by day, the way the Calendar's agenda lists them:
+/// each calendar's colour, the time, the place. A tap opens the invitation or the Calendar.
+private struct AskEventList: View {
+    let model: MailModel
+    let events: [AskEvent]
+    @State private var showsAll = false
+
+    private static let shortList = 8
+
+    var body: some View {
+        let shown = showsAll ? events : Self.shortened(events)
+        let days = Dictionary(grouping: shown) { Calendar.current.startOfDay(for: $0.start) }.sorted { $0.key < $1.key }
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("On your calendar").font(TypeScale.label.weight(.medium)).foregroundStyle(Ink.tertiary)
+                Spacer()
+                Button { model.isAsking = false; model.go(to: .calendar) } label: {
+                    Text("Open Calendar").font(TypeScale.label.weight(.medium)).foregroundStyle(Palette.accent)
+                }
+                .buttonStyle(.plain)
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(days, id: \.key) { day, items in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: Self.title(of: day)).font(TypeScale.label.weight(.semibold)).foregroundStyle(Ink.secondary)
+                            .padding(.bottom, 2)
+                        ForEach(items) { event in row(event) }
+                    }
+                }
+            }
+            .padding(10)
+            .background(Fill.one, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            if Self.shortened(events).count < events.count {
+                Button { withAnimation(Motion.quick) { showsAll.toggle() } } label: {
+                    Text(showsAll ? String(localized: "Show fewer") : String(localized: "Show all \(events.count)"))
+                        .font(TypeScale.label.weight(.medium)).foregroundStyle(Palette.accent)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.top, 2)
+    }
+
+    /// Whole days until about `shortList` events, so a day is never cut off partway.
+    static func shortened(_ events: [AskEvent]) -> [AskEvent] {
+        var shown: [AskEvent] = []
+        for event in events {
+            if shown.count >= shortList, let last = shown.last,
+               !Calendar.current.isDate(last.start, inSameDayAs: event.start) { break }
+            shown.append(event)
+        }
+        return shown
+    }
+
+    private func row(_ event: AskEvent) -> some View {
+        // What's already over today is quieter than what's still to come.
+        let over = event.end < Date()
+        return
+Button {
+            if let thread = event.invitationThreadID {
+                model.isAsking = false
+                model.showInvitation(threadID: thread, title: event.title)
+            } else {
+                model.isAsking = false
+                model.go(to: .calendar)
+            }
+        } label: {
+            HStack(alignment: .top, spacing: 10) {
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(Palette.account(event.colorIndex).opacity(event.declined || over ? 0.35 : 1))
+                    .frame(width: 3)
+                    .padding(.vertical, 2)
+                Text(verbatim: time(event))
+                    .font(TypeScale.label.monospacedDigit()).foregroundStyle(over ? Ink.tertiary : Ink.secondary)
+                    .frame(minWidth: 92, alignment: .leading)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(verbatim: event.title).font(TypeScale.label.weight(.medium))
+                        .foregroundStyle(event.declined || over ? Ink.tertiary : Ink.primary)
+                        .strikethrough(event.declined).lineLimit(2)
+                    if let place = event.location {
+                        Text(verbatim: place).font(TypeScale.label).foregroundStyle(Ink.tertiary).lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.vertical, 3)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func time(_ event: AskEvent) -> String {
+        if event.isAllDay { return String(localized: "All day") }
+        return event.start.formatted(date: .omitted, time: .shortened) + " – " + event.end.formatted(date: .omitted, time: .shortened)
+    }
+
+    static func title(of day: Date) -> String {
+        let calendar = Calendar.current
+        let date = day.formatted(.dateTime.weekday(.wide).day().month(.wide))
+        if calendar.isDateInToday(day) { return String(localized: "Today") + " · " + date }
+        if calendar.isDateInTomorrow(day) { return String(localized: "Tomorrow") + " · " + date }
+        return date
+    }
+}
+
+/// A calendar change the answer offers: nothing happens until it's confirmed here.
+private struct AskActionRow: View {
+    let model: MailModel
+    let action: AskCalendarAction
+    @State private var working = false
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol)
+                .font(.system(size: Look.size(13), weight: .medium))
+                .foregroundStyle(action.kind == .delete ? Status.danger : Ink.secondary)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(verbatim: action.title).font(TypeScale.label.weight(.semibold)).foregroundStyle(Ink.primary).lineLimit(1)
+                Text(when).font(TypeScale.label).foregroundStyle(Ink.secondary).lineLimit(1)
+                if action.tellsGuests {
+                    Text("Guests are told").font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                }
+            }
+            Spacer(minLength: Space.s)
+            switch action.state {
+            case .done:
+                Label(doneTitle, systemImage: "checkmark").font(TypeScale.label.weight(.medium)).foregroundStyle(Ink.secondary)
+            case .offered, .failed:
+                Button {
+                    working = true
+                    Task {
+                        await model.confirm(action)
+                        working = false
+                    }
+                } label: {
+                    Text(action.state == .failed ? String(localized: "Try Again") : confirmTitle)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(action.kind == .delete ? Status.danger : nil)
+                .controlSize(.small)
+                .disabled(working)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Fill.one, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+
+    private var symbol: String {
+        switch action.kind {
+        case .add: "calendar.badge.plus"
+        case .move: "calendar.badge.clock"
+        case .delete: "calendar.badge.minus"
+        }
+    }
+
+    private var when: String {
+        if action.isAllDay { return action.start.formatted(.dateTime.weekday(.wide).day().month(.wide)) }
+        return action.start.formatted(.dateTime.weekday(.wide).day().month(.wide).hour().minute()) + " – " + action.end.formatted(.dateTime.hour().minute())
+    }
+
+    private var confirmTitle: String {
+        switch action.kind {
+        case .add: String(localized: "Add to Calendar")
+        case .move: String(localized: "Move Event")
+        case .delete: String(localized: "Delete Event")
+        }
+    }
+
+    private var doneTitle: String {
+        switch action.kind {
+        case .add: String(localized: "Added")
+        case .move: String(localized: "Moved")
+        case .delete: String(localized: "Deleted")
+        }
+    }
+}
+
 /// What's happening while a question is answered: a quiet line with dots while searching
 /// and reading, then the answer itself as it's written.
 private struct AskProgressView: View {
@@ -442,6 +628,8 @@ private struct AskProgressView: View {
 
     private var status: String {
         switch progress {
+        case .lookingUp: String(localized: "Looking it up…")
+        case .calendar: String(localized: "Checking your calendar…")
         case .searching, nil: String(localized: "Searching your mail…")
         case .reading(let count): count == 0 ? String(localized: "Thinking…")
             : count == 1 ? String(localized: "Reading 1 conversation…") : String(localized: "Reading \(count) conversations…")

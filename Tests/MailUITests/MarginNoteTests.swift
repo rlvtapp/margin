@@ -16,7 +16,8 @@ import Testing
         // A bill still to pay gets "bill"; a card payment already made, filed with the bills, doesn't.
         let bills = model.emailGroups.first { $0.name == EmailGroup.starters[3].name }
         let invoice = try #require(threads.first { $0.subject.contains("Invoice question") })
-        model.bodies[MailModel.bodyKey(invoice.accountID, invoice.latest.id)] = MessageBody(text: "Invoice 1042: please pay by Friday via the payment link.")
+        // The assistant read that it asks to pay; the card payment it read as paid.
+        MailVerdicts.shared.set([MailVerdicts.key(invoice.latest): MailVerdict(automated: false, needsReply: false, asksToPay: true)])
         model.move(invoice, toGroup: bills)
         #expect(model.marginNote(for: invoice)?.text == "bill")
         let bank = try #require(threads.first { $0.subject.contains("Card payment") })
@@ -36,5 +37,23 @@ import Testing
         #expect(plain.contains("https://margin.relevate.app"))
         #expect(!plain.contains("itemid"))
         #expect(text.runs.contains { $0.link?.absoluteString == long })
+    }
+}
+
+@MainActor @Suite struct VerdictTests {
+    /// What the assistant read moves a conversation to Other and gives it its notes; nothing
+    /// else does.
+    @Test func verdictsMoveMailAndGiveNotes() async throws {
+        let model = MailModel(environment: .preview())
+        let account = model.accounts[0]
+        let message = MailMessage(id: "INBOX/v1", mailboxID: "INBOX", messageID: "<\(UUID().uuidString)@service.example>",
+                                  from: EmailAddress(name: "Service", address: "noreply@service.example"), to: [account.address],
+                                  subject: "Agreement signed", date: Date(), snippet: "You have signed the agreement.")
+        let thread = MailModel.tag(MailThread(id: "v1", messages: [message]), account: account.id)
+        model.setInbox([thread], for: account.id)
+        #expect(model.inboxThreads(nil).first?.split == .people)
+        model.record([thread.id: MailVerdict(automated: true, needsReply: false, asksToPay: false)], for: [thread])
+        #expect(model.inboxThreads(nil).first?.split == .updates)
+        #expect(model.marginNote(for: thread)?.kind != .reply)
     }
 }

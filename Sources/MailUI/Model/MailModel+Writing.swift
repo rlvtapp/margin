@@ -130,14 +130,6 @@ extension MailModel {
         saveWritingProfile()
     }
 
-    /// A draft as the person would write it: without dashes when they never use them, since
-    /// models add them even when asked not to.
-    func inYourStyle(_ text: String, language: String?) -> String {
-        loadWritingProfileIfNeeded()
-        guard learnsWriting, writingProfile.avoidsDashes(language: language) else { return text }
-        return WritingProfile.withoutDashes(text)
-    }
-
     /// What the other side last wrote in a conversation, for how they address you.
     func theirLatestText(in thread: MailThread) -> String? {
         let mine = Set(accounts.flatMap { [$0.address] + ($0.aliases ?? []) }.map { $0.address.lowercased() })
@@ -165,9 +157,14 @@ extension MailModel {
         // The quick assistant: Apple's model on this Mac by default, so the bubbles are fast and free.
         guard suggestsReplies, let intelligence = quickIntelligence, thread.split == .people, let account = account(thread.accountID),
               !mine.contains(thread.latest.from.address.lowercased()) else { return }
+        // Only for mail a person wrote: the assistant's verdict says, read now if it hasn't been.
+        if MailVerdicts.shared[thread.latest] == nil, !environment.isPreview {
+            await judge([thread], using: intelligence)
+        }
+        guard MailVerdicts.shared[thread.latest]?.automated != true else { return }
         let style = writingStyle(for: thread.latest.from, account: account, language: languageOf(thread), theirText: theirLatestText(in: thread))
         let suggestions = (try? await intelligence.suggestReplies(thread, bodies: bodies(of: thread), me: account.address, style: style)) ?? []
-        replySuggestions[thread.id] = suggestions.map { inYourStyle($0, language: languageOf(thread)) }
+        replySuggestions[thread.id] = suggestions
     }
 
     /// Opens the reply and drafts it from one of the suggestions.
@@ -227,7 +224,7 @@ extension MailModel {
         if from == nil { trimmedNote += (trimmedNote.isEmpty ? "" : " ") + "The sender's name isn't known: don't address them by name." }
         let written = try await intelligence.write(.draft(note: trimmedNote.isEmpty ? nil : trimmedNote), thread: thread,
                                                    bodies: ["try": MessageBody(text: text)], me: account.address, draft: "", style: style)
-        let reply = inYourStyle(written, language: language)
+        let reply = written
         loadWritingProfileIfNeeded()
         let languageName = language.flatMap { Locale.current.localizedString(forLanguageCode: $0) }
         let known = language.flatMap { writingProfile.languages[$0]?.messages } ?? 0

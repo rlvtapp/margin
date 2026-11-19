@@ -18,12 +18,6 @@ import Testing
         #expect(facts.contains("Sent mail still waiting for an answer: none."))
     }
 
-    /// "What needs a reply from me?" has no words worth searching mail for; a name or a topic does.
-    @Test func questionWordsAreNotSearched() {
-        #expect(MailModel.searchTerms(in: "What needs a reply from me?").isEmpty)
-        #expect(MailModel.searchTerms(in: "Did Sam reply about the invoice?") == "Sam invoice")
-    }
-
     /// One account failing leaves the others' fresh mail in place.
     @Test func oneFailingAccountDoesNotHoldTheOthersBack() async throws {
         let model = MailModel(environment: .preview())

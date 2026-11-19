@@ -95,20 +95,37 @@ extension MailModel {
 
     // MARK: Labels
 
+    /// The conversation's labels: the server's, where the account keeps labels, then Margin's own.
     public func labels(for thread: MailThread) -> [String] {
-        labelStore.labels(for: thread)
+        let own = labelStore.labels(for: thread)
+        let server = serverLabels(for: thread)
+        guard !server.isEmpty else { return own }
+        return server + own.filter { label in !server.contains { $0.caseInsensitiveCompare(label) == .orderedSame } }
     }
 
     public var allLabels: [String] { labelStore.allLabels }
 
-    public func addLabel(_ label: String, to thread: MailThread) {
+    /// `onServer`: a label the person gave, which goes on the server where the account keeps
+    /// labels. Ones Margin gives itself (groups, reminders) stay on this device.
+    public func addLabel(_ label: String, to thread: MailThread, onServer: Bool = false) {
         let cleaned = label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { return }
-        labelStore.add(cleaned, to: thread)
+        if onServer, keepsLabels(thread.accountID), !emailGroups.contains(where: { $0.name.caseInsensitiveCompare(cleaned) == .orderedSame }) {
+            // The name as the server already has it, so "projects" joins "Projects".
+            let known = mailboxes[thread.accountID!]?.compactMap(\.label).first { $0.caseInsensitiveCompare(cleaned) == .orderedSame }
+            changeServerLabel(known ?? cleaned, adding: true, on: thread)
+        } else {
+            labelStore.add(cleaned, to: thread)
+        }
         labelSuggestions[thread.id]?.removeAll { $0.caseInsensitiveCompare(cleaned) == .orderedSame }
     }
 
-    public func removeLabel(_ label: String, from thread: MailThread) {
+    /// `onServer`: the person took the label off (a chip's ✕), so a server label of that name
+    /// comes off on the server too. Margin's own removals (groups) only touch its own labels.
+    public func removeLabel(_ label: String, from thread: MailThread, onServer: Bool = false) {
+        if onServer, let server = serverLabels(for: thread).first(where: { $0.caseInsensitiveCompare(label) == .orderedSame }) {
+            changeServerLabel(server, adding: false, on: thread)
+        }
         labelStore.remove(label, from: thread)
         // Taking a conversation out of its group this way (the label's ✕) lets Sort Now look at
         // it again; "Not in a group" (`move(_:toGroup:)`) marks it to stay out afterwards.
@@ -183,7 +200,7 @@ extension MailModel {
                         self.reply?.draft.text = written + (self.reply?.sentFrom ?? "")
                     }
                 }
-                if reply != nil { reply?.draft.text = inYourStyle(text, language: languageOf(thread)) + (reply?.sentFrom ?? "") }
+                if reply != nil { reply?.draft.text = text + (reply?.sentFrom ?? "") }
             } catch {
                 show(error)
             }
@@ -203,38 +220,33 @@ extension MailModel {
 
     /// Finds the conversations most likely to hold the answer (offline index, any word),
     /// reads them, and asks the model to answer from those alone.
-    /// The question without filler words ("do I have…", "wanneer is…"), for searching saved mail.
-    static func searchTerms(in question: String) -> String {
-        let filler: Set<String> = [
-            "a", "an", "the", "do", "does", "did", "i", "me", "my", "you", "your", "we", "our", "is", "are", "was", "were",
-            "have", "has", "had", "any", "anything", "something", "what", "when", "where", "who", "why", "how", "which",
-            "to", "of", "in", "on", "at", "for", "from", "with", "about", "and", "or", "can", "could", "should", "will",
-            "would", "there", "this", "that", "it", "be", "show", "find", "tell", "give", "list", "please", "soon", "some",
-            // Words of the question itself, not of the mail it's about: "reply" alone finds every no-reply sender.
-            "need", "needs", "reply", "replies", "answer", "mail", "mails", "email", "emails", "message", "messages",
-            "today", "now", "new", "get", "got", "still",
-            "de", "het", "een", "ik", "mijn", "heb", "is", "er", "wat", "wanneer", "waar", "wie", "hoe", "van", "voor", "met",
-            "der", "die", "das", "ein", "eine", "ich", "mein", "habe", "ist", "was", "wann", "wo", "wer", "wie", "für", "mit",
-            "le", "la", "les", "un", "une", "je", "mon", "ma", "est", "quand", "où", "qui", "quoi", "pour", "avec",
-            "el", "los", "las", "una", "yo", "mi", "es", "qué", "cuándo", "dónde", "quién", "para", "con",
-        ]
-        return question.split(whereSeparator: { $0.isWhitespace || "?!.,;:¿¡“”\"'".contains($0) })
-            .map(String.init)
-            .filter { !filler.contains($0.lowercased()) }
-            .joined(separator: " ")
-    }
-
     /// What Margin knows that isn't in any one email: the day, upcoming meetings, bills not
     /// opened, mail that needs a reply and mail waiting on others. Given to Ask with each question.
-    func askFacts(now: Date = Date(), numbers: [String: Int] = [:]) -> String {
+    /// `calendar`: the calendar as the assistant looked it up for this question, in place of the
+    /// meetings already loaded. `offered`: changes waiting for the person to confirm.
+    /// `showsEvents`: the events read are shown under the answer, so the answer needn't list them.
+    func askFacts(now: Date = Date(), numbers: [String: Int] = [:], calendar: [String]? = nil, offered: [AskCalendarAction] = [],
+                  showsEvents: Bool = false) -> String {
         func cite(_ thread: MailThread) -> String { numbers[thread.id].map { " [\($0)]" } ?? "" }
         var lines = ["Today is \(now.formatted(.dateTime.weekday(.wide).day().month(.wide).year().hour().minute()))."]
-        let soon = agenda(from: now, to: now.addingTimeInterval(14 * 86_400)).filter { $0.response != .declined }.prefix(12)
+        let soonEnd = now.addingTimeInterval(14 * 86_400)
+        let all = agenda(from: now, to: soonEnd).filter { $0.response != .declined }
+        let soon = all.prefix(20)
         let from = readsAccountCalendars ? "from the calendar and invitations" : "from invitations in the mail; Margin can't see the rest of the calendar"
-        if soon.isEmpty {
+        // Not loaded isn't the same as empty: an empty list would be read as a free fortnight.
+        let loaded = !readsAccountCalendars || environment.isPreview
+            || (calendarEventsRange.map { $0.contains(now) && $0.contains(soonEnd) } ?? false)
+        if let calendar {
+            lines += calendar
+            if showsEvents {
+                lines.append("The person sees these events as a list right under your answer, with their days, times and places. Don't list them again: answer the question in one or two sentences with what matters most for it.")
+            }
+        } else if soon.isEmpty && !loaded {
+            lines.append("Upcoming meetings: not known, the calendar hasn't finished loading.")
+        } else if soon.isEmpty {
             lines.append("Upcoming meetings (next two weeks, \(from)): none.")
         } else {
-            lines.append("Upcoming meetings (next two weeks, \(from)):")
+            lines.append("Upcoming meetings (next two weeks, \(from)\(all.count > soon.count ? ", the first \(soon.count) of \(all.count)" : "")):")
             for event in soon {
                 let when = event.isAllDay ? event.start.formatted(.dateTime.weekday(.wide).day().month(.wide))
                     : event.start.formatted(.dateTime.weekday(.wide).day().month(.wide).hour().minute())
@@ -259,43 +271,105 @@ extension MailModel {
             for thread in owed { lines.append("- \(thread.latest.from.displayName) <\(thread.latest.from.address)>: \(thread.subject)\(cite(thread))") }
         }
         lines.append(waitingCount > 0 ? "Sent mail still waiting for an answer: \(waitingCount)." : "Sent mail still waiting for an answer: none.")
+        if !offered.isEmpty {
+            lines.append("Calendar changes offered to the person, not made yet: say what's ready and that they confirm it below the answer.")
+            for action in offered { lines.append("- " + Self.describe(action)) }
+        }
         return lines.joined(separator: "\n")
     }
 
     public func ask(_ question: String) {
+        ask(question, lookup: askLookupAgent())
+    }
+
+    /// `lookup`: the assistant, ready to look things up with tools (mail search, the calendar);
+    /// nil when it can't call tools, and a plan of what to look up stands in.
+    func ask(_ question: String, lookup agent: (any MailAgentModel)?) {
         guard let intelligence, !question.trimmingCharacters(in: .whitespaces).isEmpty else { return }
         let files = askAttachments
         askAttachments = []
         askAnswer = nil
         askSources = []
         assistantWork.insert("ask")
-        askProgress = .searching
+        askProgress = agent == nil ? .searching : .lookingUp
         Task {
             defer { assistantWork.remove("ask"); askProgress = nil }
-            // The calendar gets a moment to catch up; after that the answer uses what's known,
-            // and the refresh finishes for next time.
-            let refresh = Task { await refreshCalendar() }
-            await Self.wait(for: refresh, upTo: .milliseconds(1500))
-            // Questions the facts answer (the calendar, bills, replies owed) skip the search
-            // and the download of whole conversations: those made them slow.
-            let topic = Self.askTopic(question)
-            let threads = switch topic {
-            case .schedule: askScope(scheduleConversations())
-            case .general: askScope(await askConversations(for: question))
-            case .bills, .replies: askScope(await askConversations(for: question, searches: false))
+            let prompt = AskAttachment.prompt(question, with: files)
+            var threads: [MailThread] = []
+            var calendar: [String]?
+            var offered: [AskCalendarAction] = []
+            var events: [AskEvent] = []
+            var searched = false
+            var looked: AskLookup?
+            if let agent {
+                // The loaded months refresh in the background for later; the tools read what
+                // the question needs themselves, whatever the dates.
+                Task { await refreshCalendar() }
+                do {
+                    looked = try await lookUp(prompt, with: agent)
+                    // A server that might not support tools and called none most likely ignored
+                    // them: Ask plans instead, as it would without tools. Once one is used,
+                    // that's remembered.
+                    if assistantSettings.provider.actionSupport == .dependsOnModel, let calls = looked?.toolCalls {
+                        if calls > 0 {
+                            rememberActionSupport(true, key: assistantSettings.actionKey)
+                        } else if canTakeActions(assistantSettings) != true {
+                            looked = nil
+                        }
+                    }
+                } catch AssistantError.toolsUnsupported {
+                    if assistantSettings.provider.actionSupport == .dependsOnModel { rememberActionSupport(false, key: assistantSettings.actionKey) }
+                } catch {
+                    if Task.isCancelled { return }
+                }
             }
+            if let looked {
+                threads = looked.threads
+                searched = !threads.isEmpty
+                calendar = looked.readCalendar ? looked.facts : nil
+                offered = looked.actions
+                events = looked.events
+                // A question the calendar answered gets no conversations; otherwise what Home
+                // knows needs you comes after what was searched for.
+                if !(looked.readCalendar && threads.isEmpty) {
+                    for thread in await askConversations(for: "", searches: false)
+                    where !threads.contains(where: { $0.id == thread.id }) { threads.append(thread) }
+                }
+            } else {
+                // The calendar gets a moment to catch up; after that the answer uses what's known,
+                // and the refresh finishes for next time.
+                let refresh = Task { await refreshCalendar() }
+                await Self.wait(for: refresh, upTo: .milliseconds(1500))
+                // The model decides what to look up: words to search for, or nothing when the facts
+                // (the calendar, bills, replies owed) answer it, which skips the search and the
+                // download of whole conversations. Quick assistant, a couple of seconds at most.
+                let plan = await askPlan(for: question)
+                if plan.calendar {
+                    askProgress = .calendar
+                    if let read = await askPlannedCalendar(plan) {
+                        calendar = [read.facts]
+                        events = read.events
+                    }
+                }
+                threads = plan.calendar ? scheduleConversations() : []
+                for thread in await askConversations(for: plan.search, searches: !plan.search.isEmpty)
+                where !threads.contains(where: { $0.id == thread.id }) { threads.append(thread) }
+                searched = !plan.search.isEmpty
+            }
+            threads = askScope(Array(threads.prefix(10)))
             askProgress = .reading(threads.count)
-            let context = await askContext(threads, fetchMissing: topic == .general)
+            let context = await askContext(threads, fetchMissing: searched)
             let numbers = Dictionary(threads.enumerated().map { ($1.id, $0 + 1) }, uniquingKeysWith: { first, _ in first })
             let me = accounts.first?.address ?? EmailAddress(address: "me@example.com")
             do {
-                let answer = try await intelligence.ask(AskAttachment.prompt(question, with: files), about: context, me: me,
-                                                        facts: askFacts(numbers: numbers), style: askPreferences.style) { [weak self] text in
+                let answer = try await intelligence.ask(prompt, about: context, me: me,
+                                                        facts: askFacts(numbers: numbers, calendar: calendar, offered: offered, showsEvents: !events.isEmpty),
+                                                        style: askPreferences.style) { [weak self] text in
                     await MainActor.run { self?.askProgress = .writing(text) }
                 }
                 askAnswer = answer
                 askSources = answer.sources.compactMap { threads.indices.contains($0 - 1) ? threads[$0 - 1] : nil }
-                recordAsk(question, answer: answer.text, sources: askSources)
+                recordAsk(question, answer: answer.text, sources: askSources, actions: offered, events: events)
             } catch {
                 recordAsk(question, answer: error.localizedDescription, sources: [], isError: true)
             }
@@ -320,7 +394,7 @@ extension MailModel {
         for thread in inbox.filter({ $0.date >= today && InboxSplit.classify($0.latest) == .people }).prefix(3) {
             add(thread)
         }
-        let terms = searches ? Self.searchTerms(in: question) : ""
+        let terms = searches ? question : ""
         var hits = terms.isEmpty ? [] : await environment.cache.search(terms, limit: 80, anyWord: true)
         let current = Set(accounts.map(\.id))
         hits = hits.filter { hit in
@@ -389,21 +463,19 @@ extension MailModel {
         func add(_ index: Int, _ id: String, _ body: MessageBody) { all.append((index, id, body)) }
     }
 
-    /// What a question is about, so Ask reads no more mail than the answer needs.
-    enum AskTopic: Equatable { case schedule, bills, replies, general }
-
-    /// Words that mark a question about the calendar, bills or replies, in the languages Margin
-    /// speaks most. Anything else searches mail as before.
-    static func askTopic(_ question: String) -> AskTopic {
-        let text = question.lowercased()
-        func has(_ words: [String]) -> Bool { words.contains { text.contains($0) } }
-        // A question that names someone or something else still searches ("meeting with Noor about…").
-        if text.contains(" about ") || text.contains(" over ") || text.contains(" with ") { return .general }
-        if has(["calendar", "agenda", "meeting", "appointment", "schedule", "my week", "kalender", "afspraak", "vergader",
-                "termin", "besprechung", "réunion", "rendez-vous", "reunión", "cita", "riunione", "calendario", "reunião"]) { return .schedule }
-        if has(["bill", "invoice", "pay", "rekening", "factuur", "betalen", "rechnung", "facture", "factura", "fattura"]) { return .bills }
-        if has(["needs a reply", "need a reply", "reply to", "answer to", "owe", "beantwoorden", "antwoorden", "antworten", "répondre", "responder"]) { return .replies }
-        return .general
+    /// What the model says to look up for a question. If it doesn't answer in time, the whole
+    /// question is searched.
+    func askPlan(for question: String, now: Date = Date()) async -> AskPlan {
+        guard let intelligence = quickIntelligence ?? intelligence else { return AskPlan(search: question, calendar: false) }
+        let today = "\(Self.iso(now)), time zone \(TimeZone.current.identifier)"
+        let planned = await withTaskGroup(of: AskPlan?.self) { group in
+            group.addTask { try? await intelligence.plan(question, now: today) }
+            group.addTask { try? await Task.sleep(for: .seconds(3)); return nil }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first
+        }
+        return planned ?? AskPlan(search: question, calendar: false)
     }
 
     /// For a calendar question: the conversations behind the meetings coming up, from what's

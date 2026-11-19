@@ -3,6 +3,10 @@ import MailCore
 
 /// How far a question has got, shown in place of the answer until it's done.
 public enum AskProgress: Equatable, Sendable {
+    /// The assistant is choosing what to look up.
+    case lookingUp
+    /// Reading the calendar.
+    case calendar
     case searching
     case reading(Int)
     /// The answer as written so far.
@@ -25,6 +29,11 @@ public struct AskTurn: Identifiable, Codable, Hashable, Sendable {
     public var isError = false
     /// The conversations the answer cites, kept so they can be opened later.
     public var sources: [AskSource] = []
+    /// Calendar changes the answer offers, made when the person confirms each. Optional, so
+    /// chats saved before there were any still load.
+    public var actions: [AskCalendarAction]?
+    /// The calendar events the answer was written from, shown under it. Optional for the same reason.
+    public var events: [AskEvent]?
 }
 
 public struct AskSource: Codable, Hashable, Sendable {
@@ -129,11 +138,12 @@ extension MailModel {
         Task { await apply(.markRead, to: threads, announce: false) }
     }
 
-    func recordAsk(_ question: String, answer: String, sources: [MailThread], isError: Bool = false) {
+    func recordAsk(_ question: String, answer: String, sources: [MailThread], isError: Bool = false, actions: [AskCalendarAction] = [], events: [AskEvent] = []) {
         loadAskChatsIfNeeded()
         let turn = AskTurn(question: question, answer: answer, isError: isError,
                            sources: sources.map { AskSource(threadID: $0.id, accountID: $0.accountID,
-                                                            messages: $0.messages.map { var m = $0; m.body = nil; return m }) })
+                                                            messages: $0.messages.map { var m = $0; m.body = nil; return m }) },
+                           actions: actions.isEmpty ? nil : actions, events: events.isEmpty ? nil : events)
         if let index = askChats.firstIndex(where: { $0.id == currentAskChatID }) {
             askChats[index].turns.append(turn)
             askChats[index].date = Date()
@@ -233,7 +243,7 @@ extension MailModel {
         if let saved = askFile.load() { askChats = saved }
     }
 
-    private func saveAskChats() {
+    func saveAskChats() {
         askFile.save(askChats)
     }
 }

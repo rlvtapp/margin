@@ -85,10 +85,9 @@ extension MailModel {
             }
             return MarginNote(kind: .meeting, text: text)
         }
-        // In the Bills group, but only a bill to act on when it asks you to pay: an invoice
-        // that's taken automatically, or a receipt, needs nothing.
-        if let group = group(of: thread), group.name == Self.billsGroupName,
-           MailNotice.asksForPayment(subject: thread.latest.subject, text: latestText(of: thread)) {
+        // In the Bills group, but only a bill to act on when the assistant read that it asks you
+        // to pay: an invoice that's taken automatically, or a receipt, needs nothing.
+        if let group = group(of: thread), group.name == Self.billsGroupName, MailVerdicts.shared[thread.latest]?.asksToPay == true {
             return MarginNote(kind: .bill, text: String(localized: "bill"))
         }
         if owesReply(thread, now: now) {
@@ -107,9 +106,8 @@ extension MailModel {
         // Answered from anywhere (another app, the web, another device): your reply is in Sent,
         // even when the server doesn't mark their message as answered.
         guard !answeredInSent(thread), isFromSomeoneYouKnow(thread) else { return false }
-        // A reminder, confirmation or receipt from someone you know still asks nothing. Read
-        // last, as the costliest check, only for mail that passed the rest.
-        return !MailNotice.expectsNoReply(subject: latest.subject, text: latestText(of: thread))
+        // Whether it waits on an answer is the assistant's call; without one, no note.
+        return MailVerdicts.shared[latest]?.needsReply == true
     }
 
     /// The newest message's words: its text once downloaded, its preview until then.

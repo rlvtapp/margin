@@ -7,16 +7,16 @@ import { HeroScene } from "@/components/hero-scene";
 import { PrivacyDiagram } from "@/components/privacy-diagram";
 import { FeatureTabs } from "@/components/feature-tabs";
 import { BringYourOwn } from "@/components/bring-your-own";
-import { Showcase } from "@/components/showcase";
+import { Showcase, type ShowcaseView } from "@/components/showcase";
 
 export const Route = createFileRoute("/")({
 	component: Home,
 	head: () =>
 		seo({
 			path: "/",
-			title: "Margin: a free, open-source mail app for Mac",
+			title: "Margin: a free, open-source mail and calendar app for Mac",
 			description:
-				"Margin is a free, open-source mail app for Mac. It connects straight to Gmail, Outlook, iCloud and any IMAP or JMAP account, so nobody else handles your mail.",
+				"Margin is a free, open-source mail and calendar app for Mac. It connects straight to Gmail, Outlook, iCloud and any IMAP or JMAP account, so nobody else handles your mail.",
 		}),
 });
 
@@ -48,14 +48,107 @@ const more = [
 	{ title: "Every Mac", text: "Your mailboxes and settings on all your Macs, synced through your iCloud." },
 ];
 
+/** The calendar's own windows: Day, Week and Month, taken by the app's snapshot mode. */
+const calendarViews: ShowcaseView[] = [
+	{
+		id: "day",
+		label: "Day",
+		image: "mac-cal-day",
+		text: "Your day next to your colleagues': who's busy, who's out of office, and when you're all free.",
+		alt: "The calendar in Margin, showing a day: your meetings in one column, and three colleagues beside you, one of them out of office until Friday",
+	},
+	{
+		id: "week",
+		label: "Week",
+		image: "mac-cal-week",
+		text: "Drag across empty time to make an event, drag one to move it, press Delete to remove it.",
+		alt: "The calendar in Margin, showing a week of meetings, with the calendars of two mailboxes and the Mac's Calendar app listed on the left",
+	},
+	{
+		id: "month",
+		label: "Month",
+		image: "mac-cal-month",
+		text: "The whole month, with your Mac's calendars, birthdays and reminders in it too.",
+		alt: "The calendar in Margin, showing a month with meetings, a birthday and an all-day event",
+	},
+];
+
+/** What the calendar does, plainly. The detail is folded away underneath. */
+const calendarFacts: { title: string; text: string; icon: React.ReactNode }[] = [
+	{
+		title: "Every calendar, one place",
+		text: "Your mail accounts' calendars, your Mac's own calendars and your reminders, each in its colour.",
+		icon: (
+			<>
+				<rect x="2.5" y="3.5" width="15" height="14" rx="3" />
+				<path d="M2.5 8h15M6.5 2v3M13.5 2v3" />
+			</>
+		),
+	},
+	{
+		title: "Make, move, delete",
+		text: "Drag down empty time for a new event, drag it later, pull its edge to make it longer. Undo puts it back.",
+		icon: <path d="M10 2.5v15M2.5 10h15M7.5 5 10 2.5 12.5 5M7.5 15l2.5 2.5 2.5-2.5M5 7.5 2.5 10 5 12.5M15 7.5l2.5 2.5-2.5 2.5" />,
+	},
+	{
+		title: "Compare with colleagues",
+		text: "Put their day beside yours to see when they're busy or out of office, and when you're all free.",
+		icon: (
+			<>
+				<circle cx="7.5" cy="7" r="3" />
+				<circle cx="14" cy="8" r="2.4" />
+				<path d="M2 17c.6-3 2.8-4.6 5.5-4.6S12.4 14 13 17M13.5 12.6c2.3 0 4 1.4 4.5 4" />
+			</>
+		),
+	},
+	{
+		title: "A call link, built in",
+		text: "Invite people and the meeting gets a video call from your account. Join appears when it's time.",
+		icon: (
+			<>
+				<rect x="2.5" y="5.5" width="10.5" height="9" rx="2.5" />
+				<path d="m13 9 4.5-2.5v7L13 11" />
+			</>
+		),
+	},
+	{
+		title: "Suggested times",
+		text: "Add people and Margin suggests times when everyone's free, so nobody has to ask.",
+		icon: (
+			<>
+				<circle cx="10" cy="10" r="7.5" />
+				<path d="M10 5.5V10l3 2" />
+			</>
+		),
+	},
+	{
+		title: "Clash warnings",
+		text: "An invitation in your mail says what it clashes with, before you answer it.",
+		icon: (
+			<>
+				<path d="M10 2.8 18 16.5H2z" />
+				<path d="M10 8v3.6M10 14v.1" />
+			</>
+		),
+	},
+];
+
 const questions: { q: string; a: string }[] = [
 	{
 		q: "Is Margin really free?",
 		a: "Yes. There's no paid version, no subscription and no ads. We made it for fun, and it stays free.",
 	},
 	{
+		q: "Does it have a calendar?",
+		a: "Yes, a full one: Day, Week and Month, with your mail accounts' calendars, your Mac's calendars and your reminders together. You can make, move and delete events, compare calendars with colleagues and answer invitations, all without leaving Margin.",
+	},
+	{
 		q: "Which mail accounts work?",
 		a: "Gmail, Outlook and Microsoft 365, iCloud, Yahoo, Fastmail, Proton, Zoho, GMX, WEB.DE, mailbox.org, Posteo, AOL, and anything else that offers IMAP or JMAP. If you use your own domain, type your address and Margin works out who hosts it.",
+	},
+	{
+		q: "Can I sign in with Google?",
+		a: "Yes. While Google reviews Margin's sign-in, Google shows a \"Google hasn't verified this app\" screen first. Choose Advanced, then Go to Margin, and sign in as usual. The screen goes away once Google approves Margin. If you'd rather skip it, choose \"Use an app password instead\" when you add the mailbox.",
 	},
 	{
 		q: "Can you see my mail?",
@@ -78,8 +171,8 @@ const questions: { q: string; a: string }[] = [
 		a: "A Mac with macOS 15 or later.",
 	},
 	{
-		q: "When can I get it?",
-		a: "Soon, as a free download for Mac, straight from us rather than the Mac App Store.",
+		q: "How do I install it?",
+		a: "Download it from this page: it comes straight from us rather than the Mac App Store. This first version is signed with a free Apple development certificate while our Apple Developer membership is being set up, so the first time, open Margin, then choose Open Anyway in System Settings, under Privacy & Security. After that, Margin updates itself.",
 	},
 ];
 
@@ -95,27 +188,29 @@ function Home() {
 	return (
 		<>
 			<section className="hero">
-				<a className="badge" href="#look">
-					<span>New</span> Your calendar, next to your mail
+				<a className="badge" href="#calendar">
+					<span>New</span> A full calendar, next to your mail
 				</a>
 				<h1>
-					All your mail in one place.{" "}
+					Your mail and calendar in one place.{" "}
 					<br />
 					<span className="dim">Nothing in between.</span>
 				</h1>
 				<p className="lead">
-					Gmail, Outlook, iCloud and any IMAP or JMAP account, in one fast app
-					for Mac. It talks straight to your provider, so nobody
-					else handles your mail. Not even us.
+					Gmail, Outlook, iCloud and any IMAP or JMAP account, beside a full
+					calendar, in one fast app for Mac. It talks straight to your provider,
+					so nobody else handles your mail. Not even us.
 				</p>
 				<div className="actions">
-					<span className="button" aria-disabled="true">
-						Download for Mac, coming soon
-					</span>
+					<a className="button" href={site.download}>
+						Download for Mac
+					</a>
 					<a className="button ghost" href="#features">
 						See what it does
 					</a>
 				</div>
+				<InstallNote />
+				<GmailNote />
 				<p className="meta">
 					Free and open source, with no account to make.{" "}
 					<a href={site.source} rel="noreferrer">
@@ -137,6 +232,77 @@ function Home() {
 				</p>
 			</section>
 			<FeatureTabs />
+
+			<section className="block" id="calendar">
+				<h2>
+					Your calendar too.{" "}
+					<span className="dim">Right next to your mail.</span>
+				</h2>
+				<p className="lead">
+					Day, Week and Month, with your mail accounts' calendars, your Mac's
+					calendars and your reminders together. Make a meeting, move it, see
+					when colleagues are free, and answer invitations where they arrive.
+				</p>
+			</section>
+			<Showcase views={calendarViews} cycle={6} />
+			<ul className="cal-facts">
+				{calendarFacts.map((f) => (
+					<li key={f.title}>
+						<svg viewBox="0 0 20 20" aria-hidden="true">
+							{f.icon}
+						</svg>
+						<b>{f.title}</b>
+						<span>{f.text}</span>
+					</li>
+				))}
+			</ul>
+			<div className="faq cal-detail">
+				<details>
+					<summary>
+						How the calendar works, in detail
+						<svg viewBox="0 0 16 16" aria-hidden="true">
+							<path d="M8 3v10M3 8h10" />
+						</svg>
+					</summary>
+					<ul>
+						<li>
+							<b>Google and Microsoft 365</b> calendars are read and changed
+							through the provider's own interface, straight from your Mac. For
+							other mailboxes, Margin shows the invitations in your mail.
+						</li>
+						<li>
+							<b>The Calendar app and Reminders</b> stay off until you choose
+							Show in the list of calendars, and macOS asks first. Whatever
+							accounts they hold come along, and changes sync through them as
+							usual.
+						</li>
+						<li>
+							<b>Comparing calendars</b> needs a Microsoft 365 or Google account,
+							and works for people at your organization or who share their
+							calendar with you. Out of office comes from Microsoft 365; Google
+							only says busy.
+						</li>
+						<li>
+							<b>Suggested times</b> come from Microsoft 365 itself where it can,
+							otherwise from everyone's busy times. For people whose calendar
+							can't be seen, Margin suggests times you're free.
+						</li>
+						<li>
+							<b>Video calls</b> are made by your account's calendar, with the
+							call service it already uses. Your Mac's Calendar app can't add
+							one, so Margin offers to move the event to a mailbox's calendar.
+						</li>
+						<li>
+							<b>Answers to invitations</b> go to the organizer as standard
+							calendar replies, from the address that was invited. Changes
+							reach guests through the calendar itself.
+						</li>
+						<li>
+							All of it is in the <a href={`${site.source}/blob/main/docs/calendar.md`}>calendar's notes on GitHub</a>.
+						</li>
+					</ul>
+				</details>
+			</div>
 
 			<section className="block" id="look">
 				<h2>
@@ -318,9 +484,42 @@ function Home() {
 
 			<section className="final">
 				<img src="/icon.svg" alt="" width={84} height={84} />
-				<h2>Your mail, your way.</h2>
-				<p>Free and open source. Coming soon as a download for Mac.</p>
+				<h2>Your mail and calendar, your way.</h2>
+				<p>Free and open source, for Mac.</p>
+				<div className="actions">
+					<a className="button" href={site.download}>
+						Download for Mac
+					</a>
+				</div>
+				<InstallNote />
+				<GmailNote />
 			</section>
 		</>
+	);
+}
+
+/** The honest note beside every download button, until the app is notarized. */
+function InstallNote() {
+	return (
+		<p className="install-note">
+			This first version is signed with a free Apple development certificate
+			while our Apple Developer membership is being set up. The first time,
+			open it, then choose Open Anyway in System Settings › Privacy &amp;
+			Security. After that, Margin updates itself.{" "}
+			<Link to="/support" hash="install">
+				Step by step
+			</Link>
+		</p>
+	);
+}
+
+/** Beside the install note: Google sign-in until Google has reviewed it (docs/google-verification.md). */
+function GmailNote() {
+	return (
+		<p className="install-note">
+			Using Gmail? While Google reviews Margin, signing in shows a "Google
+			hasn't verified this app" screen. Choose Advanced, then Go to Margin.
+			It goes away once Google approves it.
+		</p>
 	);
 }

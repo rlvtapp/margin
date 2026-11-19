@@ -11,9 +11,14 @@ export const site = {
 	],
 	/** Margin's code, open source under the Apache License 2.0. */
 	source: "https://github.com/rlvtapp/margin",
+	/**
+	 * The Mac app: the disk image in the newest GitHub release. `/download/mac` on this site
+	 * redirects there too (worker.js), for links that should never change.
+	 */
+	download: "https://github.com/rlvtapp/margin/releases/latest/download/Margin.dmg",
 	/** Who publishes Margin. */
 	publisher: "Relevate",
 	publisherURL: "https://relevate.app",
 	/** Shown at the top of the privacy policy and terms. */
-	updated: "16 November 2026",
+	updated: "19 November 2026",
 };

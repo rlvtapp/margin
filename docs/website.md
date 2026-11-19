@@ -34,7 +34,16 @@ pnpm types:check
   - `feature-tabs`: a list on the left, a live card on the right, moving on by itself until
     someone picks one: `mini-inbox` (answers J, K, E and S), Home, Meetings, `translate-demo`
     and the assistant's summary.
-  - `showcase`: the real app, a whole window at a time, with a row of buttons to pick the screen.
+  - The calendar section (`#calendar`, right after the feature tabs): `showcase` again with the
+    calendar's own windows (`calendarViews`: Day with colleagues beside you, Week, Month), moving
+    on by itself every six seconds until someone picks one, then six plain outcomes
+    (`calendarFacts`) and a folded "How the calendar works, in detail" for which accounts do what
+    (comparing needs Microsoft 365 or Google; out of office is Microsoft 365 only). Keep it in step
+    with the What's New list in `Changelog.swift` and [calendar.md](calendar.md). Its copy names no
+    call service; the folded detail names only the account types the rest of the site does.
+  - `showcase`: the real app, a whole window at a time, with a row of buttons to pick the screen
+    (Inbox, Home, Subscriptions; the calendar has its own section). Pass `views` for another set
+    and `cycle` to have it move on by itself.
   - `privacy-diagram`: how mail travels, as thin lines on dark paper. Providers on the left with
     their tiles (`provider-icons`: our own drawings in each provider's colour, not their logos),
     square-cornered routes into one spine and a trunk to the devices, light running along them,
@@ -69,14 +78,22 @@ pnpm types:check
   the notification relay for iPhone and iPad is ours. Say "your mail never passes through a
   server of ours", not "no server".
 - The Mac app is a direct download, not on the Mac App Store (it isn't sandboxed; see
-  [release.md](release.md)). Until there's a file to link, the hero button, the FAQ and the
-  closing panel say "coming soon"; when there is, make the hero button a real download link.
+  [release.md](release.md)). The hero button, the header's Download pill, the closing panel and
+  the support page link `site.download`, the `Margin.dmg` in the newest GitHub release
+  (`/download/mac` redirects there too, in `worker.js`). Beside each button is the honest note
+  (`InstallNote`): this version is signed with a free Apple development certificate while the
+  Apple Developer membership is being set up, so the first time it's Open Anyway in System
+  Settings › Privacy & Security, and after that Margin updates itself. The support page has the
+  same as steps (`/support#install`). Once the app is notarized, drop the note and those steps. Under it, `GmailNote` (and the FAQ's "Can I sign in
+  with Google?") says that while Google reviews the sign-in, Google shows its "hasn't verified this
+  app" screen (Advanced, then Go to Margin), as does `/support#google-warning`
+  ([google-verification.md](google-verification.md)); drop them once Google approves it.
 - Light and dark follow the system until someone uses the switch in the header; the choice is
   kept in `localStorage` and applied before the page paints.
 - The contact address, source link, publisher and the "last updated" date are in
   `site/src/site.ts`. Change the date whenever the privacy policy or terms change.
-- Pictures are in `site/public/images/`. The Mac ones (`mac-hero`, `mac-home`, `mac-calendar`,
-  `mac-subs`, each `-light` and `-dark`) are pictures of the real window, taken by the app's
+- Pictures are in `site/public/images/`. The Mac ones (`mac-hero`, `mac-home`, `mac-subs`, and
+  the calendar's `mac-cal-day`, `mac-cal-week` and `mac-cal-month`, each `-light` and `-dark`) are pictures of the real window, taken by the app's
   `-snapshot` mode ([architecture.md](architecture.md)) with `-snapshot-size 1520x940
   -snapshot-no-next-up -snapshot-glass` (Next up stays closed on the pictures): the window
   comes up behind your other windows for a moment and the system's own picture of it is saved,
@@ -86,13 +103,18 @@ pnpm types:check
   `open -g -W -n -a .build/xcode-snapshot/Build/Products/Debug/Margin.app --args -snapshot
   /tmp/mac-home-dark.png -appearance dark -snapshot-size 1520x940 -snapshot-place home
   -snapshot-no-next-up -snapshot-glass`. The hero is `-snapshot-select "Lisbon"`, the others
-  `-snapshot-place home`, `calendar` and `subscription`. Then
+  `-snapshot-place home` and `subscription`, all three with `-snapshot-meeting` so the next
+  meeting's pill shows at the top right, beside the sync and sidebar icons, and the calendar's `-snapshot-place calendar
+  -snapshot-calendar-mode day` (or `week`, `month`). The sample meetings sit around the time
+  you take them, and Day and Week scroll to just before now, so take the calendar's in the
+  afternoon. Then
   `sips -s format jpeg -s formatOptions 80 -Z 2600`, and a smaller copy next to each with
   `-Z 1600` named `…-1600.jpg` (the pages offer both through `srcset`; the hero's light picture
   is the one loaded first, the dark one only when it's shown). The window isn't the active one, so its
   buttons at the top left are grey. The pictures have square corners; the page rounds them to
   the window's own corners (`.showcase-window`).
-  `share.jpg` is the 1200×630 preview card for links, and `apple-touch-icon.png` the home-screen
+  `share.jpg` is the 1200×630 preview card for links (made as a small HTML page around the dark
+  hero picture and saved with headless Chrome at 1200×630 and 1280×640), and `apple-touch-icon.png` the home-screen
   icon. The card is dark: the icon, the hero headline and lead, "Open source" with the GitHub
   repository, and the dark hero picture on the right. `.github/social-preview.png` is the same
   card at 1280×640 for the repository's social preview on GitHub. When the hero picture is

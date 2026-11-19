@@ -136,6 +136,8 @@
 html {
 	-webkit-text-size-adjust: 100%;
 	scroll-behavior: smooth;
+	/* Anchors land below the sticky header (64px), not under it. */
+	scroll-padding-top: 88px;
 }
 
 body {
@@ -1037,6 +1039,180 @@ a.button:hover {
 .showcase-shot img {
 	width: 100%;
 	height: 100%;
+}
+
+/* A picked window settles into place. */
+.showcase-shot.on img {
+	animation: shot-in 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes shot-in {
+	from {
+		transform: scale(1.03);
+	}
+}
+
+/* When the windows move on by themselves, the picked button shows how long until the next. */
+.showcase-tabs button {
+	position: relative;
+}
+
+.showcase-progress {
+	position: absolute;
+	left: 14px;
+	right: 14px;
+	bottom: 5px;
+	height: 2px;
+	border-radius: 2px;
+	background: color-mix(in srgb, var(--button-fg) 22%, transparent);
+	overflow: hidden;
+}
+
+.showcase-progress::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: var(--button-fg);
+	transform-origin: left;
+	animation: progress linear both;
+	animation-duration: inherit;
+}
+
+/* Calendar: what it does, under its windows, and the detail folded away */
+
+.cal-facts {
+	list-style: none;
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 30px 36px;
+	margin: 48px 0 0;
+	padding: 0;
+}
+
+.cal-facts li {
+	display: grid;
+	grid-template-columns: 34px 1fr;
+	gap: 2px 14px;
+}
+
+.cal-facts svg {
+	grid-row: span 2;
+	width: 34px;
+	height: 34px;
+	padding: 7px;
+	border-radius: 10px;
+	background: var(--panel);
+	fill: none;
+	stroke: var(--fg);
+	stroke-width: 1.6;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	transition: transform 0.3s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+.cal-facts li:hover svg {
+	transform: rotate(-8deg) scale(1.08);
+}
+
+.cal-facts b {
+	font-weight: 600;
+	letter-spacing: -0.012em;
+}
+
+.cal-facts span {
+	color: var(--muted);
+	font-size: 14.5px;
+	line-height: 1.5;
+	text-wrap: pretty;
+}
+
+/* As wide as the section above it, its points in the same two columns as the heading and text. */
+.cal-detail {
+	margin-top: 40px;
+	border-top: 1px solid var(--border);
+}
+
+.cal-detail ul {
+	columns: 2;
+	column-gap: 64px;
+	margin: -4px 0 24px;
+	padding: 0;
+	list-style: none;
+	color: var(--muted);
+	font-size: 15px;
+	line-height: 1.6;
+}
+
+.cal-detail li {
+	break-inside: avoid;
+	margin-bottom: 12px;
+}
+
+.cal-detail li b {
+	color: var(--fg);
+	font-weight: 550;
+}
+
+.cal-detail a {
+	color: var(--fg);
+	text-decoration: underline;
+	text-decoration-color: var(--faint);
+	text-underline-offset: 3px;
+}
+
+/* The first time on a Mac: the honest note under the download button */
+
+.install-note {
+	max-width: 36em;
+	margin: 14px 0 0;
+	color: var(--faint);
+	font-size: 13.5px;
+	line-height: 1.5;
+	text-wrap: pretty;
+}
+
+.install-note a,
+.final .install-note a {
+	color: inherit;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.install-note + .install-note {
+	margin-top: 8px;
+}
+
+.final .install-note + .install-note {
+	margin-top: 8px;
+}
+
+.final .install-note {
+	margin: 14px 0 0;
+	color: inherit;
+	font-size: 13.5px;
+	opacity: 0.75;
+}
+
+/* An invitation that overlaps something already on */
+
+.clash {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	margin: 12px 0 0;
+	color: #d98a00;
+	font-size: 13.5px;
+	font-weight: 500;
+	animation: card-in 0.5s 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.clash svg {
+	width: 15px;
+	height: 15px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.8;
+	stroke-linecap: round;
 }
 
 .card {
@@ -2256,7 +2432,6 @@ a.button:hover {
 /* Questions: each one opens in place */
 
 .faq {
-	max-width: 820px;
 	margin-top: 36px;
 }
 
@@ -2413,6 +2588,11 @@ a.button:hover {
 .final p {
 	margin: 12px 0 0;
 	font-size: 18px;
+}
+
+.final .button {
+	background: var(--final-fg);
+	color: #ffffff;
 }
 
 /* Reading pages */
@@ -2576,6 +2756,15 @@ a.button:hover {
 	.facts {
 		grid-template-columns: 1fr 1fr;
 		gap: 24px;
+	}
+
+	.cal-facts {
+		grid-template-columns: 1fr;
+		gap: 22px;
+	}
+
+	.cal-detail ul {
+		columns: 1;
 	}
 
 	.byo {

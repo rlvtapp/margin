@@ -20,6 +20,29 @@ function Support() {
 			title="Support"
 			intro="Answers to the common questions. If yours isn't here, write to us and a person will reply."
 		>
+			<h2 id="install">Installing on a Mac</h2>
+			<p>
+				Margin is a free download from this website, not from the Mac App
+				Store. This first version is signed with a free Apple development
+				certificate while our Apple Developer membership is being set up, so
+				macOS asks you to confirm it once:
+			</p>
+			<ol>
+				<li>
+					<a href={site.download}>Download Margin</a> and drag it into your
+					Applications folder.
+				</li>
+				<li>Open it. macOS says it can't check the app, and won't open it yet.</li>
+				<li>
+					Open System Settings, go to Privacy &amp; Security, scroll down and
+					choose Open Anyway next to Margin.
+				</li>
+			</ol>
+			<p>
+				That's needed only the first time. After that, Margin looks for new
+				versions and updates itself.
+			</p>
+
 			<h2>Adding a mailbox</h2>
 			<p>
 				Choose Add Mailbox, type your email address, and Margin finds the right
@@ -28,10 +51,20 @@ function Support() {
 				password if your provider asks for one.
 			</p>
 
+			<h2 id="google-warning">Google says the app isn't verified</h2>
+			<p>
+				While Google reviews Margin's sign-in, signing in with Google first
+				shows a "Google hasn't verified this app" screen. Choose Advanced,
+				then Go to Margin, and sign in as usual. Margin still talks only to
+				Google, straight from your device. The screen goes away once Google
+				approves Margin.
+			</p>
+
 			<h2 id="gmail">Adding Gmail with an app password</h2>
 			<p>
-				Google doesn't let mail apps use your normal password. Until Google
-				sign-in is available in Margin, use an app password:
+				If you'd rather not sign in with Google, choose "Use an app password
+				instead" when you add the mailbox. Google doesn't let mail apps use
+				your normal password, so make an app password:
 			</p>
 			<ol>
 				<li>

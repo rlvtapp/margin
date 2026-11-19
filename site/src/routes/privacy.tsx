@@ -87,9 +87,11 @@ function Privacy() {
 					mailed.
 				</li>
 				<li>
-					<b>Your calendar</b>, only if you turn that on: when you and the
-					people you invite are free or busy, your organisation's meeting
-					rooms, and the events Margin creates or answers for you.
+					<b>Your calendar</b>, only if you turn that on: the events in your
+					calendars, which Margin shows and lets you make, change and delete;
+					when you, the people you invite and the colleagues you compare
+					calendars with are free or busy; and your organisation's meeting
+					rooms.
 				</li>
 			</ul>
 			<h3>How Margin uses it</h3>
@@ -160,7 +162,7 @@ function Privacy() {
 			<h2>Microsoft accounts</h2>
 			<p>
 				If you sign in with a Microsoft account, Margin uses Microsoft's
-				interfaces in the same way: for your mail, contacts, meeting rooms and
+				interfaces in the same way: for your mail, contacts, calendars, meeting rooms and
 				automatic replies, only on your devices. You can remove its access in
 				your Microsoft account's privacy or app permissions settings.
 			</p>
@@ -174,6 +176,16 @@ function Privacy() {
 				never looks an address up anywhere else. Contacts stay on your device
 				and are never uploaded. Meeting invitations are answered by
 				sending standard replies through your own mail account.
+			</p>
+			<p>
+				Margin's calendar shows the calendars of your Google and Microsoft
+				accounts, read and changed through their own interfaces straight from
+				your device. Events you make, move or delete there are sent to that
+				account, which tells the guests. If you choose Show, it also reads and
+				changes the Calendar app's calendars and Reminders on your Mac, which
+				sync with whatever accounts you set up there, as they always do. When you compare calendars with colleagues or
+				ask for suggested times, Margin asks your own account when those
+				people are busy or out of office. None of this passes through us.
 			</p>
 
 			<h2>Sync with iCloud</h2>
@@ -231,7 +243,9 @@ function Privacy() {
 				The Mac app downloaded from this website looks for new versions about
 				once a day. It asks this website, which points it to the newest release
 				on GitHub; the request carries the app's version and nothing about you
-				or your mail. You can turn this off in Settings → About.
+				or your mail. You can turn this off in Settings → About. The download
+				button on this website fetches the app from GitHub, where Margin's
+				releases are published.
 			</p>
 
 			<h2>Crashes and bug reports</h2>

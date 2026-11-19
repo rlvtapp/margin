@@ -12,6 +12,7 @@ export function Header() {
 			</Link>
 			<nav className="middle">
 				<a href="/#features">Features</a>
+				<a href="/#calendar">Calendar</a>
 				<a href="/#privacy">Privacy</a>
 				<a href="/#agents">AI apps</a>
 				<a href="/#faq">FAQ</a>
@@ -19,7 +20,9 @@ export function Header() {
 			</nav>
 			<div className="end">
 				<ThemeSwitch />
-				<span className="pill">Coming soon</span>
+				<a className="pill" href={site.download}>
+					Download
+				</a>
 			</div>
 		</header>
 	);

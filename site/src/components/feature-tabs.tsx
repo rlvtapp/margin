@@ -37,6 +37,13 @@ function MeetingCard() {
 			<p className="card-sub">Invitation from Lena Fischer</p>
 			<h3>Quarterly planning</h3>
 			<p className="card-sub">Friday 10:00 to 11:00, Harbor office</p>
+			<p className="clash">
+				<svg viewBox="0 0 16 16" aria-hidden="true">
+					<circle cx="8" cy="8" r="6.5" />
+					<path d="M8 4.8v3.6M8 11.1v.1" />
+				</svg>
+				Clashes with Design critique
+			</p>
 			<div className="people">
 				{["#7c5cff", "#18a874", "#e0a100", "#e04f9a"].map((c, i) => (
 					<i key={c} style={{ background: c }}>
@@ -97,7 +104,7 @@ const tabs: Tab[] = [
 	{
 		id: "meetings",
 		title: "Meetings",
-		text: "Invitations from your mail and your Google and Outlook calendars on one page. Answer in one click, see what overlaps, join the call.",
+		text: "Invitations from your mail and your Google and Outlook calendars on one page. Answer in one click, see what it clashes with, join the call.",
 		card: () => <MeetingCard />,
 	},
 	{

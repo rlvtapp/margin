@@ -178,6 +178,8 @@ extension MailModel {
     func pushKind(for account: MailAccount) -> PushRelay.Kind? {
         switch (account.auth, account.connection) {
         case (.oauth(.google, _), _): Self.gmailTopic == nil ? nil : .gmail
+        // A shared mailbox's subscription would watch its owner's inbox: it's checked on a timer.
+        case (.oauth(.microsoft, _), .graph(sharedMailbox: .some)): nil
         case (.oauth(.microsoft, _), _): .graph
         case (_, .jmap): .jmap
         default: nil

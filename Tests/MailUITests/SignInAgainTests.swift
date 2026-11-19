@@ -86,7 +86,10 @@ import Testing
     /// mailbox, that's the proof, and it's kept.
     @Test func aSignInNameThatDiffersFromTheAddressIsFine() async throws {
         let (model, environment, account) = try setUp(auth: .oauth(provider: .microsoft, username: "me@example.com"))
-        try await model.useSignIn("fresh tokens", for: account, signedInAs: "me@company.onmicrosoft.example") { _ in }
+        // Signing in again moves a Microsoft mailbox to Graph (`movesOnSignIn`), as here.
+        var moved = account
+        moved.connection = .graph()
+        try await model.useSignIn("fresh tokens", for: moved, signedInAs: "me@company.onmicrosoft.example") { _ in }
         #expect(environment.keychain.read(account: account.id, kind: "oauth") == "fresh tokens")
         #expect(!model.needsSignIn(account.id))
     }
@@ -95,5 +98,64 @@ import Testing
         let model = MailModel(environment: .preview())
         #expect(model.accounts.allSatisfy { !model.canSignInAgain($0) })
         #expect(model.accountNeedingSignIn == nil)
+    }
+}
+
+/// A Microsoft mailbox set up over IMAP moves to Graph when it signs in again, keeping its place,
+/// settings and id; until then it asks to be signed in again.
+@MainActor @Suite struct MicrosoftMoveTests {
+    private func setUp() throws -> (MailModel, MailEnvironment, MailAccount) {
+        let environment = MailEnvironment.preview()
+        var account = MailAccount(label: "Work", address: EmailAddress(address: "me@example.com"),
+                                  connection: .imap(incoming: ServerEndpoint(host: "outlook.office365.com", port: 993, security: .tls),
+                                                    outgoing: ServerEndpoint(host: "smtp.office365.com", port: 587, security: .startTLS)),
+                                  auth: .oauth(provider: .microsoft, username: "me@example.com"))
+        account.signature = "Kind regards"
+        try environment.accounts.save([account])
+        try environment.keychain.save("old", account: account.id, kind: "oauth")
+        return (MailModel(environment: environment), environment, account)
+    }
+
+    @Test func asksToSignInAgainBeforeMoving() throws {
+        let (model, _, account) = try setUp()
+        #expect(model.movesOnSignIn(account))
+        #expect(model.needsSignIn(account.id))
+        #expect(model.accountNeedingSignIn?.id == account.id)
+    }
+
+    @Test func movesToGraphAndKeepsTheMailbox() async throws {
+        let (model, environment, account) = try setUp()
+        var moved = account
+        moved.connection = .graph()
+        try await model.useSignIn("new tokens", for: moved) { _ in }
+        let now = try #require(model.account(account.id))
+        #expect(now.connection == .graph())
+        #expect(now.signature == "Kind regards")
+        #expect(environment.accounts.load().first?.connection == .graph())
+        #expect(!model.needsSignIn(account.id))
+    }
+
+    @Test func aRefusedMoveStaysAsItWas() async throws {
+        let (model, environment, account) = try setUp()
+        var moved = account
+        moved.connection = .graph()
+        await #expect(throws: MailError.self) {
+            try await model.useSignIn("wrong", for: moved) { _ in throw MailError.authenticationFailed("AADSTS65001") }
+        }
+        #expect(model.account(account.id)?.connection == account.connection)
+        #expect(environment.keychain.read(account: account.id, kind: "oauth") == "old")
+    }
+
+    /// Other mailboxes don't move: Microsoft on Graph already, and IMAP with a password.
+    @Test func onlyMicrosoftOverIMAPMoves() {
+        let graph = MailAccount(label: "A", address: EmailAddress(address: "a@example.com"), connection: .graph(),
+                                auth: .oauth(provider: .microsoft, username: "a@example.com"))
+        let imap = MailAccount(label: "B", address: EmailAddress(address: "b@example.com"),
+                               connection: .imap(incoming: ServerEndpoint(host: "imap.example.com", port: 993, security: .tls),
+                                                 outgoing: ServerEndpoint(host: "smtp.example.com", port: 465, security: .tls)),
+                               auth: .password(username: "b@example.com"))
+        let model = MailModel(environment: .preview())
+        #expect(!model.movesOnSignIn(graph))
+        #expect(!model.movesOnSignIn(imap))
     }
 }

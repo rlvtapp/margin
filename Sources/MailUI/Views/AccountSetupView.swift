@@ -563,7 +563,7 @@ struct ServerFields: View {
                     get: { url.absoluteString },
                     set: { if let url = URL(string: $0) { connection = .jmap(sessionURL: url) } }
                 )).fieldStyle()
-            case .sample:
+            case .sample, .graph:
                 EmptyView()
             }
         }

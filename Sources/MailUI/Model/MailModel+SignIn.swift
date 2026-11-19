@@ -15,9 +15,18 @@ extension MailModel {
         account.connection != .sample
     }
 
-    /// The provider refused this mailbox's sign-in, so signing in again is what helps.
+    /// Signing in again is what helps: the provider refused the sign-in, or the mailbox still
+    /// waits to move to the connection Margin uses for it now.
     public func needsSignIn(_ id: UUID) -> Bool {
-        loadErrors[id] != nil && signInRefused.contains(id)
+        if loadErrors[id] != nil && signInRefused.contains(id) { return true }
+        return account(id).map(movesOnSignIn) ?? false
+    }
+
+    /// A Microsoft mailbox set up over IMAP before mail went through Graph. Signing in again
+    /// moves it (`signInAgain`); Margin no longer asks for IMAP access, so it can't stay.
+    public func movesOnSignIn(_ account: MailAccount) -> Bool {
+        guard case .oauth(.microsoft, _) = account.auth, case .imap = account.connection else { return false }
+        return true
     }
 
     /// The first mailbox in view whose sign-in was refused, for the "Sign in again" next to the
@@ -29,9 +38,22 @@ extension MailModel {
     /// Google and Microsoft: opens the provider's sign-in (`authenticate` is the view's web
     /// authentication session and returns the callback URL) and keeps the new sign-in.
     public func signInAgain(_ account: MailAccount, authenticate: (URL, String) async throws -> URL) async throws {
-        guard case .oauth(let provider, _) = account.auth,
-              let client = environment.oauth.client(for: provider) else { throw MailError.missingCredentials }
-        let request = client.authorizationRequest(loginHint: account.address.address)
+        guard case .oauth(let provider, let username) = account.auth,
+              var client = environment.oauth.client(for: account) else { throw MailError.missingCredentials }
+        var account = account
+        let extras = apiAccess[account.id] ?? []
+        if provider == .microsoft {
+            // Mail goes through Graph now: a mailbox set up over IMAP moves with this sign-in.
+            if movesOnSignIn(account) { account.connection = .graph() }
+            // Everything that was turned on is asked for on the same page, so new permissions
+            // (added since it was connected) are granted in one go.
+            if account.sharedMailbox == nil, let more = environment.oauth.client(for: .microsoft, access: extras), !extras.isEmpty {
+                client.scopes += more.scopes.filter { !client.scopes.contains($0) }
+                client.laterScopes = more.laterScopes
+            }
+        }
+        // A shared mailbox opens with its owner's sign-in, so the owner signs in.
+        let request = client.authorizationRequest(loginHint: account.sharedMailbox == nil ? account.address.address : username)
         let callback = try await authenticate(request.url, client.callbackScheme)
         let tokens = try await client.exchange(callback: callback, verifier: request.verifier, state: request.state)
         // Whether it's the right account is proved by the mail server taking the new sign-in for
@@ -40,7 +62,7 @@ extension MailModel {
         // domain), and turning those away made signing in again fail for good mailboxes.
         try await useSignIn(String(decoding: try JSONEncoder().encode(tokens), as: UTF8.self), for: account, signedInAs: tokens.signedInAs)
         // Microsoft: one sign-in covers contacts, the calendar and the rest that was turned on.
-        if provider == .microsoft, !(apiAccess[account.id] ?? []).isEmpty, (try? await credentials.apiToken(for: account)) == nil {
+        if provider == .microsoft, account.sharedMailbox == nil, !extras.isEmpty {
             try? await credentials.renewAPITokens(from: tokens, for: account)
             await refreshContacts()
         }
@@ -85,6 +107,7 @@ extension MailModel {
             }
             throw error
         }
+        await adoptConnection(of: account)
         loadErrors[account.id] = nil
         unreachable.remove(account.id)
         signInRefused.remove(account.id)
@@ -95,5 +118,21 @@ extension MailModel {
             await reload()
             if clock != nil { startWatching() }
         }
+    }
+
+    /// After a sign-in that moved the mailbox to another connection: keeps the new one, and
+    /// drops the mail saved through the old one (its ids mean nothing to the new server), which
+    /// then loads again. Settings, rules and the mailbox's place in the list stay.
+    func adoptConnection(of account: MailAccount) async {
+        guard let index = accounts.firstIndex(where: { $0.id == account.id }),
+              accounts[index].connection != account.connection else { return }
+        accounts[index].connection = account.connection
+        try? environment.accounts.save(accounts)
+        mailboxes[account.id] = nil
+        shelves[account.id] = nil
+        if place.accountID == account.id { go(to: .allInboxes) }
+        guard !environment.isPreview else { return }
+        await environment.cache.removeAccount(account.id)
+        await environment.imapSync?.keepOnly(Set(accounts.map(\.id)).subtracting([account.id]))
     }
 }

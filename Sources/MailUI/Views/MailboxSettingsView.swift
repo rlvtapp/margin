@@ -117,9 +117,14 @@ struct SignatureEditor: View {
                             Text("Notifications")
                         }
 
-                        AutoReplySection(model: model, account: account.wrappedValue)
+                        // A shared mailbox's automatic reply is its owners' to set.
+                        if account.wrappedValue.sharedMailbox == nil {
+                            AutoReplySection(model: model, account: account.wrappedValue)
+                        }
 
-                        OutlookReactionsSection(model: model, account: account.wrappedValue)
+                        if model.canAddSharedMailbox(from: account.wrappedValue) {
+                            SharedMailboxSection(model: model, account: account.wrappedValue)
+                        }
 
                     }
                     if tab == .sending {

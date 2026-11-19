@@ -162,13 +162,20 @@ public struct MicrosoftGraphClient: Sendable {
         let data = try await http.data(for: request)
         let page = try BearerHTTP.decode(GraphPage<GraphSchedule>.self, from: data)
         var result: [String: [BusyTime]] = [:]
-        for schedule in page.value {
+        // A calendar that can't be seen is left out, so it isn't taken for a free one.
+        for schedule in page.value where schedule.error == nil {
             let key = schedule.scheduleId.lowercased()
             let busy = (schedule.scheduleItems ?? []).compactMap { item -> BusyTime? in
                 guard item.status?.lowercased() != "free",
                       let start = Self.parseGraphDate(item.start), let end = Self.parseGraphDate(item.end), start < end
                 else { return nil }
-                return BusyTime(start: start, end: end)
+                let kind: BusyTime.Kind = switch item.status?.lowercased() {
+                case "oof": .outOfOffice
+                case "workingelsewhere": .workingElsewhere
+                case "tentative": .tentative
+                default: .busy
+                }
+                return BusyTime(start: start, end: end, kind: kind)
             }
             result[key, default: []] += busy.sorted { $0.start < $1.start }
         }
@@ -307,6 +314,10 @@ struct GraphDateTime: Decodable {
 struct GraphSchedule: Decodable {
     var scheduleId: String
     var scheduleItems: [Item]?
+    /// Set when the calendar can't be seen (someone outside the organization, or not shared).
+    var error: Failure?
+
+    struct Failure: Decodable { var message: String?; var responseCode: String? }
 
     struct Item: Decodable {
         var status: String?

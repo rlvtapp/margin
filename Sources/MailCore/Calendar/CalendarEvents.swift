@@ -21,6 +21,16 @@ public struct CalendarEvent: Codable, Hashable, Identifiable, Sendable {
     public var repeats: Bool
     /// Everyone invited, with their answers when the calendar knows them.
     public var attendees: [MeetingAttendee] = []
+    /// The calendar it's in: one of this device's, or one of a mailbox's several calendars.
+    public var calendarName: String?
+    /// The provider's id of that calendar, for a mailbox with several (`CalendarListing`).
+    public var calendarID: String?
+    /// That calendar's colour as 0xRRGGBB, for events from this device.
+    public var calendarColor: UInt32?
+    /// The event's notes when the calendar gives them in full.
+    public var notes: String?
+    /// Whether Margin may change it: you made it, in a calendar that can be written to.
+    public var canChange = false
 
     public init(id: String, uid: String? = nil, title: String, start: Date, end: Date, isAllDay: Bool = false,
                 location: String? = nil, joinURL: URL? = nil, organizer: String? = nil,
@@ -51,7 +61,11 @@ public protocol CalendarReading: Sendable {
 
 extension MicrosoftGraphClient: CalendarReading {
     public func events(from start: Date, to end: Date) async throws -> [CalendarEvent] {
-        var components = URLComponents(string: "\(Self.base)/me/calendarView")!
+        try await calendarView("/me/calendarView", from: start, to: end)
+    }
+
+    func calendarView(_ path: String, from start: Date, to end: Date) async throws -> [CalendarEvent] {
+        var components = URLComponents(string: "\(Self.base)\(path)")!
         let iso = ISO8601DateFormatter()
         components.queryItems = [
             URLQueryItem(name: "startDateTime", value: iso.string(from: start)),
@@ -110,6 +124,7 @@ extension MicrosoftGraphClient: CalendarReading {
                                        organizer: event.organizer?.emailAddress?.name ?? event.organizer?.emailAddress?.address,
                                        response: response, isOrganizer: event.isOrganizer ?? false, isCancelled: event.isCancelled ?? false,
                                        repeats: event.type == "occurrence" || event.type == "exception")
+            result.canChange = event.isOrganizer ?? false
             result.attendees = (event.attendees ?? []).compactMap { entry in
                 guard let address = entry.emailAddress?.address, EmailAddress.isValid(address) else { return nil }
                 let kind: MeetingAttendee.Kind = entry.type == "resource" ? .room : entry.type == "optional" ? .optional : .required
@@ -139,7 +154,11 @@ extension MicrosoftGraphClient: CalendarReading {
 
 extension GoogleCalendarClient: CalendarReading {
     public func events(from start: Date, to end: Date) async throws -> [CalendarEvent] {
-        var components = URLComponents(url: Self.calendar.appending(path: "calendars/primary/events"), resolvingAgainstBaseURL: false)!
+        try await events(inCalendar: "primary", from: start, to: end)
+    }
+
+    func events(inCalendar calendar: String, from start: Date, to end: Date) async throws -> [CalendarEvent] {
+        var components = URLComponents(url: Self.calendar.appending(path: "calendars/\(calendar)/events"), resolvingAgainstBaseURL: false)!
         let iso = ISO8601DateFormatter()
         components.queryItems = [
             URLQueryItem(name: "timeMin", value: iso.string(from: start)),
@@ -168,6 +187,7 @@ extension GoogleCalendarClient: CalendarReading {
             var organizer: Person?
             var attendees: [Attendee]?
             var recurringEventId: String?
+            var description: String?
             struct Moment: Decodable { var dateTime: String?; var date: String? }
             struct Conference: Decodable { var entryPoints: [Entry]? }
             struct Entry: Decodable { var entryPointType: String?; var uri: String? }
@@ -198,6 +218,8 @@ extension GoogleCalendarClient: CalendarReading {
                                        organizer: event.organizer?.displayName ?? event.organizer?.email, response: response,
                                        isOrganizer: event.organizer?.`self` == true, isCancelled: event.status == "cancelled",
                                        repeats: event.recurringEventId != nil)
+            result.canChange = event.organizer?.`self` == true
+            result.notes = event.description
             result.attendees = (event.attendees ?? []).compactMap { entry in
                 guard let address = entry.email, EmailAddress.isValid(address) else { return nil }
                 let kind: MeetingAttendee.Kind = entry.resource == true ? .room : entry.optional == true ? .optional : .required

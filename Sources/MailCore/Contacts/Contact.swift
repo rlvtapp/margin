@@ -79,12 +79,19 @@ public struct MeetingRoom: Codable, Hashable, Sendable, Identifiable {
 
 /// A stretch of time someone (or a room) is taken.
 public struct BusyTime: Codable, Hashable, Sendable {
+    /// What the calendar says about the time, when it says (Microsoft 365 does; Google only busy).
+    public enum Kind: String, Codable, Sendable {
+        case busy, tentative, outOfOffice, workingElsewhere
+    }
+
     public var start: Date
     public var end: Date
+    public var kind: Kind
 
-    public init(start: Date, end: Date) {
+    public init(start: Date, end: Date, kind: Kind = .busy) {
         self.start = start
         self.end = end
+        self.kind = kind
     }
 
     public func overlaps(_ start: Date, _ end: Date) -> Bool { self.start < end && start < self.end }

@@ -105,10 +105,10 @@ final class GraphFakeAPI: @unchecked Sendable {
         let busy = try await client.busyTimes(for: ["Noor@postbox.example", "oak@rooms.example"],
                                               from: Self.utc("2026-11-09T00:00:00Z"), to: Self.utc("2026-11-10T00:00:00Z"))
         #expect(busy["noor@postbox.example"] == [
-            BusyTime(start: Self.utc("2026-11-09T08:00:00Z"), end: Self.utc("2026-11-09T09:30:00Z")),
+            BusyTime(start: Self.utc("2026-11-09T08:00:00Z"), end: Self.utc("2026-11-09T09:30:00Z"), kind: .outOfOffice),
             BusyTime(start: Self.utc("2026-11-09T10:00:00Z"), end: Self.utc("2026-11-09T11:00:00Z")),
         ])
-        #expect(busy["oak@rooms.example"] == [BusyTime(start: Self.utc("2026-11-09T14:15:00Z"), end: Self.utc("2026-11-09T15:00:00Z"))])
+        #expect(busy["oak@rooms.example"] == [BusyTime(start: Self.utc("2026-11-09T14:15:00Z"), end: Self.utc("2026-11-09T15:00:00Z"), kind: .tentative)])
 
         let body = try #require(api.json(of: "getSchedule"))
         #expect(body["schedules"] as? [String] == ["Noor@postbox.example", "oak@rooms.example"])

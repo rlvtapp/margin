@@ -50,7 +50,8 @@ public struct GoogleCalendarClient: Sendable {
         let data = try await http.data(for: try http.request(Self.calendar.appending(path: "freeBusy"), method: "POST", json: body))
         let answer = try BearerHTTP.decode(FreeBusy.self, from: data)
         var result: [String: [BusyTime]] = [:]
-        for (id, calendar) in answer.calendars ?? [:] {
+        // A calendar that can't be seen is left out, so it isn't taken for a free one.
+        for (id, calendar) in answer.calendars ?? [:] where (calendar.errors ?? []).isEmpty {
             result[id.lowercased()] = (calendar.busy ?? []).compactMap { span in
                 guard let start = Self.parse(span.start), let end = Self.parse(span.end) else { return nil }
                 return BusyTime(start: start, end: end)
@@ -112,7 +113,9 @@ public struct GoogleCalendarClient: Sendable {
 
     struct FreeBusy: Decodable {
         var calendars: [String: Calendar]?
-        struct Calendar: Decodable { var busy: [Span]? }
+        /// `errors` is set when the calendar can't be seen (not shared, or outside the domain).
+        struct Calendar: Decodable { var busy: [Span]?; var errors: [Failure]? }
+        struct Failure: Decodable { var reason: String? }
         struct Span: Decodable { var start: String?; var end: String? }
     }
 }

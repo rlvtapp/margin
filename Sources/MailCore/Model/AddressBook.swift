@@ -5,6 +5,8 @@ import Foundation
 /// Address books also fill in names the mail didn't have.
 public struct AddressBook: Sendable {
     public private(set) var entries: [EmailAddress] = []
+    /// Everyone you've written to (lowercased), the people worth inviting to things.
+    public private(set) var writtenTo: Set<String> = []
 
     public init(threads: [MailThread], me: Set<String>, contacts: [EmailAddress] = []) {
         var score: [String: Int] = [:]
@@ -17,7 +19,10 @@ public struct AddressBook: Sendable {
         }
         for message in threads.flatMap(\.messages) {
             if me.contains(message.from.address.lowercased()) {
-                for person in message.to + message.cc { note(person, weight: 3) }
+                for person in message.to + message.cc {
+                    note(person, weight: 3)
+                    if !me.contains(person.address.lowercased()) { writtenTo.insert(person.address.lowercased()) }
+                }
             } else if InboxSplit.classify(message) == .people {
                 note(message.from, weight: 1)
             }

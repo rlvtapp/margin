@@ -378,4 +378,3 @@ extension MailModel {
         return (askEventFacts(found.items, from: found.start, to: found.end, unreadable: found.unreadable), found.items.map(AskEvent.init))
     }
 }
-

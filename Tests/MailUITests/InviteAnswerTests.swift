@@ -233,4 +233,3 @@ private actor SlowSendProvider: MailProvider {
         #expect(await s.provider.sent.last?.calendar?.contains("SEQUENCE:1") == true)
     }
 }
-

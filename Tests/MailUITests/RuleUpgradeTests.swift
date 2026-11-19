@@ -25,31 +25,32 @@ import Testing
         let model = await model()
         let bank = try #require(model.inboxThreads(nil).first { $0.subject.contains("Card payment") })
         let sender = model.ruleForm(for: bank, basis: .sender)
-        #expect(sender.field == .from && sender.contains == "notifications@fieldworkbank.example")
+        #expect(sender.from == "notifications@fieldworkbank.example" && sender.subject.isEmpty)
         #expect(sender.accountID == bank.accountID && sender.threadID == bank.id)
-        #expect(model.ruleForm(for: bank, basis: .domain).contains == "@fieldworkbank.example")
+        #expect(model.ruleForm(for: bank, basis: .domain).from == "@fieldworkbank.example")
         let subject = model.ruleForm(for: bank, basis: .subject)
-        #expect(subject.field == .subject && subject.contains == bank.subject)
+        #expect(subject.subject == bank.subject && subject.from.isEmpty)
         #expect(MailModel.plainSubject("Re: Fwd: Weekly report") == "Weekly report")
 
         // What it would catch includes the conversation it came from.
         #expect(model.inboxMatches(try #require(sender.condition)).contains { $0.id == bank.id })
 
         model.startRule(for: bank)
-        #expect(model.creatingRule?.contains == "notifications@fieldworkbank.example")
+        #expect(model.creatingRule?.from == "notifications@fieldworkbank.example")
     }
 
     @Test func aRuleNeedsItsPartsAndAFolderThatExists() async throws {
         let model = await model()
-        var form = RuleForm(field: .from, contains: "  ", choice: .star)
+        var form = RuleForm(field: .from, contains: "  ")
+        form.star = true
         #expect(form.rule == nil)
-        form.contains = "bank"
-        #expect(form.rule?.action == .star)
-        form.choice = .move
+        form.from = "bank"
+        #expect(form.rule?.actions == [.star])
+        form.move = .folder
         #expect(form.rule == nil)   // a folder is needed
-        form.name = "Nowhere"
+        form.folder = "Nowhere"
         #expect(form.rule != nil && model.ruleFolderMissing(form))
-        form.name = "archive"
+        form.folder = "archive"
         #expect(!model.ruleFolderMissing(form))
 
         #expect(model.addRule(form))
@@ -60,12 +61,12 @@ import Testing
     @Test func theAssistantsRuleIsMatchedToRealNames() async throws {
         let model = await model()
         let form = model.ruleForm(from: RuleParts(field: "from", contains: "@fieldworkbank.example", action: "group", target: "bills to pay", mailbox: "work"))
-        #expect(form.choice == .label && form.name == "Bills to Pay")
+        #expect(form.label == "Bills to Pay" && form.move == .none)
         #expect(form.accountID == model.accounts.first { $0.label == "Work" }?.id)
         let move = model.ruleForm(from: RuleParts(field: "subject", contains: "digest", action: "move", target: "ARCHIVE"))
-        #expect(move.choice == .move && move.name == "Archive" && move.accountID == nil)
+        #expect(move.move == .folder && move.folder == "Archive" && move.accountID == nil)
         let unknown = model.ruleForm(from: RuleParts(field: "body", contains: "x", action: "explode"))
-        #expect(unknown.field == .from && unknown.choice == .archive)
+        #expect(unknown.from == "x" && unknown.move == .archive)
     }
 
     @Test func ruleMovesCanBeUndoneAndShowInRecentActivity() async throws {

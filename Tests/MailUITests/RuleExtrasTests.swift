@@ -50,12 +50,12 @@ import Testing
         let model = await model()
         model.mailRules = [MailRule(field: .from, contains: "bank", action: .star)]
         var form = RuleForm(rule: model.mailRules[0])
-        #expect(form.editing == model.mailRules[0].id && form.choice == .star && form.contains == "bank")
-        form.choice = .answer
-        form.name = "Thanks, got it."
+        #expect(form.editing == .margin(model.mailRules[0].id) && form.star && form.from == "bank")
+        form.star = false
+        form.answer = "Thanks, got it."
         #expect(model.addRule(form))
         #expect(model.mailRules.count == 1)
-        #expect(model.mailRules[0].action == .answer("Thanks, got it."))
+        #expect(model.mailRules[0].actions == [.answer("Thanks, got it.")])
         #expect(RuleForm(rule: model.mailRules[0]).rule == model.mailRules[0])
         #expect(!MailModel.starterRules.isEmpty)
     }
@@ -67,7 +67,7 @@ import Testing
         #expect(model.ruleSuggestion == nil)
         for _ in 0..<3 { model.noteFiling([thread], into: folder.id) }
         let suggestion = try #require(model.ruleSuggestion)
-        #expect(suggestion.form.choice == .move && suggestion.form.name == folder.name && suggestion.form.field == .from)
+        #expect(suggestion.form.move == .folder && suggestion.form.folder == folder.name && !suggestion.form.from.isEmpty)
         #expect(model.addRule(suggestion.form))
         #expect(model.ruleSuggestion == nil)   // a rule does it now
     }

@@ -1,7 +1,9 @@
 import Foundation
 import MailCore
 
-/// A rule for new mail: when a field contains some text, do one thing with it.
+/// A rule for new mail kept by Margin: when every condition matches (text in From, To or the
+/// subject, an attachment), do each action. Runs while Margin is open; rules kept by the server
+/// (`ServerRule`) have the same parts and are made in the same editor.
 public struct MailRule: Codable, Hashable, Identifiable, Sendable {
     public enum Field: String, Codable, CaseIterable, Sendable {
         case from, to, subject
@@ -12,6 +14,17 @@ public struct MailRule: Codable, Hashable, Identifiable, Sendable {
             case .to: String(localized: "To")
             case .subject: String(localized: "Subject")
             }
+        }
+    }
+
+    /// Text one field must contain, ignoring case.
+    public struct Condition: Codable, Hashable, Sendable {
+        public var field: Field
+        public var contains: String
+
+        public init(field: Field, contains: String) {
+            self.field = field
+            self.contains = contains
         }
     }
 
@@ -40,33 +53,71 @@ public struct MailRule: Codable, Hashable, Identifiable, Sendable {
             case .quiet: String(localized: "Keep quiet (no alert)")
             }
         }
+
+        /// Takes the email out of the inbox; a rule does at most one of these.
+        public var moves: Bool {
+            switch self {
+            case .archive, .trash, .move: true
+            default: false
+            }
+        }
     }
 
     public var id = UUID()
-    public var field: Field
-    public var contains: String
-    public var action: Action
+    public var conditions: [Condition]
+    public var hasAttachment = false
+    public var actions: [Action]
     /// Only for this mailbox; nil for all of them.
     public var accountID: UUID?
 
-    public init(field: Field, contains: String, action: Action, accountID: UUID? = nil) {
-        self.field = field
-        self.contains = contains
-        self.action = action
+    public init(conditions: [Condition], hasAttachment: Bool = false, actions: [Action], accountID: UUID? = nil) {
+        self.conditions = conditions
+        self.hasAttachment = hasAttachment
+        self.actions = actions
         self.accountID = accountID
     }
 
+    /// One condition and one action, the common case.
+    public init(field: Field, contains: String, action: Action, accountID: UUID? = nil) {
+        self.init(conditions: [Condition(field: field, contains: contains)], actions: [action], accountID: accountID)
+    }
+
+    /// The first condition's field and text, and the first action, for places that show one.
+    public var field: Field { conditions.first?.field ?? .from }
+    public var contains: String { conditions.first?.contains ?? "" }
+    public var action: Action { actions.first ?? .archive }
+
+    /// One condition and one action: what AI apps can change in place.
+    public var isSimple: Bool { conditions.count == 1 && !hasAttachment && actions.count == 1 }
+
     public func matches(_ message: MailMessage) -> Bool {
-        let needle = contains.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !needle.isEmpty else { return false }
-        switch field {
-        case .from:
-            return message.from.address.lowercased().contains(needle) || (message.from.name ?? "").lowercased().contains(needle)
-        case .to:
-            return (message.to + message.cc).contains { $0.address.lowercased().contains(needle) || ($0.name ?? "").lowercased().contains(needle) }
-        case .subject:
-            return message.subject.lowercased().contains(needle)
+        guard !conditions.isEmpty || hasAttachment else { return false }
+        if hasAttachment, !message.hasAttachments { return false }
+        return conditions.allSatisfy { condition in
+            let needle = condition.contains.trimmingCharacters(in: .whitespaces).lowercased()
+            guard !needle.isEmpty else { return false }
+            switch condition.field {
+            case .from:
+                return message.from.address.lowercased().contains(needle) || (message.from.name ?? "").lowercased().contains(needle)
+            case .to:
+                return (message.to + message.cc).contains { $0.address.lowercased().contains(needle) || ($0.name ?? "").lowercased().contains(needle) }
+            case .subject:
+                return message.subject.lowercased().contains(needle)
+            }
         }
+    }
+
+    /// "From contains “bank”, Has an attachment", for its row.
+    public var conditionTitle: String {
+        var parts = conditions.map { condition in
+            switch condition.field {
+            case .from: String(localized: "From contains “\(condition.contains)”")
+            case .to: String(localized: "To contains “\(condition.contains)”")
+            case .subject: String(localized: "Subject contains “\(condition.contains)”")
+            }
+        }
+        if hasAttachment { parts.append(String(localized: "Has an attachment")) }
+        return parts.joined(separator: ", ")
     }
 }
 
@@ -130,7 +181,7 @@ extension MailModel {
         var ruleMoves: [MailAction: [MailThread]] = [:]
         var done: [RuleActivity] = []
         let batch = UUID()
-        var autoSends: [(rule: MailRule, thread: MailThread)] = []
+        var autoSends: [(rule: MailRule, action: MailRule.Action, thread: MailThread)] = []
         var leaving = Set<String>()
         for thread in threads {
             let message = thread.latest
@@ -143,24 +194,26 @@ extension MailModel {
                 actions[.done, default: []].append(thread); leaving.insert(thread.id); continue
             }
             for rule in rules where (rule.accountID == nil || rule.accountID == thread.accountID) && rule.matches(message) {
+              for action in rule.actions {
                 var did = true
-                switch rule.action {
+                switch action {
                 case .archive, .trash, .move:
                     // One move per email: the first rule that moves it wins.
-                    guard !leaving.contains(thread.id), let action = ruleMove(rule.action, for: thread) else { did = false; break }
-                    ruleMoves[action, default: []].append(thread); leaving.insert(thread.id)
+                    guard !leaving.contains(thread.id), let move = ruleMove(action, for: thread) else { did = false; break }
+                    ruleMoves[move, default: []].append(thread); leaving.insert(thread.id)
                 case .markRead: actions[.markRead, default: []].append(thread)
                 case .star: actions[.star, default: []].append(thread)
                 case .label(let name): addLabel(name, to: thread)
                 case .forward, .answer:
-                    guard autoSends.count < Self.autoSendsPerRun, mayAutoSend(rule.action, to: message, ruleID: rule.id) else { did = false; break }
-                    autoSends.append((rule, thread))
+                    guard autoSends.count < Self.autoSendsPerRun, mayAutoSend(action, to: message, ruleID: rule.id) else { did = false; break }
+                    autoSends.append((rule, action, thread))
                 case .quiet: break   // `isQuietByRule` keeps its alert away
                 }
                 if did {
                     done.append(RuleActivity(date: Date(), batch: batch, subject: message.subject,
-                                             sender: message.from.displayName, action: rule.action.title))
+                                             sender: message.from.displayName, action: action.title))
                 }
+              }
             }
         }
         // Kept to a few thousand, which covers any inbox view.
@@ -227,12 +280,12 @@ extension MailModel {
     }
 
     /// Forwards and answers what rules asked for, each from the mailbox the mail came to.
-    private func send(_ items: [(rule: MailRule, thread: MailThread)]) async {
-        for (rule, thread) in items {
+    private func send(_ items: [(rule: MailRule, action: MailRule.Action, thread: MailThread)]) async {
+        for (rule, action, thread) in items {
             guard let account = account(thread.accountID), let provider = try? provider(for: account) else { continue }
             let message = thread.latest
             var draft: Draft
-            switch rule.action {
+            switch action {
             case .forward(let address):
                 let body = try? await provider.body(of: message)
                 let subject = "Fwd: " + (Subject.isReply(message.subject) ? String(message.subject.dropFirst(4)) : message.subject)
@@ -264,7 +317,7 @@ extension MailModel {
     /// New mail a "keep quiet" rule covers: it arrives without an alert or sound.
     func isQuietByRule(_ thread: MailThread) -> Bool {
         mailRules.contains { rule in
-            rule.action == .quiet && (rule.accountID == nil || rule.accountID == thread.accountID) && rule.matches(thread.latest)
+            rule.actions.contains(.quiet) && (rule.accountID == nil || rule.accountID == thread.accountID) && rule.matches(thread.latest)
         }
     }
 

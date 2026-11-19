@@ -47,12 +47,15 @@ extension MailModel {
             guard parts.count == 3, let accountID = UUID(uuidString: parts[0]), account(accountID) != nil else { continue }
             let (sender, folder) = (parts[1], parts[2])
             let covered = rules.contains { rule in
-                if case .move(let name) = rule.action, name.caseInsensitiveCompare(folder) == .orderedSame,
-                   rule.field == .from, sender.contains(rule.contains.lowercased()) { return true }
-                return false
+                let files = rule.actions.contains { action in
+                    if case .move(let name) = action { name.caseInsensitiveCompare(folder) == .orderedSame } else { false }
+                }
+                return files && rule.conditions.contains { $0.field == .from && sender.contains($0.contains.lowercased()) }
             }
             guard !covered else { continue }
-            var form = RuleForm(field: .from, contains: sender, choice: .move, name: folder, accountID: accountID)
+            var form = RuleForm(field: .from, contains: sender, accountID: accountID)
+            form.move = .folder
+            form.folder = folder
             form.suggestionKey = key
             return RuleSuggestion(text: String(localized: "You keep filing mail from \(sender) into “\(folder)”"), form: form)
         }

@@ -23,7 +23,7 @@ enum RuleTools {
     static func tools(allowChanges: Bool) -> [MCPTool] {
         var tools = [
             MCPTool(name: "list_rules",
-                    description: "Lists the person's rules for new mail (Settings → Rules), each with its id, condition, action and mailbox.",
+                    description: "Lists the rules Margin runs on new mail (Settings → Rules), each with its id, condition, action and mailbox. Rules made in Settings can have several conditions and actions, listed in conditions and actions; those can be deleted but not updated here. Rules kept on a mail server aren't listed.",
                     inputSchema: #"{"type":"object","properties":{},"additionalProperties":false}"#),
             MCPTool(name: "preview_rule",
                     description: "Shows which inbox conversations a rule would match: an existing one by id, or a condition (field, contains, mailbox) before create_rule. Rules only act on new mail, so act on these with the usual tools (archive, move_to_folder, sort_into_group…) if the person wants existing mail handled too.",
@@ -75,6 +75,9 @@ extension MailModel {
             return json(["rule": ruleJSON(rule), "note": ruleNote(rule)] as [String: Any])
         case "update_rule":
             let old = try agentRule(arguments["id"]?.string)
+            guard old.isSimple else {
+                throw MCPToolError("This rule has several conditions or actions, made in Settings → Rules. Change it there, or delete it and create a new one.")
+            }
             var rule = try makeRule(arguments, from: old, needsAction: true)
             rule.id = old.id
             if let same = mailRules.first(where: { $0.id != old.id && Self.sameRule($0, rule) }) {
@@ -234,7 +237,8 @@ extension MailModel {
     }
 
     static func sameRule(_ a: MailRule, _ b: MailRule) -> Bool {
-        a.field == b.field && a.contains.lowercased() == b.contains.lowercased() && a.action == b.action && a.accountID == b.accountID
+        let lowered = { (rule: MailRule) in rule.conditions.map { MailRule.Condition(field: $0.field, contains: $0.contains.lowercased()) } }
+        return lowered(a) == lowered(b) && a.hasAttachment == b.hasAttachment && a.actions == b.actions && a.accountID == b.accountID
     }
 
     private func ruleMailboxName(_ rule: MailRule) -> String {
@@ -251,12 +255,29 @@ extension MailModel {
             "summary": Self.ruleSummary(rule, mailbox: ruleMailboxName(rule)),
         ]
         if let target = ruleTarget(rule.action) { item["target"] = target }
+        if !rule.isSimple {
+            // Made in Settings with several parts: all of them, so nothing is hidden.
+            item["conditions"] = rule.conditions.map { ["field": $0.field.rawValue, "contains": $0.contains] }
+            if rule.hasAttachment { item["has_attachment"] = true }
+            item["actions"] = rule.actions.map { action -> [String: String] in
+                var entry = ["action": ruleActionKind(action)]
+                if let target = ruleTarget(action) { entry["target"] = target }
+                return entry
+            }
+        }
         return item
     }
 
     /// "When From contains “github”: label “Updates” (all mailboxes)", for AI apps.
     static func ruleSummary(_ rule: MailRule, mailbox: String) -> String {
-        let action = switch rule.action {
+        let actions = rule.actions.map(actionSummary).joined(separator: ", ")
+        var conditions = rule.conditions.map { "\($0.field.rawValue.capitalized) contains “\($0.contains)”" }
+        if rule.hasAttachment { conditions.append("it has an attachment") }
+        return "When \(conditions.joined(separator: " and ")): \(actions) (\(mailbox))"
+    }
+
+    private static func actionSummary(_ action: MailRule.Action) -> String {
+        switch action {
         case .archive: "archive"
         case .trash: "move to Trash"
         case .markRead: "mark as read"
@@ -267,7 +288,6 @@ extension MailModel {
         case .answer(let text): "answer “\(text.prefix(60))”"
         case .quiet: "no alert"
         }
-        return "When \(rule.field.rawValue.capitalized) contains “\(rule.contains)”: \(action) (\(mailbox))"
     }
 
     /// What the AI app should know after saving: rules act on new mail only.

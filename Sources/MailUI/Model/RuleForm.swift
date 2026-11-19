@@ -1,28 +1,35 @@
 import Foundation
 import MailCore
 
-/// A rule being made, in Settings → Rules or from a conversation's Create Rule…: the same parts
-/// as `MailRule`, kept loose while it's filled in so anything missing can be pointed out.
+/// A rule being made or changed, in Settings → Rules or from a conversation's Create Rule…: one
+/// form for every rule, kept loose while it's filled in so anything missing can be pointed out.
+/// It's saved where it runs: on the mailbox's server when that server keeps rules (it then runs
+/// while every device is off), otherwise in Margin.
 public struct RuleForm: Identifiable, Hashable, Sendable {
-    public enum Choice: String, CaseIterable, Identifiable, Sendable {
-        case archive, trash, markRead, star, label, move, forward, answer, quiet
+    /// Where the rule runs.
+    public enum Place: String, CaseIterable, Identifiable, Sendable {
+        case server, margin
         public var id: String { rawValue }
         public var title: String {
             switch self {
-            case .archive: String(localized: "Archive")
-            case .trash: String(localized: "Move to Trash")
-            case .markRead: String(localized: "Mark as read")
-            case .star: String(localized: "Star")
-            case .label: String(localized: "Label…")
-            case .move: String(localized: "Move to folder…")
-            case .forward: String(localized: "Forward to…")
-            case .answer: String(localized: "Answer with…")
-            case .quiet: String(localized: "Keep quiet (no alert)")
+            case .server: String(localized: "On the server")
+            case .margin: String(localized: "In Margin")
             }
         }
-        public var needsName: Bool { [.label, .move, .forward, .answer].contains(self) }
-        /// Sends mail by itself.
-        public var sendsMail: Bool { self == .forward || self == .answer }
+    }
+
+    /// Where matching mail goes; a rule moves it at most once.
+    public enum Move: String, CaseIterable, Identifiable, Sendable {
+        case none, archive, folder, trash
+        public var id: String { rawValue }
+        public var title: String {
+            switch self {
+            case .none: String(localized: "Leave in Inbox")
+            case .archive: String(localized: "Archive")
+            case .folder: String(localized: "Move to folder…")
+            case .trash: String(localized: "Move to Trash")
+            }
+        }
     }
 
     /// What Create Rule… catches from a conversation.
@@ -38,73 +45,184 @@ public struct RuleForm: Identifiable, Hashable, Sendable {
         }
     }
 
+    /// The saved rule being changed.
+    public enum Editing: Hashable, Sendable {
+        case margin(UUID)
+        /// As the server had it, with its id, name and whether it's on.
+        case server(ServerRule, accountID: UUID)
+    }
+
     public var id = UUID()
-    public var field = MailRule.Field.from
-    public var contains = ""
-    public var choice = Choice.archive
-    /// The label or folder, for those choices.
-    public var name = ""
+    // When…
+    public var from = ""
+    public var to = ""
+    public var subject = ""
+    public var hasAttachment = false
+    // Then…
+    public var move = Move.none
+    /// The folder: its name for a rule in Margin, the server's id for it on the server.
+    public var folder = ""
+    public var markRead = false
+    public var star = false
+    public var forwardTo = ""
+    /// Only in Margin: a label, an answer to the sender, no alert.
+    public var label = ""
+    public var answer = ""
+    public var quiet = false
+
     public var accountID: UUID?
+    public var place = Place.margin
     /// The conversation it was made from, for Create Rule….
     public var threadID: MailThread.ID?
-    /// The saved rule being changed; nil for a new one.
-    public var editing: UUID?
+    public var editing: Editing?
     /// The suggestion it came from, so adding it stops the suggestion.
     var suggestionKey: String?
 
-    public init(field: MailRule.Field = .from, contains: String = "", choice: Choice = .archive, name: String = "", accountID: UUID? = nil) {
-        self.field = field
-        self.contains = contains
-        self.choice = choice
-        self.name = name
+    public init(accountID: UUID? = nil) {
         self.accountID = accountID
     }
 
-    /// A saved rule, to change.
+    /// A form with one condition filled in.
+    public init(field: MailRule.Field, contains: String, accountID: UUID? = nil) {
+        self.accountID = accountID
+        set(field, contains)
+    }
+
+    /// A rule kept in Margin, to change.
     public init(rule: MailRule) {
-        field = rule.field
-        contains = rule.contains
         accountID = rule.accountID
-        editing = rule.id
-        switch rule.action {
-        case .archive: choice = .archive
-        case .trash: choice = .trash
-        case .markRead: choice = .markRead
-        case .star: choice = .star
-        case .label(let name): choice = .label; self.name = name
-        case .move(let folder): choice = .move; name = folder
-        case .forward(let address): choice = .forward; name = address
-        case .answer(let text): choice = .answer; name = text
-        case .quiet: choice = .quiet
+        editing = .margin(rule.id)
+        for condition in rule.conditions {
+            if text(condition.field).isEmpty { set(condition.field, condition.contains) }
+        }
+        hasAttachment = rule.hasAttachment
+        for action in rule.actions {
+            switch action {
+            case .archive: move = .archive
+            case .trash: move = .trash
+            case .move(let name): move = .folder; folder = name
+            case .markRead: markRead = true
+            case .star: star = true
+            case .label(let name): label = name
+            case .forward(let address): forwardTo = address
+            case .answer(let text): answer = text
+            case .quiet: quiet = true
+            }
         }
     }
 
-    var trimmedContains: String { contains.trimmingCharacters(in: .whitespacesAndNewlines) }
-    var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
+    /// A rule kept on a mailbox's server, to change.
+    public init(server rule: ServerRule, accountID: UUID) {
+        self.accountID = accountID
+        place = .server
+        editing = .server(rule, accountID: accountID)
+        from = rule.from
+        to = rule.to
+        subject = rule.subject
+        hasAttachment = rule.hasAttachment
+        if rule.delete { move = .trash } else if rule.archive { move = .archive } else if let id = rule.moveTo { move = .folder; folder = id }
+        markRead = rule.markRead
+        star = rule.flag
+        forwardTo = rule.forwardTo
+    }
 
-    /// The rule, once everything it needs is filled in.
-    public var rule: MailRule? {
-        guard !trimmedContains.isEmpty, !choice.needsName || !trimmedName.isEmpty else { return nil }
-        if choice == .forward, !EmailAddress.isValid(trimmedName) { return nil }
-        let action: MailRule.Action = switch choice {
-        case .archive: .archive
-        case .trash: .trash
-        case .markRead: .markRead
-        case .star: .star
-        case .label: .label(trimmedName)
-        case .move: .move(trimmedName)
-        case .forward: .forward(trimmedName)
-        case .answer: .answer(trimmedName)
-        case .quiet: .quiet
+    func text(_ field: MailRule.Field) -> String {
+        switch field {
+        case .from: from
+        case .to: to
+        case .subject: subject
         }
-        var rule = MailRule(field: field, contains: trimmedContains, action: action, accountID: accountID)
-        if let editing { rule.id = editing }
+    }
+
+    /// Fills in one condition, clearing the others (Create Rule…'s "Catch").
+    mutating func catchOnly(_ field: MailRule.Field, _ contains: String) {
+        from = ""; to = ""; subject = ""
+        set(field, contains)
+    }
+
+    mutating func set(_ field: MailRule.Field, _ contains: String) {
+        switch field {
+        case .from: from = contains
+        case .to: to = contains
+        case .subject: subject = contains
+        }
+    }
+
+    static func trimmed(_ text: String) -> String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    var conditions: [MailRule.Condition] {
+        MailRule.Field.allCases.compactMap { field in
+            let value = Self.trimmed(text(field))
+            return value.isEmpty ? nil : MailRule.Condition(field: field, contains: value)
+        }
+    }
+
+    var hasCondition: Bool { !conditions.isEmpty || hasAttachment }
+
+    /// Actions only Margin can do (a label, an answer, no alert).
+    public var needsMargin: Bool { !Self.trimmed(label).isEmpty || !Self.trimmed(answer).isEmpty || quiet }
+
+    /// Sends mail by itself.
+    public var sendsMail: Bool { !Self.trimmed(forwardTo).isEmpty || (!Self.trimmed(answer).isEmpty && place == .margin) }
+
+    var hasAction: Bool {
+        move != .none || markRead || star || !Self.trimmed(forwardTo).isEmpty
+            || (place == .margin && needsMargin)
+    }
+
+    /// Ready to save where it runs.
+    public var isComplete: Bool {
+        hasCondition && hasAction && (move != .folder || !Self.trimmed(folder).isEmpty)
+            && (Self.trimmed(forwardTo).isEmpty || EmailAddress.isValid(Self.trimmed(forwardTo)))
+            && (place == .margin || (!needsMargin && accountID != nil))
+    }
+
+    /// The rule for Margin, once everything it needs is filled in.
+    public var rule: MailRule? {
+        guard place == .margin, isComplete else { return nil }
+        var actions: [MailRule.Action] = []
+        switch move {
+        case .none: break
+        case .archive: actions.append(.archive)
+        case .trash: actions.append(.trash)
+        case .folder: actions.append(.move(Self.trimmed(folder)))
+        }
+        if markRead { actions.append(.markRead) }
+        if star { actions.append(.star) }
+        if !Self.trimmed(label).isEmpty { actions.append(.label(Self.trimmed(label))) }
+        if !Self.trimmed(forwardTo).isEmpty { actions.append(.forward(Self.trimmed(forwardTo))) }
+        if !Self.trimmed(answer).isEmpty { actions.append(.answer(Self.trimmed(answer))) }
+        if quiet { actions.append(.quiet) }
+        var rule = MailRule(conditions: conditions, hasAttachment: hasAttachment, actions: actions, accountID: accountID)
+        if case .margin(let id) = editing { rule.id = id }
         return rule
     }
 
-    /// For the matches shown while it's filled in: the condition alone, whatever the action.
+    /// The rule for the mailbox's server, once everything it needs is filled in.
+    public var serverRule: ServerRule? {
+        guard place == .server, isComplete else { return nil }
+        var rule = ServerRule()
+        if case .server(let old, _) = editing {
+            rule.id = old.id
+            rule.name = old.name
+            rule.isEnabled = old.isEnabled
+        }
+        rule.from = Self.trimmed(from)
+        rule.to = Self.trimmed(to)
+        rule.subject = Self.trimmed(subject)
+        rule.hasAttachment = hasAttachment
+        rule.delete = move == .trash
+        rule.archive = move == .archive
+        rule.moveTo = move == .folder ? Self.trimmed(folder) : nil
+        rule.markRead = markRead
+        rule.flag = star
+        rule.forwardTo = Self.trimmed(forwardTo)
+        return rule
+    }
+
+    /// For the matches shown while it's filled in: the conditions alone, whatever the actions.
     var condition: MailRule? {
-        trimmedContains.isEmpty ? nil : MailRule(field: field, contains: trimmedContains, action: .archive, accountID: accountID)
+        hasCondition ? MailRule(conditions: conditions, hasAttachment: hasAttachment, actions: [.archive], accountID: accountID) : nil
     }
 }
 
@@ -118,14 +236,11 @@ extension MailModel {
         form.threadID = thread.id
         switch basis {
         case .sender:
-            form.field = .from
-            form.contains = sender.address.lowercased()
+            form.catchOnly(.from, sender.address.lowercased())
         case .domain:
-            form.field = .from
-            form.contains = sender.address.split(separator: "@").last.map { "@" + $0.lowercased() } ?? sender.address
+            form.catchOnly(.from, sender.address.split(separator: "@").last.map { "@" + $0.lowercased() } ?? sender.address)
         case .subject:
-            form.field = .subject
-            form.contains = Self.plainSubject(thread.subject)
+            form.catchOnly(.subject, Self.plainSubject(thread.subject))
         }
         return form
     }
@@ -146,10 +261,11 @@ extension MailModel {
 
     /// The folder a move rule names isn't in any mailbox it covers, so it would do nothing.
     public func ruleFolderMissing(_ form: RuleForm) -> Bool {
-        guard form.choice == .move, !form.trimmedName.isEmpty else { return false }
+        let name = RuleForm.trimmed(form.folder)
+        guard form.place == .margin, form.move == .folder, !name.isEmpty else { return false }
         let scope = form.accountID.map { [$0] } ?? accounts.map(\.id)
         return !scope.contains { id in
-            folders(of: id).contains { $0.role != .junk && $0.role != .trash && $0.name.caseInsensitiveCompare(form.trimmedName) == .orderedSame }
+            folders(of: id).contains { $0.role != .junk && $0.role != .trash && $0.name.caseInsensitiveCompare(name) == .orderedSame }
         }
     }
 
@@ -174,7 +290,7 @@ extension MailModel {
     public func addRule(_ form: RuleForm) -> Bool {
         guard let rule = form.rule else { return false }
         if let key = form.suggestionKey { dismissedRuleSuggestions.insert(key) }
-        if let editing = form.editing, let index = mailRules.firstIndex(where: { $0.id == editing }) {
+        if case .margin(let editing) = form.editing, let index = mailRules.firstIndex(where: { $0.id == editing }) {
             mailRules[index] = rule
         } else if !mailRules.contains(where: { Self.sameRule($0, rule) }) {
             mailRules.append(rule)
@@ -184,12 +300,17 @@ extension MailModel {
 
     /// Rules to start from, filled in for the common cases; anything left blank is marked.
     public static var starterRules: [(title: String, form: RuleForm)] {
-        [(String(localized: "Mark newsletters as read"), RuleForm(field: .from, contains: "newsletter", choice: .markRead)),
-         (String(localized: "Archive receipts"), RuleForm(field: .subject, contains: String(localized: "receipt"), choice: .archive)),
-         (String(localized: "Label invoices"), RuleForm(field: .subject, contains: String(localized: "invoice"), choice: .label, name: String(localized: "Invoices"))),
-         (String(localized: "Star mail from someone"), RuleForm(field: .from, contains: "", choice: .star)),
-         (String(localized: "No alerts for notifications"), RuleForm(field: .from, contains: "notifications@", choice: .quiet)),
-         (String(localized: "Answer while you're away"), RuleForm(field: .to, contains: "", choice: .answer))]
+        func form(_ field: MailRule.Field, _ contains: String, _ fill: (inout RuleForm) -> Void) -> RuleForm {
+            var form = RuleForm(field: field, contains: contains)
+            fill(&form)
+            return form
+        }
+        return [(String(localized: "Mark newsletters as read"), form(.from, "newsletter") { $0.markRead = true }),
+                (String(localized: "Archive receipts"), form(.subject, String(localized: "receipt")) { $0.move = .archive }),
+                (String(localized: "Label invoices"), form(.subject, String(localized: "invoice")) { $0.label = String(localized: "Invoices") }),
+                (String(localized: "Star mail from someone"), form(.from, "") { $0.star = true }),
+                (String(localized: "No alerts for notifications"), form(.from, "notifications@") { $0.quiet = true }),
+                (String(localized: "Answer while you're away"), form(.to, "") { $0.answer = String(localized: "Thanks for your email. I'll get back to you next week.") })]
     }
 
     // MARK: Writing a rule from words
@@ -216,30 +337,26 @@ extension MailModel {
     /// fit stays as written, for the form to point out.
     func ruleForm(from parts: RuleParts) -> RuleForm {
         var form = RuleForm()
-        form.field = MailRule.Field(rawValue: parts.field.lowercased()) ?? .from
-        form.contains = parts.contains.trimmingCharacters(in: .whitespacesAndNewlines)
+        form.set(MailRule.Field(rawValue: parts.field.lowercased()) ?? .from, parts.contains.trimmingCharacters(in: .whitespacesAndNewlines))
         let mailbox = parts.mailbox.trimmingCharacters(in: .whitespaces).lowercased()
         form.accountID = accounts.first { $0.label.lowercased() == mailbox || $0.address.address.lowercased() == mailbox }?.id
         let target = parts.target.trimmingCharacters(in: .whitespacesAndNewlines)
         switch parts.action.lowercased() {
-        case "trash": form.choice = .trash
-        case "mark_read", "markread", "read": form.choice = .markRead
-        case "star", "important": form.choice = .star
+        case "trash": form.move = .trash
+        case "mark_read", "markread", "read": form.markRead = true
+        case "star", "important": form.star = true
         case "label", "group":
-            form.choice = .label
-            form.name = ruleLabelNames.first { $0.caseInsensitiveCompare(target) == .orderedSame } ?? target
+            form.label = ruleLabelNames.first { $0.caseInsensitiveCompare(target) == .orderedSame } ?? target
         case "move":
-            form.choice = .move
-            form.name = ruleFolderNames(for: form.accountID).first { $0.caseInsensitiveCompare(target) == .orderedSame } ?? target
+            form.move = .folder
+            form.folder = ruleFolderNames(for: form.accountID).first { $0.caseInsensitiveCompare(target) == .orderedSame } ?? target
         case "forward":
-            form.choice = .forward
-            form.name = target
+            form.forwardTo = target
         case "answer":
-            form.choice = .answer
-            form.name = target
+            form.answer = target
         case "quiet":
-            form.choice = .quiet
-        default: form.choice = .archive
+            form.quiet = true
+        default: form.move = .archive
         }
         return form
     }

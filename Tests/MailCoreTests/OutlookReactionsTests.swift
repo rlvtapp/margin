@@ -79,15 +79,13 @@ import Testing
         }
     }
 
-    @Test func isAskedForOnlyWhenTurnedOn() throws {
+    @Test func needNoGrantOfTheirOwn() throws {
         let registry = OAuthClientRegistry(googleClientID: nil, microsoftClientID: "client")
-        // Sign-in doesn't ask for reading mail.
+        // The mail sign-in already reads mail through Graph; nothing else is asked for.
         let signIn = try #require(registry.client(for: .microsoft))
+        #expect(signIn.scopes.contains("https://graph.microsoft.com/Mail.ReadWrite"))
         #expect(!signIn.scopes.contains("https://graph.microsoft.com/Mail.Read"))
-        let turnedOn = try #require(registry.client(for: .microsoft, access: [.reactions]))
-        #expect(turnedOn.scopes == ["https://graph.microsoft.com/Mail.Read", "offline_access", "openid", "email"])
-        #expect(APIAccess.offered(by: .microsoft).contains(.reactions))
-        #expect(!APIAccess.offered(by: .google).contains(.reactions))
+        #expect(!APIAccess.allCases.flatMap { $0.scopes(for: .microsoft) }.contains("https://graph.microsoft.com/Mail.Read"))
     }
 }
 

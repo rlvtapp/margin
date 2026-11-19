@@ -78,8 +78,10 @@ import Testing
 
     @Test func aReplyThatIsOnlyAnEmojiIsAReaction() {
         #expect(MailReaction.detect(Self.mail("r1"), text: "🎉")?.emoji == "🎉")
-        #expect(MailReaction.detect(Self.mail("r1"), text: "👍\n\nSent from my iPhone")?.emoji == "👍")
-        #expect(MailReaction.detect(Self.mail("r1"), text: "❤️\n\nOn Tue, 10 Nov 2026, Kaan Mol wrote:\n> lorem")?.emoji == "❤️")
+        #expect(MailReaction.detect(Self.mail("r1"), text: "❤️\n\n> lorem")?.emoji == "❤️")
+        #expect(MailReaction.detect(Self.mail("r1"), text: "👍\n________________________________\nFrom: Kaan")?.emoji == "👍")
+        // Words after it aren't read, in any language: a signature line makes it an ordinary reply.
+        #expect(MailReaction.detect(Self.mail("r1"), text: "👍\n\nSent from my iPhone") == nil)
         // Words after it, or not a reply at all: an ordinary message.
         #expect(MailReaction.detect(Self.mail("r1"), text: "👍 on it, will do tomorrow") == nil)
         #expect(MailReaction.detect(Self.mail("n1", subject: "Party", inReplyTo: nil), text: "🎉") == nil)

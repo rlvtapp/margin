@@ -34,12 +34,14 @@ extension MailModel {
         return layout
     }
 
-    // MARK: Outlook's own reactions (opt-in, unofficial)
+    // MARK: Outlook's own reactions (unofficial)
 
-    /// Whether Outlook's own reactions are read for this account: a Microsoft account where
-    /// someone turned it on.
+    /// Whether Outlook's own reactions are read for this account: a Microsoft mailbox of the
+    /// person's own, whose Graph sign-in already reads mail. (Shared mailboxes would be read as
+    /// their owner's.)
     public func showsOutlookReactions(_ account: MailAccount) -> Bool {
-        oauthProvider(of: account) == .microsoft && apiAccess[account.id]?.contains(.reactions) == true
+        guard case .graph(nil) = account.connection, case .oauth(.microsoft, _) = account.auth else { return false }
+        return true
     }
 
     /// Reads Outlook's reactions on a conversation's newest messages through Graph, each at most
@@ -53,7 +55,7 @@ extension MailModel {
             let read = outlookReactionsRead[Self.bodyKey(thread.accountID, message.id)]
             return read.map { now.timeIntervalSince($0) > 120 } ?? true
         }
-        guard !due.isEmpty, let token = try? await credentials.apiToken(for: account) else { return }
+        guard !due.isEmpty, let token = try? await credentials.secret(for: account) else { return }
         let graph = MicrosoftGraphClient(accessToken: token)
         let jobs = due.map { (key: Self.bodyKey(thread.accountID, $0.id), messageID: $0.messageID ?? "") }
         for job in jobs { outlookReactionsRead[job.key] = now }
@@ -72,22 +74,6 @@ extension MailModel {
                              date: $0.date, messageID: "outlook:\($0.address)", inReplyTo: messageID)
             }
         }
-    }
-
-    /// Turns reading Outlook's reactions on: asks the account for reading mail in the sign-in sheet.
-    public func turnOnOutlookReactions(for account: MailAccount, authenticate: (URL, String) async throws -> URL) async throws {
-        try await requestAccess([.reactions], for: account, authenticate: authenticate)
-    }
-
-    /// Turns it off: the account's tokens stop being used for reading mail, and what was read is
-    /// forgotten. (The permission itself stays granted in the Microsoft account until removed there.)
-    public func turnOffOutlookReactions(for account: MailAccount) async {
-        let access = (apiAccess[account.id] ?? []).subtracting([.reactions])
-        try? await credentials.setAPIAccess(access, for: account)
-        apiAccess[account.id] = access.isEmpty ? nil : access
-        let prefix = Self.bodyKey(account.id, "")
-        outlookReactions = outlookReactions.filter { !$0.key.hasPrefix(prefix) }
-        outlookReactionsRead = outlookReactionsRead.filter { !$0.key.hasPrefix(prefix) }
     }
 
     /// The conversation without its reactions, so a reply answers the last person who wrote,

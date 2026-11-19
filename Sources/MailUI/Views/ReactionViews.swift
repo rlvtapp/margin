@@ -1,4 +1,3 @@
-import AuthenticationServices
 import MailCore
 import SwiftUI
 
@@ -155,50 +154,5 @@ struct ReactionNoticeCard: View {
     private var line: String {
         if reaction.isRemoval { return String(localized: "\(reaction.from.displayName) removed a reaction") }
         return isMine ? String(localized: "You reacted") : String(localized: "\(reaction.from.displayName) reacted to your message")
-    }
-}
-
-/// A Microsoft account's switch for Outlook's own reactions (from colleagues on Microsoft 365),
-/// read from the mailbox. Off until turned on; turning it on asks the account for reading mail.
-struct OutlookReactionsSection: View {
-    let model: MailModel
-    let account: MailAccount
-    @Environment(\.webAuthenticationSession) private var webAuthentication
-    @State private var working = false
-    @State private var problem: String?
-
-    var body: some View {
-        if model.oauthProvider(of: account) == .microsoft, model.canAskForAccess(account) {
-            Section {
-                Toggle("Show Outlook reactions", isOn: Binding(
-                    get: { model.showsOutlookReactions(account) },
-                    set: { on in Task { on ? await turnOn() : await model.turnOffOutlookReactions(for: account) } }
-                ))
-                .disabled(working)
-            } header: {
-                Text("Reactions")
-            } footer: {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Shows reactions from people on Microsoft 365 under your messages. Microsoft doesn't offer this to other apps, so Margin reads it from your mailbox and it may stop working. Turning it on asks to read your mail.")
-                    if let problem { Text(verbatim: problem).foregroundStyle(Status.danger) }
-                }
-            }
-        }
-    }
-
-    private func turnOn() async {
-        working = true
-        defer { working = false }
-        do {
-            try await model.turnOnOutlookReactions(for: account) { url, scheme in
-                try await webAuthentication.authenticate(using: url, callbackURLScheme: scheme, preferredBrowserSession: .ephemeral)
-            }
-            problem = nil
-            if let thread = model.selectedThread { await model.loadOutlookReactions(for: thread) }
-        } catch let failure as ASWebAuthenticationSessionError where failure.code == .canceledLogin {
-            return
-        } catch {
-            problem = error.localizedDescription
-        }
     }
 }

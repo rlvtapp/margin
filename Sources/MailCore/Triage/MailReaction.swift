@@ -71,37 +71,10 @@ public struct MailReaction: Hashable, Sendable {
 
     // MARK: Recognising
 
-    /// The words Outlook (and other apps) put in brackets or in a picture's description for each
-    /// reaction, lowercased.
+    /// Outlook's names for its six reactions, as they appear in brackets ("[like]") or in its
+    /// reaction picture's address (`…/assets/reaction/like.png`). Microsoft's identifiers, not words.
     static let tokens: [String: String] = [
-        "like": "👍", "thumbs up": "👍", "thumbsup": "👍", "thumbs_up": "👍", "+1": "👍",
-        "heart": "❤️", "love": "❤️", "red heart": "❤️",
-        "celebrate": "🎉", "party": "🎉", "tada": "🎉", "party popper": "🎉",
-        "laugh": "😆", "haha": "😆", "smile": "😆", "laughing": "😆",
-        "surprised": "😲", "wow": "😮", "surprise": "😲", "astonished": "😲",
-        "sad": "😢", "crying": "😢", "cry": "😢",
-    ]
-
-    /// "reacted to your message" as Outlook might write it, lowercased, in the languages Margin
-    /// speaks. Microsoft doesn't publish its wording, so these are matched loosely and the
-    /// email's shape (a reaction, then the sender's name) counts as much as the words.
-    static let phrases = [
-        "reacted to your message", "reacted to your email", "reacted to your mail",
-        "auf ihre nachricht reagiert", "auf deine nachricht reagiert", "auf ihre e-mail reagiert",
-        "reaccionó a tu mensaje", "reaccionó a su mensaje", "reaccionó a tu correo",
-        "a réagi à votre message", "a réagi à ton message", "a réagi à votre courriel",
-        "पर प्रतिक्रिया दी",
-        "reagált az üzenetére", "reagált az üzenetedre",
-        "ha reagito al tuo messaggio", "ha reagito al suo messaggio", "ha reagito al messaggio",
-        "メッセージにリアクションしました", "メッセージにリアクション",
-        "메시지에 반응했습니다", "메시지에 반응",
-        "gereageerd op je bericht", "gereageerd op uw bericht", "reageerde op je bericht", "reageerde op uw bericht",
-        "reagiu à sua mensagem", "reagiu a sua mensagem", "reagiu à tua mensagem",
-        "отреагировал", "отреагировала",
-        "回应了你的邮件", "回应了您的邮件", "对你的邮件做出了回应", "对您的邮件做出了回应", "回應了你的郵件", "回應了您的郵件",
-        "iletinize tepki verdi", "mesajınıza tepki verdi", "e-postanıza tepki verdi",
-        "na twoją wiadomość", "zareagował", "zareagowała",
-        "reagerade på ditt meddelande", "reagerade på ditt mejl", "reagerade på ditt e-postmeddelande",
+        "like": "👍", "heart": "❤️", "celebrate": "🎉", "laugh": "😆", "surprised": "😲", "sad": "😢",
     ]
 
     /// Recognises a reaction email: Outlook's ("[like] Jane reacted to your message:") or a reply
@@ -113,8 +86,7 @@ public struct MailReaction: Hashable, Sendable {
         if let gmail, message.inReplyTo != nil {
             return MailReaction(emoji: gmail, from: message.from, date: message.date, messageID: message.id, inReplyTo: message.inReplyTo)
         }
-        guard startsLikeOne(text, sender: message.from),
-              message.inReplyTo != nil || !message.references.isEmpty || isReplySubject(message.subject) else { return nil }
+        guard startsLikeOne(text, sender: message.from), message.inReplyTo != nil || !message.references.isEmpty else { return nil }
         if let emoji = outlookStyle(text: text, html: html, sender: message.from, isReply: true) {
             let isRemoval = emoji == removed
             return MailReaction(emoji: emoji.isEmpty || isRemoval ? nil : emoji, from: message.from, date: message.date,
@@ -166,17 +138,16 @@ public struct MailReaction: Hashable, Sendable {
         rest = colon.map { rest[..<$0] } ?? window
         let remainder = rest.trimmingCharacters(in: .whitespaces)
         let lower = remainder.lowercased()
-        let name = sender.name?.trimmingCharacters(in: .whitespaces) ?? ""
+        // "Jolie, Jane" in the header is "Jane Jolie" in the text.
+        let header = sender.name?.trimmingCharacters(in: .whitespaces) ?? ""
+        let parts = header.split(separator: ",", maxSplits: 1).map { $0.trimmingCharacters(in: .whitespaces) }
+        let names = parts.count == 2 ? [header, parts[1] + " " + parts[0]] : [header]
+        let name = names.first { $0.count >= 2 && lower.hasPrefix($0.lowercased()) } ?? header
         let startsWithName = name.count >= 2 && lower.hasPrefix(name.lowercased())
-        if phrases.contains(where: { lower.contains($0) }) {
-            if let emoji { return emoji }
-            if let picture = pictureToken(in: html) { return picture }
-            // Without a reaction in front, only Outlook's own order counts: the person, then the
-            // words. "Did you see Jane reacted to your message" is a sentence, not a reaction.
-            return startsWithName || (name.count < 2 && remainder.count <= 120) ? "" : nil
-        }
-        // In a language Margin doesn't know: a known reaction, then the sender's name and a few
-        // words before the colon, in a reply ("👍 Jane Jolie reagerade på ditt meddelande:").
+        if emoji == nil, let picture = pictureToken(in: html) { emoji = picture }
+        // Outlook's shape, in any language: a known reaction, then the sender's name and a few
+        // words before the colon, in a reply ("[like] Jane Jolie reacted to your message:").
+        // Its words aren't read.
         // A tag Margin can't read ("[EXTERNAL]") or a name alone ("👍 Jane: sure") isn't enough.
         guard let emoji, isReply, !emoji.isEmpty, colon != nil, startsWithName,
               remainder.count > name.count + 3, remainder.count <= name.count + 60 else { return nil }
@@ -220,20 +191,10 @@ public struct MailReaction: Hashable, Sendable {
         let lead = trimmed.prefix(while: isEmoji)
         guard !lead.isEmpty, lead.count <= 3 else { return nil }
         let after = trimmed.dropFirst(lead.count).trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if after.isEmpty || quoteStarts.contains(where: after.hasPrefix) { return String(lead) }
-        // "On Tuesday, Jane wrote:" needs its "wrote", or "👍 on it" would count.
-        if quoteIntros.contains(where: after.hasPrefix), wrote.contains(where: after.prefix(300).contains) { return String(lead) }
+        // Nothing after it but the quoted original or a separator line.
+        if after.isEmpty || after.hasPrefix(">") || after.hasPrefix("____") || after.hasPrefix("-----") { return String(lead) }
         return nil
     }
-
-    /// How quoted mail or an automatic signature line begins, lowercased.
-    static let quoteStarts = [
-        ">", "____", "-----", "from:", "von:", "van:", "de:", "da:", "feladó:", "от:",
-        "sent from", "verzonden vanaf", "gesendet von", "envoyé de", "enviado desde", "inviato da", "get outlook",
-    ]
-    /// "On … wrote:" in other languages, and the words that end it.
-    static let quoteIntros = ["on ", "op ", "am ", "le ", "el ", "il ", "em ", "в "]
-    static let wrote = ["wrote", "schreef", "schrieb", "a écrit", "escribió", "ha scritto", "escreveu", "írta", "написал"]
 
     static func isEmoji(_ character: Character) -> Bool {
         let scalars = character.unicodeScalars
@@ -362,8 +323,8 @@ public struct MailReaction: Hashable, Sendable {
         return draft
     }
 
-    /// The words of a reaction email in each language Margin speaks. The sentence is matched by
-    /// `phrases` when the email comes back.
+    /// The words of a reaction email Margin sends, in the reader's language. Coming back, only
+    /// its shape is read (the reaction, then the name), never these words.
     struct Wording {
         var sentence: String
         var from: String
@@ -395,8 +356,8 @@ public struct MailReaction: Hashable, Sendable {
             "zh": Wording(sentence: "{name} 回应了你的邮件：", from: "发件人", sent: "发送时间", to: "收件人", subject: "主题"),
             "zh-hant": Wording(sentence: "{name} 回應了你的郵件：", from: "寄件者", sent: "寄件日期", to: "收件者", subject: "主旨"),
             "tr": Wording(sentence: "{name} iletinize tepki verdi:", from: "Kimden", sent: "Gönderildi", to: "Kime", subject: "Konu"),
-            // Gender-neutral: "a reaction from {name}".
-            "pl": Wording(sentence: "Reakcja od {name} na Twoją wiadomość:", from: "Od", sent: "Wysłano", to: "Do", subject: "Temat"),
+            // Gender-neutral, with the name first as in every language: "{name}: a reaction".
+            "pl": Wording(sentence: "{name} – reakcja na Twoją wiadomość:", from: "Od", sent: "Wysłano", to: "Do", subject: "Temat"),
             "sv": Wording(sentence: "{name} reagerade på ditt meddelande:", from: "Från", sent: "Skickat", to: "Till", subject: "Ämne"),
         ]
     }

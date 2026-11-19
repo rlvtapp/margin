@@ -14,7 +14,7 @@ let package = Package(
     targets: [
         .target(name: "MailCore"),
         .target(name: "MailUI", dependencies: ["MailCore"]),
-        .testTarget(name: "MailCoreTests", dependencies: ["MailCore"]),
+        .testTarget(name: "MailCoreTests", dependencies: ["MailCore"], resources: [.copy("Fixtures")]),
         .testTarget(name: "MailUITests", dependencies: ["MailUI", "MailCore"]),
     ]
 )

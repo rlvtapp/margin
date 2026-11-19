@@ -17,6 +17,12 @@ public struct OAuthClient: Sendable {
     /// Must match the redirect registered with the provider.
     public var redirectURI: String
     public var extraParameters: [String: String]
+    /// Scopes added after people had already connected (`APIAccess.laterScopes`). Their
+    /// refresh tokens weren't given them, so a refresh that's turned down tries again without
+    /// them; connecting again grants them.
+    public var laterScopes: [String] = []
+    /// How token requests go out; tests answer them.
+    var send: @Sendable (URLRequest) async throws -> (Data, URLResponse) = { try await URLSession.shared.data(for: $0) }
 
     public init(
         provider: OAuthProviderID, clientID: String, authorizeURL: URL, tokenURL: URL,
@@ -85,7 +91,12 @@ public struct OAuthClient: Sendable {
         var form = ["grant_type": "refresh_token", "refresh_token": refreshToken, "client_id": clientID]
         // Microsoft's tokens are per service, so a refresh says which service it's for.
         if provider == .microsoft { form["scope"] = tokenScopes.joined(separator: " ") }
-        return try await token(form, previous: tokens)
+        do {
+            return try await token(form, previous: tokens)
+        } catch MailError.authenticationFailed where provider == .microsoft && tokenScopes.contains(where: laterScopes.contains) {
+            form["scope"] = tokenScopes.filter { !laterScopes.contains($0) }.joined(separator: " ")
+            return try await token(form, previous: tokens)
+        }
     }
 
     private func token(_ form: [String: String], previous: OAuthTokens?) async throws -> OAuthTokens {
@@ -93,7 +104,7 @@ public struct OAuthClient: Sendable {
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpBody = Data(FormEncoding.encode(form).utf8)
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await send(request)
         struct Payload: Decodable {
             var access_token: String?
             var refresh_token: String?
@@ -199,16 +210,36 @@ public struct OAuthClientRegistry: Sendable {
                 provider: .microsoft, clientID: id,
                 authorizeURL: URL(string: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize")!,
                 tokenURL: URL(string: "https://login.microsoftonline.com/common/oauth2/v2.0/token")!,
-                scopes: [
-                    "https://outlook.office.com/IMAP.AccessAsUser.All",
-                    "https://outlook.office.com/SMTP.Send", "offline_access", "openid", "email", "profile",
-                    // Asked for at sign-in so instant notifications on iPhone need nothing more;
-                    // the token for it comes from the same sign-in (see `pushToken`).
-                    "https://graph.microsoft.com/Mail.ReadBasic",
+                // Mail goes through Graph (`GraphMailProvider`), so it works where IMAP is off.
+                // Mail.ReadBasic is what instant notifications on iPhone redeem (see `pushToken`).
+                scopes: Self.microsoftMailScopes + [
+                    "https://graph.microsoft.com/Mail.ReadBasic", "offline_access", "openid", "email", "profile",
                 ],
                 redirectURI: "msauth.\(Bundle.main.bundleIdentifier ?? "app")://auth"
             )
         }
+    }
+}
+
+extension OAuthClientRegistry {
+    /// Reading, filing and sending the person's own mail through Graph.
+    public static let microsoftMailScopes = [
+        "https://graph.microsoft.com/Mail.ReadWrite", "https://graph.microsoft.com/Mail.Send",
+    ]
+
+    /// Opening and sending from mailboxes others shared with the person. Work and school
+    /// accounts only, so they're asked for when a shared mailbox is added, not at sign-in.
+    public static let microsoftSharedMailScopes = [
+        "https://graph.microsoft.com/Mail.ReadWrite.Shared", "https://graph.microsoft.com/Mail.Send.Shared",
+    ]
+
+    /// The sign-in a mailbox uses: its provider's, plus the shared-mail scopes for a shared mailbox.
+    public func client(for account: MailAccount) -> OAuthClient? {
+        guard case .oauth(let provider, _) = account.auth, var client = client(for: provider) else { return nil }
+        if provider == .microsoft, account.sharedMailbox != nil {
+            client.scopes = Self.microsoftSharedMailScopes + client.scopes
+        }
+        return client
     }
 }
 
@@ -223,9 +254,10 @@ public enum APIAccess: String, Codable, Sendable, CaseIterable {
     case rooms
     /// The out-of-office reply.
     case autoReply
-    /// Outlook's reactions on Microsoft 365 mail, read from undocumented mailbox properties
-    /// (unofficial; see `OutlookReactions`). Needs reading mail, which sign-in doesn't ask for.
-    case reactions
+    /// Rules kept by the server (inbox rules, filters). Microsoft: the same mailbox settings as
+    /// the automatic reply, and folder names; Google: the same settings scope (labels are read
+    /// with the mail sign-in).
+    case rules
 
     func scopes(for provider: OAuthProviderID) -> [String] {
         switch (provider, self) {
@@ -234,7 +266,8 @@ public enum APIAccess: String, Codable, Sendable, CaseIterable {
             ["https://graph.microsoft.com/Contacts.Read", "https://graph.microsoft.com/People.Read",
              "https://graph.microsoft.com/User.ReadBasic.All"]
         case (.microsoft, .calendar):
-            ["https://graph.microsoft.com/Calendars.ReadWrite"]
+            // Calendars.Read.Shared: suggested meeting times (`findMeetingTimes`), work accounts only.
+            ["https://graph.microsoft.com/Calendars.ReadWrite", "https://graph.microsoft.com/Calendars.Read.Shared"]
         case (.microsoft, .rooms):
             ["https://graph.microsoft.com/Place.Read.All"]
         case (.google, .contacts):
@@ -247,17 +280,20 @@ public enum APIAccess: String, Codable, Sendable, CaseIterable {
             ["https://graph.microsoft.com/MailboxSettings.ReadWrite"]
         case (.google, .autoReply):
             ["https://www.googleapis.com/auth/gmail.settings.basic"]
-        case (.microsoft, .reactions):
-            ["https://graph.microsoft.com/Mail.Read"]
-        case (.google, .reactions):
-            // Gmail's reactions arrive as mail, which Margin already reads.
-            []
+        case (.microsoft, .rules):
+            ["https://graph.microsoft.com/MailboxSettings.ReadWrite", "https://graph.microsoft.com/Mail.ReadBasic"]
+        case (.google, .rules):
+            ["https://www.googleapis.com/auth/gmail.settings.basic"]
         }
     }
 
+    /// Scopes added after release: connections made before don't have them (see
+    /// `OAuthClient.laterScopes`).
+    static let laterScopes: Set<String> = ["https://graph.microsoft.com/Calendars.Read.Shared"]
+
     /// What each provider offers.
     public static func offered(by provider: OAuthProviderID) -> [APIAccess] {
-        provider == .microsoft ? [.contacts, .calendar, .rooms, .autoReply, .reactions] : [.contacts, .calendar, .rooms, .autoReply]
+        [.contacts, .calendar, .rooms, .autoReply, .rules]
     }
 }
 
@@ -279,6 +315,7 @@ extension OAuthClientRegistry {
         guard var client = client(for: provider) else { return nil }
         let scopes = APIAccess.allCases.filter(access.contains).flatMap { $0.scopes(for: provider) }
         // openid and email: so it's known which account said yes (see `signedInAs`).
+        client.laterScopes = scopes.filter(APIAccess.laterScopes.contains)
         client.scopes = scopes + (provider == .microsoft ? ["offline_access", "openid", "email"] : ["openid", "email"])
         if provider == .google { client.extraParameters["include_granted_scopes"] = "true" }
         return client

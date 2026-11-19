@@ -42,6 +42,10 @@ public enum AccountConnection: Hashable, Codable, Sendable {
     case imap(incoming: ServerEndpoint, outgoing: ServerEndpoint)
     /// JMAP for both (RFC 8620, RFC 8621).
     case jmap(sessionURL: URL)
+    /// Microsoft Graph for both (Microsoft 365, Outlook.com), so mail works where IMAP is off.
+    /// `sharedMailbox` is another mailbox the signed-in person may open (`/users/{address}`);
+    /// nil is their own.
+    case graph(sharedMailbox: String? = nil)
 }
 
 public struct MailAccount: Identifiable, Hashable, Codable, Sendable {
@@ -218,7 +222,13 @@ public struct MailAccount: Identifiable, Hashable, Codable, Sendable {
         case .sample: String(localized: "On this device")
         case .imap(let incoming, _): incoming.host
         case .jmap(let url): url.host() ?? url.absoluteString
+        case .graph: MicrosoftGraphClient.base.host() ?? ""
         }
+    }
+
+    /// The other mailbox this one opens with its owner's sign-in, when it's a shared mailbox.
+    public var sharedMailbox: String? {
+        if case .graph(let shared?) = connection { shared } else { nil }
     }
 }
 

@@ -1,0 +1,27 @@
+{
+  "responses": [
+    {
+      "id": "AAkALgMsg4=", "status": 200, "headers": {"Content-Type": "application/json"},
+      "body": {
+        "id": "AAkALgMsg4=",
+        "conversationId": "AAQkConvC=",
+        "internetMessageId": "<news-4@news.example>",
+        "subject": "Your weekly digest",
+        "bodyPreview": "Top stories this week",
+        "receivedDateTime": "2026-11-19T07:45:00Z",
+        "isRead": false,
+        "isDraft": false,
+        "hasAttachments": false,
+        "flag": {"flagStatus": "notFlagged"},
+        "categories": [],
+        "from": {"emailAddress": {"name": "Digest", "address": "digest@news.example"}},
+        "toRecipients": [{"emailAddress": {"address": "alex@work.example"}}],
+        "parentFolderId": "AAMkInbox=",
+        "internetMessageHeaders": [
+          {"name": "List-Unsubscribe", "value": "<https://news.example/unsubscribe>"},
+          {"name": "Feedback-ID", "value": "1234:news"}
+        ]
+      }
+    }
+  ]
+}

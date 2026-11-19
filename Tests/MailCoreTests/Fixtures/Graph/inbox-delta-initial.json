@@ -1,0 +1,9 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#Collection(message)",
+  "value": [
+    {"id": "AAkALgMsg2=", "isRead": false, "flag": {"flagStatus": "flagged"}, "categories": ["Red category", "Planning"], "parentFolderId": "AAMkInbox=", "receivedDateTime": "2026-11-18T09:30:00Z"},
+    {"id": "AAkALgMsg3=", "isRead": true, "flag": {"flagStatus": "notFlagged"}, "categories": [], "parentFolderId": "AAMkInbox=", "receivedDateTime": "2026-11-17T15:00:00Z"},
+    {"id": "AAkALgMsg1=", "isRead": true, "flag": {"flagStatus": "notFlagged"}, "categories": [], "parentFolderId": "AAMkInbox=", "receivedDateTime": "2026-11-16T08:00:00Z"}
+  ],
+  "@odata.deltaLink": "https://graph.microsoft.com/v1.0/me/mailFolders/AAMkInbox%3D/messages/delta?$deltatoken=round1"
+}

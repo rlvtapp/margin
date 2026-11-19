@@ -1,0 +1,8 @@
+{
+  "value": [
+    {"id": "AAkALgMsg3=", "@removed": {"reason": "deleted"}},
+    {"id": "AAkALgMsg2=", "isRead": true, "flag": {"flagStatus": "notFlagged"}, "categories": [], "parentFolderId": "AAMkInbox=", "receivedDateTime": "2026-11-18T09:30:00Z"},
+    {"id": "AAkALgMsg4=", "isRead": false, "flag": {"flagStatus": "notFlagged"}, "categories": [], "parentFolderId": "AAMkInbox=", "receivedDateTime": "2026-11-19T07:45:00Z"}
+  ],
+  "@odata.deltaLink": "https://graph.microsoft.com/v1.0/me/mailFolders/AAMkInbox%3D/messages/delta?$deltatoken=round2"
+}

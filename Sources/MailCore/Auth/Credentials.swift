@@ -307,13 +307,13 @@ public actor KeychainCredentials: CredentialSource {
         case .token:
             guard let token = keychain.read(account: account.id, kind: "token") else { throw MailError.missingCredentials }
             return token
-        case .oauth(let provider, _):
+        case .oauth:
             guard let stored = keychain.read(account: account.id, kind: "oauth"),
                   let tokens = try? JSONDecoder().decode(OAuthTokens.self, from: Data(stored.utf8)) else {
                 throw MailError.missingCredentials
             }
             if !tokens.isExpiring { return tokens.accessToken }
-            guard let client = oauth.client(for: provider) else { throw MailError.missingCredentials }
+            guard let client = oauth.client(for: account) else { throw MailError.missingCredentials }
             let fresh = try await refreshed(tokens, key: "\(account.id.uuidString).oauth", with: client)
             // Whoever was waiting for the same refresh got the same tokens: saving once is enough.
             let saved = keychain.read(account: account.id, kind: "oauth").flatMap { try? JSONDecoder().decode(OAuthTokens.self, from: Data($0.utf8)) }

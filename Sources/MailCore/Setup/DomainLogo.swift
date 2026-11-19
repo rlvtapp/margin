@@ -146,6 +146,7 @@ extension ProviderCatalog {
     public static func preset(for account: MailAccount) -> ProviderPreset? {
         if let id = account.providerID, let found = preset(id: id) { return found }
         if let byDomain = preset(forDomain: account.address.domain) { return byDomain }
+        if case .graph = account.connection { return preset(id: "microsoft") }
         guard case .imap(let incoming, _) = account.connection else {
             if case .jmap(let url) = account.connection { return all.first { $0.connection == .jmap(sessionURL: url) } }
             return nil

@@ -18,9 +18,10 @@ import Testing
 
     @Test func microsoftTokensAreForOneServiceOnly() throws {
         let client = try #require(registry.client(for: .microsoft))
+        // Mail is read and sent through Graph, so the whole sign-in is one Graph token.
         #expect(client.tokenScopes == [
-            "https://outlook.office.com/IMAP.AccessAsUser.All", "https://outlook.office.com/SMTP.Send",
-            "offline_access", "openid", "email", "profile",
+            "https://graph.microsoft.com/Mail.ReadWrite", "https://graph.microsoft.com/Mail.Send",
+            "https://graph.microsoft.com/Mail.ReadBasic", "offline_access", "openid", "email", "profile",
         ])
     }
 
@@ -29,4 +30,30 @@ import Testing
         client.scopes = ["https://graph.microsoft.com/Mail.ReadBasic", "offline_access"]
         #expect(client.tokenScopes == client.scopes)
     }
+
+    /// The calendar asks for shared calendars too (suggested meeting times). Connections made
+    /// before don't have that: a refresh that's turned down tries again without it.
+    @Test func calendarAccessAsksForSharedCalendarsAndOlderConnectionsStillRefresh() async throws {
+        var client = try #require(registry.client(for: .microsoft, access: [.calendar]))
+        #expect(client.scopes.contains("https://graph.microsoft.com/Calendars.Read.Shared"))
+        #expect(client.laterScopes == ["https://graph.microsoft.com/Calendars.Read.Shared"])
+        let asked = Asked()
+        client.send = { request in
+            let form = String(decoding: request.httpBody ?? Data(), as: UTF8.self).removingPercentEncoding ?? ""
+            await asked.add(form)
+            let shared = form.contains("Calendars.Read.Shared")
+            let body = shared ? #"{"error":"invalid_grant","error_description":"consent required"}"# : #"{"access_token":"new","expires_in":3600}"#
+            return (Data(body.utf8), HTTPURLResponse(url: request.url!, statusCode: shared ? 400 : 200, httpVersion: nil, headerFields: nil)!)
+        }
+        let tokens = try await client.refresh(OAuthTokens(accessToken: "old", refreshToken: "r", expiresAt: Date()))
+        #expect(tokens.accessToken == "new")
+        let forms = await asked.forms
+        #expect(forms.count == 2)
+        #expect(forms.last?.contains("Calendars.ReadWrite") == true)
+    }
+}
+
+private actor Asked {
+    var forms: [String] = []
+    func add(_ form: String) { forms.append(form) }
 }

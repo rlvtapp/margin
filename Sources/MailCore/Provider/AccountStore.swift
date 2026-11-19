@@ -37,6 +37,7 @@ public enum ProviderFactory {
         case .sample: SampleProvider(me: account.address, variant: account.id == MailAccount.samplePersonal.id ? .personal : .work)
         case .imap: try IMAPProvider(account: account, credentials: credentials, syncStore: imapSync)
         case .jmap: try JMAPProvider(account: account, credentials: credentials)
+        case .graph: try GraphMailProvider(account: account, credentials: credentials)
         }
     }
 }

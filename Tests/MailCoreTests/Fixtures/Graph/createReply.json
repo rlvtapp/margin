@@ -1,0 +1,9 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('ab12')/messages/$entity",
+  "id": "AAkALgDraft9=",
+  "conversationId": "AAQkConvA=",
+  "subject": "RE: RE: Quarterly plan",
+  "isDraft": true,
+  "parentFolderId": "AAMkDrafts=",
+  "toRecipients": [{"emailAddress": {"name": "Noor Haddad", "address": "noor@work.example"}}]
+}

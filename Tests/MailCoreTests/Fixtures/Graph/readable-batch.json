@@ -1,0 +1,7 @@
+{
+  "responses": [
+    {"id": "AAkALgMsg1=", "status": 200, "body": {"id": "AAkALgMsg1=", "hasAttachments": true, "body": {"contentType": "html", "content": "<html><body><p>Here is the <b>draft</b> plan.</p></body></html>"}}},
+    {"id": "AAkALgMsg2=", "status": 200, "body": {"id": "AAkALgMsg2=", "hasAttachments": false, "body": {"contentType": "text", "content": "Sounds good, let's meet Thursday."}}},
+    {"id": "AAkALgGone=", "status": 404, "body": {"error": {"code": "ErrorItemNotFound", "message": "The specified object was not found in the store."}}}
+  ]
+}

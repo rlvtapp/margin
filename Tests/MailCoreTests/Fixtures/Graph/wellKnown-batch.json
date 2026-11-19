@@ -1,0 +1,10 @@
+{
+  "responses": [
+    {"id": "inbox", "status": 200, "headers": {"Content-Type": "application/json"}, "body": {"id": "AAMkInbox="}},
+    {"id": "sentitems", "status": 200, "headers": {"Content-Type": "application/json"}, "body": {"id": "AAMkSent="}},
+    {"id": "drafts", "status": 200, "headers": {"Content-Type": "application/json"}, "body": {"id": "AAMkDrafts="}},
+    {"id": "archive", "status": 200, "headers": {"Content-Type": "application/json"}, "body": {"id": "AAMkArchive="}},
+    {"id": "deleteditems", "status": 200, "headers": {"Content-Type": "application/json"}, "body": {"id": "AAMkDeleted="}},
+    {"id": "junkemail", "status": 200, "headers": {"Content-Type": "application/json"}, "body": {"id": "AAMkJunk="}}
+  ]
+}

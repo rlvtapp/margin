@@ -68,10 +68,13 @@ public enum ProviderCatalog {
                   "Paste the password below.",
               ],
               setupURL: "https://myaccount.google.com/apppasswords"),
-        .imap("microsoft", "Microsoft", domains: ["outlook.com", "hotmail.com", "live.com", "msn.com", "outlook.de", "hotmail.co.uk"],
-              imap: ("outlook.office365.com", 993, .tls), smtp: ("smtp.office365.com", 587, .startTLS),
-              signIn: .oauth(.microsoft),
-              detail: "Outlook, Hotmail and Microsoft 365"),
+        // Mail through Graph, not IMAP: many organizations turn IMAP off.
+        ProviderPreset(
+            id: "microsoft", name: "Microsoft",
+            domains: ["outlook.com", "hotmail.com", "live.com", "msn.com", "outlook.de", "hotmail.co.uk"],
+            connection: .graph(), signIn: .oauth(.microsoft),
+            detail: String(localized: "Outlook, Hotmail and Microsoft 365")
+        ),
         .imap("icloud", "iCloud Mail", domains: ["icloud.com", "me.com", "mac.com"],
               imap: ("imap.mail.me.com", 993, .tls), smtp: ("smtp.mail.me.com", 587, .startTLS),
               signIn: .appPassword(help: URL(string: "https://support.apple.com/102654")!),

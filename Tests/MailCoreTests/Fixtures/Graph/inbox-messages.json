@@ -1,0 +1,65 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('ab12')/mailFolders('AAMkInbox%3D')/messages",
+  "value": [
+    {
+      "@odata.etag": "W/\"CQAAABYAAAA\"",
+      "id": "AAkALgMsg2=",
+      "conversationId": "AAQkConvA=",
+      "internetMessageId": "<reply-1@work.example>",
+      "subject": "RE: Quarterly plan",
+      "bodyPreview": "Sounds good, let's meet Thursday.",
+      "receivedDateTime": "2026-11-18T09:30:00Z",
+      "sentDateTime": "2026-11-18T09:29:58Z",
+      "isRead": false,
+      "isDraft": false,
+      "hasAttachments": false,
+      "flag": {"flagStatus": "flagged"},
+      "categories": ["Red category", "Planning"],
+      "from": {"emailAddress": {"name": "Noor Haddad", "address": "noor@work.example"}},
+      "toRecipients": [{"emailAddress": {"name": "Alex Rivera", "address": "alex@work.example"}}],
+      "ccRecipients": [],
+      "parentFolderId": "AAMkInbox=",
+      "internetMessageHeaders": [
+        {"name": "In-Reply-To", "value": "<plan-1@work.example>"},
+        {"name": "References", "value": "<plan-1@work.example>"},
+        {"name": "Received", "value": "from mail.work.example"}
+      ]
+    },
+    {
+      "@odata.type": "#microsoft.graph.eventMessageRequest",
+      "id": "AAkALgMsg3=",
+      "conversationId": "AAQkConvB=",
+      "internetMessageId": "<invite-7@work.example>",
+      "subject": "Design review",
+      "bodyPreview": "When: Friday 10:00",
+      "receivedDateTime": "2026-11-17T15:00:00Z",
+      "isRead": true,
+      "isDraft": false,
+      "hasAttachments": false,
+      "flag": {"flagStatus": "notFlagged"},
+      "categories": [],
+      "from": {"emailAddress": {"name": "Sam Lee", "address": "sam@work.example"}},
+      "toRecipients": [{"emailAddress": {"name": "Alex Rivera", "address": "alex@work.example"}}],
+      "parentFolderId": "AAMkInbox=",
+      "internetMessageHeaders": [{"name": "List-Id", "value": "<design.work.example>"}]
+    },
+    {
+      "id": "AAkALgMsg1=",
+      "conversationId": "AAQkConvA=",
+      "internetMessageId": "<plan-1@work.example>",
+      "subject": "Quarterly plan",
+      "bodyPreview": "Here is the draft plan.",
+      "receivedDateTime": "2026-11-16T08:00:00Z",
+      "isRead": true,
+      "isDraft": false,
+      "hasAttachments": true,
+      "flag": {"flagStatus": "notFlagged"},
+      "categories": [],
+      "from": {"emailAddress": {"name": "Alex Rivera", "address": "alex@work.example"}},
+      "toRecipients": [{"emailAddress": {"name": "Noor Haddad", "address": "noor@work.example"}}],
+      "parentFolderId": "AAMkInbox=",
+      "internetMessageHeaders": []
+    }
+  ],
+  "@odata.nextLink": "https://graph.microsoft.com/v1.0/me/mailFolders/AAMkInbox%3D/messages?$top=3&$skip=3"
+}

@@ -1,0 +1,18 @@
+From: Noor Haddad <noor@work.example>
+To: Alex Rivera <alex@work.example>
+Subject: RE: Quarterly plan
+Message-ID: <reply-1@work.example>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="b1"
+
+--b1
+Content-Type: text/plain; charset=utf-8
+
+Sounds good, let's meet Thursday.
+--b1
+Content-Type: text/csv; name="numbers.csv"
+Content-Disposition: attachment; filename="numbers.csv"
+Content-Transfer-Encoding: base64
+
+YSxiCjEsMgo=
+--b1--

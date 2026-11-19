@@ -12,10 +12,10 @@ struct ReaderMetaLine: View {
         FlowRow(spacing: 6) {
             Text(meta).font(TypeScale.label).foregroundStyle(Ink.tertiary).frame(height: Look.gap(22))
             ForEach(labels, id: \.self) { label in
-                LabelChip(text: label, style: .applied) { model.removeLabel(label, from: thread) }
+                LabelChip(text: label, style: .applied) { model.removeLabel(label, from: thread, onServer: true) }
             }
             ForEach(suggestions, id: \.self) { label in
-                LabelChip(text: label, style: .suggested) { model.addLabel(label, to: thread) }
+                LabelChip(text: label, style: .suggested) { model.addLabel(label, to: thread, onServer: true) }
             }
             if model.isWorking("labels", on: thread) {
                 ProgressView().controlSize(.mini).frame(height: Look.gap(22))
@@ -193,6 +193,9 @@ struct ReaderMoreMenu: View {
         Divider()
         Button(model.isPinned(thread) ? "Unpin" : "Pin to top") { model.togglePin(thread) }
         Button("Add to Reminders") { model.addToReminders(thread) }
+        #if os(macOS)
+        Button("Add to Notes") { model.addToNotes(thread) }
+        #endif
         Button("Print…") { model.printSelected() }
         #if os(macOS)
         Button("Save as PDF…") { model.printSelected(asPDF: true) }

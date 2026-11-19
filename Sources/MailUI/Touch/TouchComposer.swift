@@ -190,7 +190,7 @@ struct TouchComposer: View {
     }
 
     private func send() {
-        if model.remindsAboutAttachments && state.forgotAttachment { warnsAboutAttachment = true } else { model.queueSend(state, isReply: isReply) }
+        model.sendChecking(state, isReply: isReply) { warnsAboutAttachment = true }
     }
 }
 #endif

@@ -54,7 +54,8 @@ struct ReaderView: View {
                                         attachmentActions: AttachmentActions(
                                             open: { model.openAttachment($0, of: message, in: thread) },
                                             save: { model.saveAttachment($0, of: message, in: thread) },
-                                            file: { try await model.attachmentFile($0, of: message, in: thread) }
+                                            file: { try await model.attachmentFile($0, of: message, in: thread) },
+                                            saveAll: { model.saveAttachments($0, of: message, in: thread) }
                                         )
                                     )
                                     .id(message.id)
@@ -125,7 +126,7 @@ struct ReaderView: View {
             TextField("Label", text: $newLabel)
             Button("Cancel", role: .cancel) { newLabel = "" }
             Button("Add") {
-                if let thread = model.selectedThread { model.addLabel(newLabel, to: thread) }
+                if let thread = model.selectedThread { model.addLabel(newLabel, to: thread, onServer: true) }
                 newLabel = ""
             }
         }
@@ -377,7 +378,7 @@ struct MessageView: View {
     private var shownHTML: SafeHTML? {
         guard let content, let html = content.html, showsOriginal ?? !prefersPlainText else { return nil }
         if !showsNoticeText, model.flatMap({ model in thread.flatMap { model.reaction(in: message, of: $0) } }) != nil { return nil }
-        if !showsNoticeText, MeetingNotice.detect(subject: message.subject, text: content.text) != nil { return nil }
+        if !showsNoticeText, MeetingNotice.detect(invite: content.invite, text: content.text) != nil { return nil }
         return SafeHTMLCache.sanitized(html)
     }
 
@@ -388,7 +389,7 @@ struct MessageView: View {
             // A reaction whose message isn't here: one line, not Outlook's quoted copy.
             ReactionNoticeCard(reaction: reaction, subject: MailReaction.originalSubject(message.subject),
                                isMine: model.isMine(reaction, in: thread)) { showsNoticeText = true }
-        } else if !showsNoticeText, let notice = MeetingNotice.detect(subject: message.subject, text: content?.text ?? message.snippet) {
+        } else if !showsNoticeText, let notice = MeetingNotice.detect(invite: content?.invite, text: content?.text ?? message.snippet) {
             MeetingNoticeCard(notice: notice, who: message.from.displayName) { showsNoticeText = true }
         } else if let content, let html = content.html, showsOriginal ?? !prefersPlainText {
             let safe = SafeHTMLCache.sanitized(html)
@@ -487,6 +488,18 @@ struct MessageView: View {
         FlowRow(spacing: Space.s) {
             ForEach(files, id: \.self) { file in
                 AttachmentChip(file: file, actions: attachmentActions)
+            }
+            if files.count > 1, let saveAll = attachmentActions?.saveAll {
+                Button { saveAll(files) } label: {
+                    Label("Save All…", systemImage: "square.and.arrow.down")
+                        .font(TypeScale.label)
+                        .foregroundStyle(Ink.secondary)
+                        .padding(.horizontal, 8)
+                        .frame(height: Look.gap(26))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .tip("Save all \(files.count) files to a folder")
             }
         }
     }

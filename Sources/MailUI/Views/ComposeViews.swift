@@ -501,7 +501,7 @@ struct SendControls: View {
     var body: some View {
         HStack(spacing: Space.s) {
             Button {
-                if model.remindsAboutAttachments && state.forgotAttachment { warnsAboutAttachment = true } else { model.queueSend(state, isReply: isReply) }
+                model.sendChecking(state, isReply: isReply) { warnsAboutAttachment = true }
             } label: {
                 HStack(spacing: 6) {
                     Text("Send")
@@ -557,6 +557,18 @@ struct ComposeAttachments: View {
     var body: some View {
         // Pictures shown inside the message aren't listed; they're in the text.
         let files = state.draft.attachments.filter { $0.contentID == nil }
+        if let problem = state.attachmentProblem {
+            HStack(spacing: 6) {
+                Image(systemName: "exclamationmark.circle").font(.system(size: Look.size(11))).foregroundStyle(Status.danger)
+                Text(verbatim: problem).font(TypeScale.label).foregroundStyle(Status.danger)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button { state.attachmentProblem = nil } label: {
+                    Image(systemName: "xmark").font(.system(size: Look.size(8), weight: .bold)).foregroundStyle(Ink.tertiary)
+                }
+                .buttonStyle(.plain)
+                .tip("Dismiss")
+            }
+        }
         if !files.isEmpty {
             FlowRow(spacing: 6) {
                 ForEach(files) { file in
@@ -578,21 +590,49 @@ struct ComposeAttachments: View {
         }
     }
 
-    /// Reads chosen or dropped files (25 MB in total, the common provider limit).
+    /// Most providers refuse messages over about 25 MB in all.
+    static let sizeLimit = 25 * 1024 * 1024
+
+    /// Reads chosen or dropped files, up to `sizeLimit` in all. Files that don't fit or can't be
+    /// read are named under the attachments, never dropped without a word.
     @discardableResult
     static func add(_ urls: [URL], to state: inout ComposeState) -> Bool {
         var total = state.draft.attachments.reduce(0) { $0 + $1.data.count }
         var added = false
+        var tooBig: [String] = [], unreadable: [String] = []
         for url in urls {
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            guard let data = try? Data(contentsOf: url), total + data.count <= 25 * 1024 * 1024 else { continue }
+            guard let data = try? Data(contentsOf: url) else {
+                unreadable.append(url.lastPathComponent)
+                continue
+            }
+            guard total + data.count <= sizeLimit else {
+                tooBig.append(url.lastPathComponent)
+                continue
+            }
             total += data.count
             let type = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
             state.draft.attachments.append(OutgoingAttachment(filename: url.lastPathComponent, mimeType: type, data: data))
             added = true
         }
+        state.attachmentProblem = problem(tooBig: tooBig, unreadable: unreadable)
         return added
+    }
+
+    /// "“film.mov” is too big: mail can carry about 25 MB in all. Share it by link instead."
+    static func problem(tooBig: [String], unreadable: [String]) -> String? {
+        var lines: [String] = []
+        let limit = sizeLimit.formatted(.byteCount(style: .file))
+        if !tooBig.isEmpty {
+            let names = tooBig.map { "“\($0)”" }.formatted(.list(type: .and))
+            lines.append(String(localized: "\(names) didn't fit: mail can carry about \(limit) in all. Share big files by link instead."))
+        }
+        if !unreadable.isEmpty {
+            let names = unreadable.map { "“\($0)”" }.formatted(.list(type: .and))
+            lines.append(String(localized: "\(names) couldn't be read."))
+        }
+        return lines.isEmpty ? nil : lines.joined(separator: " ")
     }
 }
 

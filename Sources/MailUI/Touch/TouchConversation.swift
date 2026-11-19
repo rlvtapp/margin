@@ -69,7 +69,7 @@ struct TouchConversation: View {
             TextField("Label", text: $newLabel)
             Button("Cancel", role: .cancel) { newLabel = "" }
             Button("Add") {
-                if let thread = model.selectedThread { model.addLabel(newLabel, to: thread) }
+                if let thread = model.selectedThread { model.addLabel(newLabel, to: thread, onServer: true) }
                 newLabel = ""
             }
         }
@@ -210,7 +210,7 @@ private struct TouchMessageCard: View {
                                        isMine: model.isMine(reaction, in: thread)) { showsNoticeText = true }
                         .padding(.horizontal, 20)
                         .padding(.bottom, 12)
-                } else if !showsNoticeText, let notice = MeetingNotice.detect(subject: message.subject, text: content?.text ?? message.snippet) {
+                } else if !showsNoticeText, let notice = MeetingNotice.detect(invite: content?.invite, text: content?.text ?? message.snippet) {
                     MeetingNoticeCard(notice: notice, who: message.from.displayName) { showsNoticeText = true }
                         .padding(.horizontal, 20)
                         .padding(.bottom, 12)

@@ -86,8 +86,23 @@ import Testing
         let model = await model()
         let account = try #require(model.accounts.first)
         let sam = EmailAddress(name: "Sam Okafor", address: "sam@kettle.example")
-        let invitation = MailMessage(id: "invite-1", mailboxID: "Deleted Items", messageID: "invite-1@kettle.example", from: sam,
-                                     to: [account.address], subject: "Invitation: Renewal call @ Tue 15:00", date: Date())
+        let ics = """
+        BEGIN:VCALENDAR\r
+        METHOD:REQUEST\r
+        BEGIN:VEVENT\r
+        UID:renewal-call@kettle.example\r
+        SUMMARY:Renewal call\r
+        DTSTART:20991201T150000Z\r
+        DTEND:20991201T153000Z\r
+        ORGANIZER;CN=Sam:mailto:sam@kettle.example\r
+        ATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:\(account.address.address)\r
+        END:VEVENT\r
+        END:VCALENDAR\r
+        """
+        // Known from its calendar data, not from words in the subject.
+        var invitation = MailMessage(id: "invite-1", mailboxID: "Deleted Items", messageID: "invite-1@kettle.example", from: sam,
+                                     to: [account.address], subject: "Renewal call @ Tue 15:00", date: Date(), calendarMethod: "REQUEST")
+        invitation.body = MessageBody(text: "", invite: try #require(CalendarInvite.parse(ics)))
         await model.environment.cache.saveThreads([MailThread(id: "invite-1", messages: [invitation])], account: account.id,
                                                   mailbox: "Deleted Items")
         let waiting = await model.waitingThreads(nil)
@@ -123,10 +138,9 @@ import Testing
         state.send(from: model.accounts[1], previous: model.account(account.id))
         #expect(state.draft.text == "\n\nSent from Margin")
 
-        state.draft.text = "Attached is the plan."
-        #expect(state.forgotAttachment)
-        state.draft.attachments = [OutgoingAttachment(filename: "plan.pdf", mimeType: "application/pdf", data: Data([1]))]
-        #expect(!state.forgotAttachment)
+        // Quoted mail isn't what was written; whether it mentions a file is the assistant's call.
+        state.draft.text = "See you then.\n> Attached is the plan."
+        #expect(state.writtenText == "See you then.")
     }
 
     @Test func unsubscribeAndCodes() async throws {

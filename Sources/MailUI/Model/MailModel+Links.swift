@@ -4,8 +4,8 @@ import MailCore
 import AppKit
 #endif
 
-/// Links and files other apps hand to Margin: `mailto:` links from websites and other apps,
-/// and device-link files from another of your devices.
+/// Links and files other apps hand to Margin: `mailto:` and `margin://` links from websites and
+/// other apps, and device-link files from another of your devices.
 extension MailModel {
     /// Opens what another app sent. Returns false when Margin doesn't handle it.
     @discardableResult
@@ -41,4 +41,20 @@ extension MailModel {
         defaultAppRevision += 1
     }
     #endif
+
+    /// `margin://compose` and `margin://invite`.
+    func openMarginLink(_ url: URL) -> Bool {
+        guard let link = MarginLink(url) else { return false }
+        switch link {
+        case .compose:
+            if let mailto = link.mailto { startCompose(mailto: mailto) }
+        case .invite(let uid):
+            if let thread = calendarEntries.first(where: { $0.id == uid && !$0.threadID.isEmpty })?.threadID {
+                reveal(thread)
+            } else {
+                notice = Notice(text: String(localized: "Margin doesn't have the email for that invitation."))
+            }
+        }
+        return true
+    }
 }

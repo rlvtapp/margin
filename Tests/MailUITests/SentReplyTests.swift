@@ -37,7 +37,11 @@ import Testing
     @Test func replyInSentClearsReplyOwed() async throws {
         let model = MailModel(environment: .preview())
         await model.reload()
-        let owed = try #require(model.inboxThreads(nil).first { model.owesReply($0) && $0.latest.messageID != nil })
+        let candidate = try #require(model.inboxThreads(nil).first {
+            $0.split == .people && model.isFromSomeoneYouKnow($0) && $0.latest.messageID != nil && !model.answeredInSent($0)
+        })
+        MailVerdicts.shared.set([MailVerdicts.key(candidate.latest): MailVerdict(automated: false, needsReply: true, asksToPay: false)])
+        let owed = try #require(model.inboxThreads(nil).first { $0.id == candidate.id && model.owesReply($0) })
         let account = try #require(model.account(owed.accountID))
         model.noteSent(Draft.reply(to: owed, from: account.address, all: false), account: account)
         #expect(!model.owesReply(owed))

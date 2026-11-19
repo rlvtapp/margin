@@ -69,6 +69,12 @@ extension MailModel {
         switch notice?.undo {
         case .send: undoSend(); return
         case .snooze: undoSnooze(); return
+        case .calendar:
+            let action = calendarUndo
+            calendarUndo = nil
+            notice = nil
+            if let action { Task { await action() } }
+            return
         default: break
         }
         guard let pending = pendingChange else { return }
@@ -356,6 +362,8 @@ public struct ComposeState: Equatable {
     public var forwarded: ForwardedOriginal?
     /// Started from one message's own Reply: the reply box opens under that message.
     public var answersOneMessage = false
+    /// Files that couldn't be attached, and why, shown under the attachments until the next try.
+    public var attachmentProblem: String?
 
     /// Edit as Text: the forwarded email becomes quoted text in the message, to trim it.
     public mutating func forwardAsText() {
@@ -444,17 +452,9 @@ public struct ComposeState: Equatable {
         return draft.inReplyTo == nil && !draft.subject.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
-    /// Words that suggest a file should be attached, in a few common languages.
-    static let attachmentWords = ["attached", "attachment", "enclosed", "bijlage", "bijgevoegd", "anbei", "anhang", "angehängt",
-                                  "ci-joint", "pièce jointe", "adjunto", "allegato"]
-
-    /// True when the text mentions an attachment but none is attached.
-    public var forgotAttachment: Bool {
-        guard draft.attachments.isEmpty else { return false }
-        let lower = draft.text.lowercased()
-        // Quoted text and signatures can mention attachments from earlier mail; check what was written.
-        let written = lower.components(separatedBy: "\n>").first ?? lower
-        return Self.attachmentWords.contains { written.contains($0) }
+    /// What was written, without the quoted mail it answers (which can mention earlier files).
+    public var writtenText: String {
+        draft.text.components(separatedBy: "\n>").first ?? draft.text
     }
 
     /// The message as it goes out. `includingForward` false leaves the forwarded email off, for
@@ -486,4 +486,29 @@ extension MailModel {
         set { environment.defaults.set(newValue, forKey: "holdSpaceDictates"); contactSettingsRevision += 1 }
     }
 
+}
+
+extension MailModel {
+    /// Whether to remind about a missing file before sending: nothing is attached, and the
+    /// assistant reads that the text says something is. Waits a few seconds at most; with AI off
+    /// there's no reminder, since no word list guesses it.
+    public func forgotAttachment(_ state: ComposeState) async -> Bool {
+        guard remindsAboutAttachments, state.draft.attachments.isEmpty, let intelligence = quickIntelligence else { return false }
+        let text = state.writtenText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return false }
+        return await withTaskGroup(of: Bool?.self) { group in
+            group.addTask { try? await intelligence.mentionsAttachment(text) }
+            group.addTask { try? await Task.sleep(for: .seconds(3)); return nil }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first ?? false
+        }
+    }
+
+    /// Sends, or asks first when a file seems forgotten (`forgotAttachment`).
+    public func sendChecking(_ state: ComposeState, isReply: Bool, warn: @escaping @MainActor () -> Void) {
+        Task {
+            if await forgotAttachment(state) { warn() } else { queueSend(state, isReply: isReply) }
+        }
+    }
 }

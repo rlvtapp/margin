@@ -1,4 +1,5 @@
 import MailCore
+import QuickLook
 import SwiftUI
 import UniformTypeIdentifiers
 #if canImport(Translation)
@@ -134,6 +135,8 @@ struct AttachmentActions: Sendable {
     var open: @MainActor @Sendable (AttachmentInfo) -> Void
     var save: @MainActor @Sendable (AttachmentInfo) -> Void
     var file: @MainActor @Sendable (AttachmentInfo) async throws -> URL
+    /// Every file of the message into one folder.
+    var saveAll: (@MainActor @Sendable ([AttachmentInfo]) -> Void)? = nil
 }
 
 /// One file: click opens it, drag it out, or Save As from the menu.
@@ -141,6 +144,8 @@ struct AttachmentChip: View {
     let file: AttachmentInfo
     let actions: AttachmentActions?
     @State private var isHovered = false
+    /// The file shown in Quick Look, once it's on the device.
+    @State private var preview: URL?
 
     var body: some View {
         Button { actions?.open(file) } label: {
@@ -160,10 +165,21 @@ struct AttachmentChip: View {
         .onHover { isHovered = $0 }
         .tip("Open \(file.filename)")
         .contextMenu {
+            Button("Quick Look") { quickLook() }
             Button("Open") { actions?.open(file) }
             Button("Save As…") { actions?.save(file) }
         }
         .onDrag { dragItem() }
+        .quickLookPreview($preview)
+    }
+
+    /// Shows the file in Quick Look without opening another app (a preview only, so apps and
+    /// scripts are safe to look at too).
+    private func quickLook() {
+        guard let actions else { return }
+        Task {
+            if let url = try? await actions.file(file) { preview = url }
+        }
     }
 
     /// Hands the file over lazily, so dragging doesn't wait for a download that may not be needed.
@@ -219,6 +235,15 @@ struct InviteCard: View {
                     Text(invite.isCancelled ? String(localized: "Canceled: \(invite.summary)") : invite.summary)
                         .font(TypeScale.rowStrong).foregroundStyle(Ink.primary)
                     Text(when).font(TypeScale.row).foregroundStyle(Ink.secondary)
+                    if !invite.isCancelled, invite.method != "REPLY", let clash = clashes.first {
+                        Label(clashes.count == 1 ? String(localized: "Clashes with \(clash.title)")
+                                                 : String(localized: "Clashes with \(clash.title) and \(clashes.count - 1) more"),
+                              systemImage: "exclamationmark.triangle.fill")
+                            .font(TypeScale.label)
+                            .foregroundStyle(Status.star)
+                            .lineLimit(1)
+                            .help(Text(verbatim: clashes.map { "\($0.title) · \($0.start.formatted(date: .omitted, time: .shortened))" }.joined(separator: "\n")))
+                    }
                     if let location = invite.location, !location.isEmpty {
                         Text(location).font(TypeScale.label).foregroundStyle(Ink.tertiary).lineLimit(1)
                     }
@@ -230,6 +255,7 @@ struct InviteCard: View {
             }
             MeetingGuests(attendees: guests)
             if !invite.isCancelled && invite.method != "REPLY" {
+                if invite.organizer != nil && invite.method == "REQUEST" { answerLine }
                 // One row when it fits; on a narrow screen, the answers move to a row of their own.
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: Space.s) {
@@ -246,7 +272,17 @@ struct InviteCard: View {
         }
         .padding(14)
         .background(Fill.one, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .task(id: invite.uid) { await model.refreshAnswers(invite.uid) }
+        .task(id: invite.uid) {
+            await model.refreshAnswers(invite.uid)
+            // Its day's calendar, so a clash shows even for a meeting weeks away.
+            if let start = invite.start { await model.refreshCalendar(around: start) }
+        }
+    }
+
+    /// Other meetings at the same time, from every calendar the Calendar shows.
+    private var clashes: [AgendaItem] {
+        guard let start = invite.start, !invite.isAllDay else { return [] }
+        return model.clashes(start: start, end: invite.end ?? start.addingTimeInterval(3600), uid: invite.uid, title: invite.summary)
     }
 
     @ViewBuilder
@@ -254,21 +290,100 @@ struct InviteCard: View {
         if let join = invite.joinURL {
             Button("Join") { HTMLWebCoordinator.openInBrowser(join) }.buttonStyle(PillButtonStyle(prominent: true))
         }
-        if model.hasDaybook {
-            Button("Open in Daybook") { model.openInDaybook(invite) }.buttonStyle(PillButtonStyle())
-        } else {
-            Button("Add to Calendar") { model.addToCalendar(invite) }.buttonStyle(PillButtonStyle())
-        }
+        Button("Add to Calendar") { model.addToCalendar(invite) }.buttonStyle(PillButtonStyle())
     }
 
     @ViewBuilder
     private var answers: some View {
         if invite.organizer != nil && invite.method == "REQUEST" {
+            let shown = model.answer(to: invite)
+            let sending = model.answering[invite.uid] != nil
             ForEach(CalendarInvite.Response.allCases, id: \.self) { response in
-                let chosen = model.rsvps[invite.uid] == response
-                Button(chosen ? "✓ " + Self.label(response) : Self.label(response)) { model.respond(to: invite, in: thread, with: response) }
-                    .buttonStyle(PillButtonStyle(prominent: chosen))
+                let chosen = shown == response
+                // The model sends each answer once; tapping the chosen one again only says so.
+                Button {
+                    model.respond(to: invite, in: thread, with: response)
+                } label: {
+                    // Every pill keeps room for the tick, so choosing one moves nothing.
+                    ZStack {
+                        Self.answerLabel(response, ticked: true).hidden()
+                        Self.answerLabel(response, ticked: chosen)
+                    }
+                }
+                .buttonStyle(PillButtonStyle(prominent: chosen))
+                .disabled(sending)
+                // The answer on its way is shown chosen but dimmed until it has been sent.
+                .opacity(sending ? (chosen ? 0.7 : 0.45) : 1)
+                .accessibilityAddTraits(chosen ? .isSelected : [])
+                .animation(Motion.present ?? .easeInOut(duration: 0.2), value: chosen)
             }
+        }
+    }
+
+    /// Where your answer stands, in words: always one line tall, so nothing moves as it changes.
+    private var answerLine: some View {
+        let state = model.answerState(of: invite)
+        let organizer = invite.organizer?.displayName ?? ""
+        let (symbol, color, text): (String?, Color, String) = switch state {
+        case .open: (nil, Ink.tertiary, "")
+        case .sending: ("arrow.up.circle", Ink.secondary, String(localized: "Sending your answer to \(organizer)…"))
+        case .sent(let response):
+            (Self.symbol(response), Self.color(response), Self.told(response, organizer))
+        case .answered(let response): (Self.symbol(response), Self.color(response), Self.going(response))
+        case .changed: ("exclamationmark.circle", Status.star,
+                        String(localized: "Changed since you answered · answer again"))
+        }
+        return HStack(spacing: 6) {
+            Image(systemName: symbol ?? "circle").foregroundStyle(color).opacity(symbol == nil ? 0 : 1)
+            Text(verbatim: text.isEmpty ? " " : text).foregroundStyle(Ink.secondary).lineLimit(1)
+            Spacer(minLength: 0)
+        }
+        .font(TypeScale.label)
+        .accessibilityHidden(text.isEmpty)
+        .animation(Motion.present ?? .easeInOut(duration: 0.2), value: state)
+    }
+
+    private static func symbol(_ response: CalendarInvite.Response) -> String {
+        switch response {
+        case .accepted: "checkmark.circle.fill"
+        case .tentative: "questionmark.circle.fill"
+        case .declined: "xmark.circle.fill"
+        }
+    }
+
+    private static func color(_ response: CalendarInvite.Response) -> Color {
+        switch response {
+        case .accepted: Status.done
+        case .tentative: Ink.secondary
+        case .declined: Ink.tertiary
+        }
+    }
+
+    private static func told(_ response: CalendarInvite.Response, _ organizer: String) -> String {
+        switch response {
+        case .accepted: String(localized: "You're going · \(organizer) has been told")
+        case .tentative: String(localized: "You might go · \(organizer) has been told")
+        case .declined: String(localized: "You're not going · \(organizer) has been told")
+        }
+    }
+
+    private static func going(_ response: CalendarInvite.Response) -> String {
+        switch response {
+        case .accepted: String(localized: "You're going")
+        case .tentative: String(localized: "You might go")
+        case .declined: String(localized: "You're not going")
+        }
+    }
+
+    @ViewBuilder
+    private static func answerLabel(_ response: CalendarInvite.Response, ticked: Bool) -> some View {
+        if ticked {
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark").font(.system(size: Look.size(9), weight: .bold))
+                Text(label(response))
+            }
+        } else {
+            Text(label(response))
         }
     }
 

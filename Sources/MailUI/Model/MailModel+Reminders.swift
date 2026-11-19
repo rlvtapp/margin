@@ -98,6 +98,47 @@ extension MailModel {
         #endif
     }
 
+    // MARK: Add to Notes
+
+    #if os(macOS)
+    /// Saves a conversation's latest message as a note in the Notes app, with who sent it, when,
+    /// and a link back. Notes has no framework, so this asks it through AppleScript; the Mac asks
+    /// once whether Margin may control Notes.
+    public func addToNotes(_ thread: MailThread) {
+        let message = thread.latest
+        let title = thread.subject.isEmpty ? message.from.displayName : thread.subject
+        let text = String((message.body?.text ?? message.snippet).prefix(20_000))
+        var html = "<h1>\(Self.html(title))</h1>"
+        html += "<p>" + Self.html(String(localized: "From \(message.from.displayName)")) + " · "
+            + Self.html(message.date.formatted(date: .abbreviated, time: .shortened)) + "</p>"
+        html += "<p>" + Self.html(text).replacingOccurrences(of: "\n", with: "<br>") + "</p>"
+        if let link = Self.link(to: thread) {
+            html += "<p><a href=\"\(Self.html(link.absoluteString))\">" + Self.html(String(localized: "Open in Margin")) + "</a></p>"
+        }
+        let source = "tell application id \"com.apple.Notes\" to make new note with properties {body:\"\(Self.appleScriptString(html))\"}"
+        var error: NSDictionary?
+        NSAppleScript(source: source)?.executeAndReturnError(&error)
+        if let error {
+            // -1743: the Mac said no to controlling Notes.
+            let refused = (error[NSAppleScript.errorNumber] as? Int) == -1743
+            notice = Notice(text: refused ? String(localized: "Allow Margin to use Notes in System Settings → Privacy & Security → Automation.")
+                                          : String(localized: "Couldn't add it to Notes."), isError: true)
+            return
+        }
+        notice = Notice(text: String(localized: "Added to Notes"))
+    }
+
+    static func html(_ text: String) -> String {
+        text.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\"", with: "&quot;")
+    }
+
+    /// Text inside an AppleScript string literal: only backslashes and quotes need escaping.
+    static func appleScriptString(_ text: String) -> String {
+        text.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+    }
+    #endif
+
     /// A link that opens a conversation in Margin: margin://message/<first Message-ID>.
     static func link(to thread: MailThread) -> URL? {
         let id = thread.messages.first?.messageID ?? thread.id

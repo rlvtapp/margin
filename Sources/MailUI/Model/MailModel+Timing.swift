@@ -283,18 +283,14 @@ extension MailModel {
         // Someone you wrote to who has answered since in another way, in any folder: a meeting
         // invitation instead of a reply, or a new email on the same subject.
         var heardFrom: [MailThread.ID] = []
-        let invitationWords = ["invitation", "uitnodiging", "einladung", "invitación", "invito", "convite", "invite"]
         for thread in waiting {
             let mine = thread.latest
             let subject = Subject.normalized(mine.subject)
             for address in Set((mine.to + mine.cc).map { $0.address.lowercased() }) where !me.contains(address) {
                 let since = await environment.cache.history(with: address, limit: 60)
-                if since.contains(where: { message in
-                    guard message.from.address.lowercased() == address, message.date > mine.date else { return false }
-                    let lower = message.subject.lowercased()
-                    return message.body?.invite != nil || Subject.normalized(message.subject) == subject
-                        || invitationWords.contains { lower.hasPrefix($0) || lower.contains($0 + ":") }
-                }) {
+                    .filter { $0.from.address.lowercased() == address && $0.date > mine.date }
+                // A new email on the subject, or an invitation, known by its calendar part.
+                if since.contains(where: { Subject.normalized($0.subject) == subject || $0.calendarMethod == "REQUEST" }) {
                     heardFrom.append(thread.id)
                     break
                 }
@@ -425,6 +421,7 @@ extension MailModel {
         // Now and then, look for invitations in new mail so the calendar knows about them.
         if clockTick % 9 == 1 { await findInvites() }
         if clockTick % 3 == 0 { await sortNewMail(inboxThreads(since: now.addingTimeInterval(-3 * 3600))) }
+        if clockTick % 3 == 1 { judgeInbox() }
         // Replies sent from other apps and devices: read each account's Sent now and then, so
         // "reply owed" clears and conversations show both sides without opening them first.
         // One mailbox at a time, the one checked longest ago, so several mailboxes take turns

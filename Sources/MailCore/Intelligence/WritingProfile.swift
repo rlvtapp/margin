@@ -410,22 +410,6 @@ public struct WritingProfile: Codable, Hashable, Sendable {
         return template.replacingOccurrences(of: " {name}", with: "").replacingOccurrences(of: "{name}", with: "")
     }
 
-    /// Takes dashes out of a draft for someone who doesn't write them: " — " and "—" become a
-    /// comma, a dash between words a space. Ranges like 9–5 are left alone.
-    public static func withoutDashes(_ text: String) -> String {
-        var result = text.replacingOccurrences(of: #"\s*[—–]\s*(?=[A-Za-zÀ-ÿ])"#, with: ", ", options: .regularExpression)
-        result = result.replacingOccurrences(of: #"\s*—\s*"#, with: ", ", options: .regularExpression)
-        result = result.replacingOccurrences(of: #"(?<=\D)\s+–\s+"#, with: ", ", options: .regularExpression)
-        result = result.replacingOccurrences(of: #",\s*([,.!?])"#, with: "$1", options: .regularExpression)
-        return result
-    }
-
-    /// Whether drafts should have dashes taken out: enough is known, and the person doesn't use them.
-    public func avoidsDashes(language: String? = nil) -> Bool {
-        let habits = language.flatMap { languages[$0] }.flatMap { $0.messages >= 3 ? $0 : nil } ?? overall
-        return habits.messages >= 3 && !habits.usesDashes
-    }
-
     // MARK: Reading a message
 
     /// What one message says about how it was written.

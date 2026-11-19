@@ -63,6 +63,12 @@ public protocol MailLanguageModel: Sendable {
     func ruleParts(_ request: ModelRequest) async throws -> RuleParts
     /// "3: Travel" lines for a batch of numbered conversations. The default asks for text.
     func groupLines(_ request: ModelRequest) async throws -> String
+    /// A verdict per numbered conversation of a batch. The default asks for JSON and reads it.
+    func verdicts(_ request: ModelRequest) async throws -> [Int: MailVerdict]
+    /// A yes or no. The default asks for JSON and reads it.
+    func yesOrNo(_ request: ModelRequest) async throws -> Bool
+    /// What to look up for a question. The default asks for JSON and reads it.
+    func askPlan(_ request: ModelRequest) async throws -> AskPlan
     /// A draft, handing over the text written so far as it comes in. The default waits for the
     /// whole draft.
     func reply(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> String
@@ -83,12 +89,42 @@ extension MailLanguageModel {
         try await reply(request)
     }
 
+    public func verdicts(_ request: ModelRequest) async throws -> [Int: MailVerdict] {
+        MailIntelligence.parseVerdicts(try await reply(request))
+    }
+
+    public func yesOrNo(_ request: ModelRequest) async throws -> Bool {
+        MailIntelligence.parseAnswer(try await reply(request))
+    }
+
+    public func askPlan(_ request: ModelRequest) async throws -> AskPlan {
+        MailIntelligence.parsePlan(try await reply(request))
+    }
+
     public func answer(_ request: ModelRequest, partial: @escaping @Sendable (String) async -> Void) async throws -> MailAnswer {
         try await answer(request)
     }
 
     public func suggestions(_ request: ModelRequest) async throws -> [String] {
         MailIntelligence.cleanedSuggestions(try await reply(request))
+    }
+}
+
+/// What Ask looks up for a question, as the model decides: words to search saved mail for
+/// (empty when what Margin already knows answers it), and whether it's about the calendar.
+public struct AskPlan: Hashable, Sendable {
+    public var search: String
+    public var calendar: Bool
+    /// The days the question is about (ISO 8601, as the model wrote them), for a calendar
+    /// question; nil when the model gave none.
+    public var from: String?
+    public var to: String?
+
+    public init(search: String, calendar: Bool, from: String? = nil, to: String? = nil) {
+        self.search = search
+        self.calendar = calendar
+        self.from = from
+        self.to = to
     }
 }
 
@@ -115,7 +151,7 @@ public actor MailIntelligence {
         var summary = try await model.summary(request)
         summary.headline = summary.headline.trimmingCharacters(in: .whitespacesAndNewlines)
         summary.points = summary.points.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }.prefix(4).map { $0 }
-        if let action = summary.action?.trimmingCharacters(in: .whitespacesAndNewlines), !action.isEmpty, action.lowercased() != "none" {
+        if let action = summary.action?.trimmingCharacters(in: .whitespacesAndNewlines), !action.isEmpty {
             summary.action = action
         } else {
             summary.action = nil
@@ -161,7 +197,7 @@ public actor MailIntelligence {
             Write one per line, with no numbering, quotes or greeting. The replies are from \(me.displayName) to the \
             sender, so never address \(me.displayName). If nobody would answer the latest message (a notice, receipt, \
             confirmation, alert or other automated mail), write nothing at all.
-            """ + (style.map { "\n\nTone: " + $0.components(separatedBy: "\n").filter { $0.contains("casual") || $0.contains("polished") || $0.contains("emoji") || $0.contains("exclamation") }.joined(separator: " ") } ?? ""),
+            """ + (style.map { "\n\nHow \(me.displayName) writes:\n" + $0 } ?? ""),
             prompt: "The conversation, oldest first:\n\n" + Transcript.build(thread, bodies: bodies, budget: min(budget, 6_000))
                 + "\n\n===\n\nThe latest message, from \(latest.from.displayName), to answer:\n\n" + latestText
         )
@@ -197,41 +233,10 @@ public actor MailIntelligence {
         if !style.isEmpty { request.instructions += "\n\n" + style }
         var answer = if let partial { try await model.answer(request, partial: partial) } else { try await model.answer(request) }
         answer.text = answer.text.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Only cite conversations that exist, each once, and only ones the answer really speaks of.
+        // Only conversations that exist, each once. Which ones the answer used is the model's call.
         var seen = Set<Int>()
         answer.sources = answer.sources.filter { (1...max(threads.count, 1)).contains($0) && $0 <= threads.count && seen.insert($0).inserted }
-            .filter { Self.answer(answer.text, speaksOf: threads[$0 - 1].0, bodies: threads[$0 - 1].1) }
         return answer
-    }
-
-    /// Whether an answer has anything to do with a conversation it cites. Small models name
-    /// sources they didn't use; a source is kept only when the answer mentions one of the
-    /// conversation's people, a telling word of its subject, or a time, date or amount found in it.
-    static func answer(_ text: String, speaksOf thread: MailThread, bodies: [String: MessageBody]) -> Bool {
-        func words(_ string: String) -> [String] {
-            string.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil).lowercased()
-                .split(whereSeparator: { !($0.isLetter || $0.isNumber || $0 == ":" || $0 == "." || $0 == ",") })
-                .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: ":.,")) }
-                .filter { !$0.isEmpty }
-        }
-        let said = Set(words(text))
-        // Names that say nothing about who wrote: role addresses and the like.
-        let nobody: Set<String> = ["noreply", "no", "reply", "info", "team", "support", "mail", "email", "hello", "news",
-                                   "newsletter", "notifications", "notification", "service", "account", "accounts", "the"]
-        let people = thread.messages.flatMap { [$0.from] + $0.to }
-            .flatMap { words($0.name ?? String($0.address.prefix { $0 != "@" })) }
-            .filter { $0.count >= 3 && !nobody.contains($0) && !$0.contains(where: \.isNumber) }
-        if people.contains(where: said.contains) { return true }
-        // Words every other subject has.
-        let plain: Set<String> = ["your", "about", "email", "address", "please", "update", "verify", "confirm", "account",
-                                  "order", "today", "message", "notification", "reminder", "invitation", "welcome", "thanks"]
-        let subject = words(thread.subject).filter { $0.count >= 5 && !plain.contains($0) && !$0.contains(where: \.isNumber) }
-        if subject.contains(where: said.contains) { return true }
-        // "15:00", "249,00", "2026": a figure in the answer that the conversation holds too.
-        let figures = said.filter { $0.count >= 3 && $0.contains(where: \.isNumber) }
-        guard !figures.isEmpty else { return false }
-        let held = Set(words(thread.subject) + thread.messages.flatMap { words(bodies[$0.id]?.text ?? $0.body?.text ?? $0.snippet) })
-        return figures.contains(where: held.contains)
     }
 
     // MARK: Prompts
@@ -246,9 +251,11 @@ public actor MailIntelligence {
         return ModelRequest(
             task: .answer,
             instructions: """
-            You answer questions about \(me.displayName)'s email and day, using only what's given: the facts \
-            Margin knows (meetings, bills, mail that needs a reply) and the numbered conversations. \
-            Answer in the language of the question.
+            You answer questions about \(me.displayName)'s email, calendar and day, using only what's given: the \
+            facts Margin knows (the calendar as it was looked up for this question, meetings, bills, mail that \
+            needs a reply) and the numbered conversations. Answer in the language of the question. A calendar \
+            looked up for the question is the whole calendar for those days: answer calendar questions from it, \
+            not from invitations in the mail.
 
             Answer only what was asked. Use a fact or conversation only when it answers the question; a \
             question about meetings gets meetings, not bills or replies owed, and a question about what \
@@ -290,6 +297,10 @@ public actor MailIntelligence {
     /// context window (Apple's on this Mac: 20 take about 3 seconds), more for the rest.
     public nonisolated var sortingBatchSize: Int { sortsInParallel ? 30 : 20 }
 
+    /// How many conversations go into one request for verdicts: Apple's model on this Mac stops
+    /// after the first few of a batch, so it reads one at a time (under a second each).
+    public nonisolated var verdictBatchSize: Int { sortsInParallel ? 20 : 1 }
+
     /// Whether a few sorting requests can run at once; Apple's model on this Mac takes one
     /// at a time.
     public nonisolated var sortsInParallel: Bool { model.transcriptBudget >= 10_000 }
@@ -302,6 +313,108 @@ public actor MailIntelligence {
         guard !threads.isEmpty else { return [:] }
         let request = Self.batchGroupRequest(threads, groups: groups, budget: min(model.transcriptBudget, 12_000))
         return Self.matchGroups(try await model.groupLines(request), threads: threads, groups: groups)
+    }
+
+    /// What the model reads in each conversation of a batch (`MailVerdict`), by conversation
+    /// id; ones it left out get none. One request for the whole batch, from what the list shows.
+    public func judge(batch threads: [MailThread], me: [EmailAddress]) async throws -> [String: MailVerdict] {
+        guard !threads.isEmpty else { return [:] }
+        let request = Self.verdictRequest(threads, me: me, budget: min(model.transcriptBudget, 12_000))
+        var found: [String: MailVerdict] = [:]
+        for (number, verdict) in try await model.verdicts(request) where (1...threads.count).contains(number) {
+            found[threads[number - 1].id] = verdict
+        }
+        return found
+    }
+
+    /// What to look up for a question (`AskPlan`), for assistants that can't call tools.
+    /// `now` lets the model work out which days "this week" or "tomorrow" are.
+    public func plan(_ question: String, now: String = "") async throws -> AskPlan {
+        try await model.askPlan(ModelRequest(
+            task: .reply,
+            instructions: """
+            The person asks about their email or their calendar. Decide what to look up. "search": a few words to \
+            find the mail in their saved email (names, places, things, in the language that mail would be written \
+            in), or empty when the question is only about their calendar, bills still to pay, mail they owe a reply, \
+            or mail waiting for an answer: those are already known, and the calendar is read directly, not searched \
+            for in mail. "calendar": true when it's about their calendar, meetings, schedule or free time. "from" \
+            and "to": for a calendar question, the first and last day it's about (ISO 8601 dates, "to" included), \
+            worked out from now\(now.isEmpty ? "" : " (\(now))"); leave them out for other questions. Answer with \
+            JSON only: {"search": "", "calendar": true, "from": "2026-03-02", "to": "2026-03-08"}.
+            """,
+            prompt: String(question.prefix(1_000))
+        ))
+    }
+
+    static func parsePlan(_ answer: String) -> AskPlan {
+        guard let start = answer.firstIndex(of: "{"), let end = answer.lastIndex(of: "}"), start < end,
+              let object = try? JSONSerialization.jsonObject(with: Data(answer[start...end].utf8)) as? [String: Any] else {
+            return AskPlan(search: "", calendar: false)
+        }
+        let day = { (key: String) in (object[key] as? String).map { $0.trimmingCharacters(in: .whitespaces) }.flatMap { $0.isEmpty ? nil : $0 } }
+        return AskPlan(search: (object["search"] as? String ?? "").trimmingCharacters(in: .whitespaces),
+                       calendar: object["calendar"] as? Bool ?? false, from: day("from"), to: day("to"))
+    }
+
+    /// Whether what someone wrote says a file is attached or enclosed, in any language.
+    public func mentionsAttachment(_ text: String) async throws -> Bool {
+        try await model.yesOrNo(ModelRequest(
+            task: .reply,
+            instructions: """
+            You check an email before it's sent. Say whether the writer says they are sending a file, document or \
+            picture with this email (attached, enclosed, included, in any language). A file someone else sent \
+            earlier doesn't count. Answer with JSON only: {"answer": true} or {"answer": false}.
+            """,
+            prompt: String(text.prefix(4_000))
+        ))
+    }
+
+    /// Reads `{"answer": true}`, ignoring anything around it.
+    static func parseAnswer(_ answer: String) -> Bool {
+        guard let start = answer.firstIndex(of: "{"), let end = answer.lastIndex(of: "}"), start < end,
+              let object = try? JSONSerialization.jsonObject(with: Data(answer[start...end].utf8)) as? [String: Any] else { return false }
+        return object["answer"] as? Bool ?? false
+    }
+
+    static func verdictRequest(_ threads: [MailThread], me: [EmailAddress], budget: Int) -> ModelRequest {
+        let preview = max(80, min(400, budget / max(threads.count, 1) - 150))
+        let conversations = threads.enumerated().map { index, thread in
+            let snippet = thread.latest.snippet.split(whereSeparator: \.isNewline).joined(separator: " ")
+            return """
+            \(index + 1). From: \(thread.latest.from.headerValue)
+            Subject: \(thread.subject)
+            Preview: \(snippet.prefix(preview))
+            """
+        }.joined(separator: "\n\n")
+        let names = me.map(\.headerValue).joined(separator: ", ")
+        return ModelRequest(
+            task: .reply,
+            instructions: """
+            You read email for \(names). For each numbered conversation, judge its latest message: \
+            "automated" when a system or a company's automation sent it (notices, alerts, receipts, sign-in codes, \
+            account and service mail) rather than a person writing to them; "reply" when a person is waiting on an \
+            answer from them; "pay" when it asks them to pay something still open (a bill or payment request, not a \
+            receipt or an invoice already paid automatically). Answer with a JSON array only, one object per \
+            conversation: {"n": 3, "automated": true, "reply": false, "pay": false}.
+            """,
+            prompt: "Conversations:\n\n\(conversations)"
+        )
+    }
+
+    /// Reads the JSON array of verdicts, ignoring anything around it.
+    static func parseVerdicts(_ answer: String) -> [Int: MailVerdict] {
+        guard let start = answer.firstIndex(of: "["), let end = answer.lastIndex(of: "]"), start < end,
+              let items = try? JSONDecoder().decode([VerdictLine].self, from: Data(answer[start...end].utf8)) else { return [:] }
+        var found: [Int: MailVerdict] = [:]
+        for item in items { found[item.n] = MailVerdict(automated: item.automated, needsReply: item.reply, asksToPay: item.pay) }
+        return found
+    }
+
+    struct VerdictLine: Decodable {
+        var n: Int
+        var automated: Bool
+        var reply: Bool
+        var pay: Bool
     }
 
     static func batchGroupRequest(_ threads: [MailThread], groups: [EmailGroup], budget: Int) -> ModelRequest {
@@ -320,8 +433,8 @@ public actor MailIntelligence {
             task: .reply,
             instructions: """
             You sort email into the person's groups. For each numbered conversation, write one line: its number, \
-            a colon, and the group's name exactly as written, like "3: Travel". Write None instead of a name when \
-            no group clearly fits. Write nothing else.
+            a colon, and the group's name exactly as written, like "3: Travel". Leave out a conversation no group \
+            clearly fits. Write nothing else.
             """,
             prompt: "Groups:\n\(list)\n\nConversations:\n\n\(conversations)"
         )
@@ -343,7 +456,7 @@ public actor MailIntelligence {
     /// Finds the group a model named, forgiving quotes, case and trailing punctuation.
     static func matchGroup(_ answer: String, in groups: [EmailGroup]) -> EmailGroup? {
         let cleaned = answer.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "\"'.*`"))).lowercased()
-        guard !cleaned.isEmpty, cleaned != "none" else { return nil }
+        guard !cleaned.isEmpty else { return nil }
         return groups.first { $0.name.lowercased() == cleaned }
             ?? groups.first { cleaned.hasPrefix($0.name.lowercased()) }
     }

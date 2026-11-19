@@ -1,8 +1,8 @@
 import Foundation
 
-/// The automatic emails calendars send about a meeting: an answer to an invitation ("Declined:
-/// Second-round interview") or a cancellation. Outlook sends them over IMAP as text with a long
-/// web link instead of calendar data, which reads as noise; Margin shows them as a small card.
+/// The automatic emails calendars send about a meeting: an answer to an invitation or a
+/// cancellation, known from their calendar data. Their text is mostly a long web link, which
+/// reads as noise; Margin shows them as a small card.
 public struct MeetingNotice: Hashable, Sendable {
     public enum Kind: String, Hashable, Sendable { case accepted, tentative, declined, cancelled }
 
@@ -12,32 +12,26 @@ public struct MeetingNotice: Hashable, Sendable {
     /// Where the meeting opens on the web (Outlook on the web, Google Calendar), when given.
     public var link: URL?
 
-    /// Subject prefixes, in the languages Margin speaks.
-    static let prefixes: [(String, Kind)] = [
-        ("accepted:", .accepted), ("tentatively accepted:", .tentative), ("tentative:", .tentative),
-        ("declined:", .declined), ("canceled:", .cancelled), ("cancelled:", .cancelled), ("canceled event:", .cancelled),
-        ("geaccepteerd:", .accepted), ("voorlopig:", .tentative), ("voorlopig geaccepteerd:", .tentative),
-        ("afgewezen:", .declined), ("geweigerd:", .declined), ("geannuleerd:", .cancelled),
-        ("zugesagt:", .accepted), ("angenommen:", .accepted), ("mit vorbehalt:", .tentative), ("abgelehnt:", .declined),
-        ("abgesagt:", .cancelled), ("accepté:", .accepted), ("accepté :", .accepted), ("provisoire:", .tentative),
-        ("refusé:", .declined), ("refusé :", .declined), ("annulé:", .cancelled), ("annulé :", .cancelled),
-    ]
-
-    /// Recognises a notice from its subject; the body only supplies the web link.
-    public static func detect(subject: String, text: String) -> MeetingNotice? {
-        let trimmed = subject.trimmingCharacters(in: .whitespaces)
-        let lower = trimmed.lowercased()
-        guard let (prefix, kind) = prefixes.sorted(by: { $0.0.count > $1.0.count }).first(where: { lower.hasPrefix($0.0) }) else { return nil }
-        var title = String(trimmed.dropFirst(prefix.count)).trimmingCharacters(in: .whitespaces)
-        if title.hasSuffix(".") { title.removeLast() }
+    /// An answer to a meeting or a cancellation, from the message's calendar data (METHOD REPLY
+    /// or CANCEL); the text only supplies the web link. Nil for an invitation, or mail without
+    /// calendar data: subjects aren't read.
+    public static func detect(invite: CalendarInvite?, text: String) -> MeetingNotice? {
+        guard let invite else { return nil }
+        let title = invite.summary.trimmingCharacters(in: .whitespaces)
         guard !title.isEmpty else { return nil }
+        let kind: Kind
+        switch invite.method.uppercased() {
+        case "CANCEL": kind = .cancelled
+        case "REPLY":
+            switch invite.attendees.first?.response {
+            case .accepted: kind = .accepted
+            case .tentative: kind = .tentative
+            case .declined: kind = .declined
+            default: return nil
+            }
+        default: return nil
+        }
         return MeetingNotice(kind: kind, title: title, link: webLink(in: text))
-    }
-
-    /// Whether a subject alone marks an automatic meeting notice (for sorting).
-    public static func isNotice(subject: String) -> Bool {
-        let lower = subject.trimmingCharacters(in: .whitespaces).lowercased()
-        return prefixes.contains { lower.hasPrefix($0.0) }
     }
 
     static func webLink(in text: String) -> URL? {

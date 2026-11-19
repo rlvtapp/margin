@@ -210,8 +210,15 @@ struct AppleModel: MailLanguageModel {
     }
 
     @Generable struct Groups {
-        @Guide(description: "One entry per numbered conversation, in order: the group's name exactly as written, or None.")
-        var groups: [String]
+        @Guide(description: "One entry per numbered conversation, in order.")
+        var groups: [Pick]
+    }
+
+    @Generable struct Pick {
+        @Guide(description: "The conversation's number.")
+        var number: Int
+        @Guide(description: "The group's name exactly as written; left out when no group clearly fits.")
+        var group: String?
     }
 
     /// Sorting asks for a list rather than text: through the plain reply the model sometimes
@@ -220,10 +227,61 @@ struct AppleModel: MailLanguageModel {
         try await plainErrors {
             let result = try await session(request).respond(to: request.prompt, generating: Groups.self,
                                                             options: GenerationOptions(sampling: .greedy)).content
-            // It often numbers the entries itself ("3: Travel"); its own number wins.
-            return result.groups.enumerated().map { index, entry in
-                entry.first?.isNumber == true ? entry : "\(index + 1): \(entry)"
-            }.joined(separator: "\n")
+            return result.groups.compactMap { pick in pick.group.map { "\(pick.number): \($0)" } }.joined(separator: "\n")
+        }
+    }
+
+    @Generable struct Plan {
+        @Guide(description: "A few words to search saved mail for, or empty when not needed.")
+        var search: String
+        @Guide(description: "Whether the question is about meetings or the schedule.")
+        var calendar: Bool
+    }
+
+    func askPlan(_ request: ModelRequest) async throws -> AskPlan {
+        try await plainErrors {
+            let plan = try await session(request).respond(to: request.prompt, generating: Plan.self,
+                                                          options: GenerationOptions(sampling: .greedy)).content
+            return AskPlan(search: plan.search.trimmingCharacters(in: .whitespaces), calendar: plan.calendar)
+        }
+    }
+
+    @Generable struct YesOrNo {
+        var answer: Bool
+    }
+
+    func yesOrNo(_ request: ModelRequest) async throws -> Bool {
+        try await plainErrors {
+            try await session(request).respond(to: request.prompt, generating: YesOrNo.self,
+                                               options: GenerationOptions(sampling: .greedy)).content.answer
+        }
+    }
+
+    @Generable struct Verdicts {
+        @Guide(description: "Exactly one entry for every numbered conversation, all of them, in order.")
+        var conversations: [Verdict]
+    }
+
+    @Generable struct Verdict {
+        @Guide(description: "The conversation's number.")
+        var number: Int
+        @Guide(description: "A system or a company's automation sent it, not a person writing.")
+        var automated: Bool
+        @Guide(description: "A person is waiting on an answer.")
+        var reply: Bool
+        @Guide(description: "It asks to pay something still open.")
+        var pay: Bool
+    }
+
+    func verdicts(_ request: ModelRequest) async throws -> [Int: MailVerdict] {
+        try await plainErrors {
+            let result = try await session(request).respond(to: request.prompt, generating: Verdicts.self,
+                                                            options: GenerationOptions(sampling: .greedy)).content
+            var found: [Int: MailVerdict] = [:]
+            for item in result.conversations {
+                found[item.number] = MailVerdict(automated: item.automated, needsReply: item.reply, asksToPay: item.pay)
+            }
+            return found
         }
     }
 

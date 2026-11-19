@@ -6,7 +6,7 @@ import Testing
 final class FakeModel: MailLanguageModel, @unchecked Sendable {
     let lock = NSLock()
     var requests: [ModelRequest] = []
-    var summaryAnswer = ThreadSummary(headline: "  Trip to Lisbon is booked. ", points: ["Flat by the river", " ", "May 14–17"], action: "none")
+    var summaryAnswer = ThreadSummary(headline: "  Trip to Lisbon is booked. ", points: ["Flat by the river", " ", "May 14–17"], action: " ")
     var labelAnswer = ["travel", " Lisbon ", "Travel", "#Holidays", "A label that is far too long to be useful"]
     var replyAnswer = "Sounds great!\n\nAlex\n"
     var attribution: String { "by fake" }
@@ -84,6 +84,24 @@ final class FakeModel: MailLanguageModel, @unchecked Sendable {
         let fake = FakeModel()
         fake.replyAnswer = ""
         #expect(try await MailIntelligence(model: fake).suggestReplies(thread(), bodies: [:], me: me).isEmpty)
+    }
+
+    @Test func theModelSaysWhetherAFileIsMentioned() async throws {
+        let fake = FakeModel()
+        fake.replyAnswer = "Sure: {\"answer\": true}"
+        #expect(try await MailIntelligence(model: fake).mentionsAttachment("Hierbij de offerte, zie bijlage."))
+        fake.replyAnswer = "{\"answer\": false}"
+        #expect(try await !MailIntelligence(model: fake).mentionsAttachment("See you at 8."))
+        #expect(!MailIntelligence.parseAnswer("no idea"))
+    }
+
+    @Test func verdictsAreReadFromJSON() {
+        let found = MailIntelligence.parseVerdicts("""
+        Here: [{"n": 1, "automated": true, "reply": false, "pay": true}, {"n": 2, "automated": false, "reply": true, "pay": false}]
+        """)
+        #expect(found[1] == MailVerdict(automated: true, needsReply: false, asksToPay: true))
+        #expect(found[2]?.needsReply == true)
+        #expect(MailIntelligence.parseVerdicts("nothing").isEmpty)
     }
 
     @Test func oneWordSuggestionsAreDropped() {

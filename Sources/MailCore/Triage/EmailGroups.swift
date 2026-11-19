@@ -31,28 +31,11 @@ public struct EmailGroup: Codable, Hashable, Identifiable, Sendable {
     }
 }
 
-/// Sorting without an assistant: clear signals only, so nothing lands in the wrong group.
+/// Sorting without an assistant: only what standard headers say, so nothing lands in the
+/// wrong group. Mailing lists go to Newsletters; everything else waits for an assistant.
 public enum EmailSorter {
-    /// The group a conversation clearly belongs to, or nil when it isn't clear.
     public static func ruleGroup(for thread: MailThread, groups: [EmailGroup]) -> EmailGroup? {
-        let text = (thread.subject + " " + thread.latest.snippet + " " + thread.latest.from.address).lowercased()
-        func group(_ starter: String, when words: [String]) -> EmailGroup? {
-            guard words.contains(where: text.contains) else { return nil }
-            return groups.first { $0.name == starter }
-        }
-        let starters = EmailGroup.starters.map(\.name)
-        let checks: [(String, [String])] = [
-            (starters[3], ["invoice", "payment due", "amount due", "factuur", "rechnung", "facture", "bill is ready", "please pay"]),
-            (starters[4], ["receipt", "payment received", "thanks for your payment", "betalingsbewijs", "quittung", "reçu"]),
-            (starters[5], ["your order", "has shipped", "out for delivery", "tracking number", "bestelling", "bestellung", "commande"]),
-            (starters[6], ["flight", "boarding pass", "itinerary", "booking confirmation", "check-in", "hotel", "reservation"]),
-            (starters[7], ["invitation:", "invite:", "updated invitation", "uitnodiging:", "einladung:"]),
-            (starters[9], ["security alert", "new sign-in", "password", "verify your", "terms of service", "privacy policy"]),
-        ]
-        for (name, words) in checks { if let found = group(name, when: words) { return found } }
-        switch InboxSplit.classify(thread.latest) {
-        case .newsletters: return groups.first { $0.name == starters[10] }
-        default: return nil
-        }
+        guard InboxSplit.classify(thread.latest) == .newsletters else { return nil }
+        return groups.first { $0.name == EmailGroup.starters[10].name }
     }
 }

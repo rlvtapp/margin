@@ -343,7 +343,7 @@ public enum FollowUp {
         let incoming = inbox.flatMap(\.messages).filter { !me.contains($0.from.address.lowercased()) }
         return sent.filter { thread in
             let mine = thread.latest
-            guard me.contains(mine.from.address.lowercased()), !MeetingNotice.isNotice(subject: mine.subject),
+            guard me.contains(mine.from.address.lowercased()), mine.calendarMethod != "REPLY",
                   !Unsubscribe.isRequest(mine),
                   now.timeIntervalSince(mine.date) >= olderThan,
                   now.timeIntervalSince(mine.date) < 60 * 86_400 else { return false }

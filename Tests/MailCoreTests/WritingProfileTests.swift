@@ -81,18 +81,11 @@ import Testing
 @Suite struct VoiceTests {
     let noor = EmailAddress(name: "Noor Haddad", address: "noor@postbox.example")
 
-    @Test func takesOutDashesForPeopleWhoNeverWriteThem() {
-        #expect(WritingProfile.withoutDashes("I'd love to come over—sounds like fun!") == "I'd love to come over, sounds like fun!")
-        #expect(WritingProfile.withoutDashes("Great — see you then.") == "Great, see you then.")
-        #expect(WritingProfile.withoutDashes("Open 9–5 on weekdays.") == "Open 9–5 on weekdays.")
-    }
-
     @Test func learnsDashesWithoutKeepingSamples() throws {
         var profile = WritingProfile()
         for index in 1...4 {
             profile.learn("Hi Noor,\n\nThanks for sending this over, I'll have a look tonight and get back to you tomorrow.\n\nBest", to: [noor], id: "m\(index)")
         }
-        #expect(profile.avoidsDashes())
         let guide = try #require(profile.styleGuide(for: noor, myName: "Kaan", language: "en"))
         #expect(guide.contains("Never use an em dash"))
         // Rules only: a sample email's content would end up in unrelated replies.

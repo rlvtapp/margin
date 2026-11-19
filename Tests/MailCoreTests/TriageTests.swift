@@ -32,7 +32,8 @@ import Testing
     @Test func splitsTheInbox() {
         #expect(InboxSplit.classify(message("1", "Hi", from: maya, minutes: 1)) == .people)
         #expect(InboxSplit.classify(message("2", "Issue 3", from: maya, minutes: 1, headers: ["list-unsubscribe": "<mailto:x>"])) == .newsletters)
-        #expect(InboxSplit.classify(message("3", "Code", from: EmailAddress(address: "no-reply@bank.example"), minutes: 1)) == .updates)
+        // A no-reply address alone says nothing; the assistant's verdict does (see below).
+        #expect(InboxSplit.classify(message("3", "Code", from: EmailAddress(address: "no-reply@bank.example"), minutes: 1)) == .people)
         #expect(InboxSplit.classify(message("4", "Build", from: maya, minutes: 1, headers: ["auto-submitted": "auto-generated"])) == .updates)
         #expect(InboxSplit.classify(message("5", "Thanks", from: EmailAddress(address: "support@shop.example"), minutes: 1)) == .people)
     }
@@ -100,14 +101,14 @@ import Testing
         #expect(InboxSplit.classify(mail(from: "anna@shop.example")) == .people)
     }
 
-    @Test func marketingAddressesAreNewsletters() {
-        #expect(InboxSplit.classify(mail(from: "nieuwsbrief@shop.example")) == .newsletters)
-    }
-
-    @Test func seesThroughHideMyEmail() {
-        let relayed = "info_at_mail_shop_nl_2xbn7dncjb_0ea31c7b@privaterelay.appleid.com"
-        #expect(InboxSplit.senderLocalPart(EmailAddress(address: relayed)) == "info")
-        #expect(InboxSplit.classify(mail(from: "news_at_shop_nl_abc@privaterelay.appleid.com")) == .newsletters)
+    @Test func automatedMailWithoutHeadersNeedsTheAssistant() {
+        // No word lists on the address: a noreply sender without list headers is a person's
+        // mail until the assistant says a system sent it.
+        let message = MailMessage(id: UUID().uuidString, mailboxID: "INBOX", from: EmailAddress(address: "noreply@service.example"),
+                                  to: [], subject: "Hi", date: Date(), snippet: "")
+        #expect(InboxSplit.classify(message) == .people)
+        MailVerdicts.shared.set([MailVerdicts.key(message): MailVerdict(automated: true, needsReply: false, asksToPay: false)])
+        #expect(InboxSplit.classify(message) == .updates)
     }
 }
 
@@ -158,20 +159,38 @@ import Testing
     To receive meeting invitations as .iCalendar attachments instead of Outlook Web App links, go to https://outlook.office365.com/owa/sct-15/?path=/options/popandimap and select Send meeting invitations in iCalendar format.
     """
 
-    @Test func readsAnOutlookAnswer() throws {
-        let notice = try #require(MeetingNotice.detect(subject: "Declined: Second-round interview.", text: outlook))
+    @Test func readsAnAnswerFromItsCalendarData() throws {
+        let ics = """
+        BEGIN:VCALENDAR\r
+        METHOD:REPLY\r
+        BEGIN:VEVENT\r
+        UID:second-round@example.com\r
+        SUMMARY:Second-round interview\r
+        DTSTART:20991201T150000Z\r
+        ORGANIZER:mailto:kaan@relevate.app\r
+        ATTENDEE;PARTSTAT=DECLINED:mailto:jo@x.example\r
+        END:VEVENT\r
+        END:VCALENDAR\r
+        """
+        let notice = try #require(MeetingNotice.detect(invite: CalendarInvite.parse(ics), text: outlook))
         #expect(notice.kind == .declined)
         #expect(notice.title == "Second-round interview")
         #expect(notice.link?.absoluteString.contains("path=/calendar/item") == true)
-        #expect(MeetingNotice.detect(subject: "Afgewezen: Kennismaking", text: "")?.kind == .declined)
-        #expect(MeetingNotice.detect(subject: "Tentatively accepted: Standup", text: "")?.kind == .tentative)
-        #expect(MeetingNotice.detect(subject: "Re: Lunch", text: "") == nil)
+        // Without calendar data, the subject says nothing: no word lists.
+        #expect(MeetingNotice.detect(invite: nil, text: outlook) == nil)
+    }
+
+    @Test func readsTheCalendarMethodFromTheStructure() {
+        let part: IMAPValue = .list([.quoted("TEXT"), .quoted("CALENDAR"), .list([.quoted("CHARSET"), .quoted("utf-8"), .quoted("METHOD"), .quoted("REPLY")])])
+        #expect(IMAPFetchItem.calendarMethod(in: .list([.list([.quoted("TEXT"), .quoted("PLAIN"), .list([])]), part, .quoted("ALTERNATIVE")])) == "REPLY")
+        #expect(IMAPFetchItem.calendarMethod(in: .list([.quoted("TEXT"), .quoted("PLAIN"), .list([])])) == nil)
     }
 
     @Test func noticesAreUpdatesAndNeverWaitForAReply() {
         let me = EmailAddress(address: "kaan@relevate.app")
         let notice = MailMessage(id: "1", mailboxID: "Sent", messageID: "n@x", from: me, to: [EmailAddress(address: "jo@x.example")],
-                                 subject: "Declined: Second-round interview.", date: Date(timeIntervalSinceNow: -5 * 86_400))
+                                 subject: "Declined: Second-round interview.", date: Date(timeIntervalSinceNow: -5 * 86_400),
+                                 calendarMethod: "REPLY")
         #expect(InboxSplit.classify(notice) == .updates)
         let waiting = FollowUp.waiting(sent: [MailThread(id: "t", messages: [notice])], inbox: [], me: ["kaan@relevate.app"], olderThan: 86_400)
         #expect(waiting.isEmpty)

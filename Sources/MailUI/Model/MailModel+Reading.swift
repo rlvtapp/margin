@@ -206,7 +206,48 @@ extension MailModel {
             }
         }
     }
+
+    /// Saves every file of a message into a folder picked once; names that are taken get a
+    /// number, as Finder does.
+    public func saveAttachments(_ files: [AttachmentInfo], of message: MailMessage, in thread: MailThread) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.prompt = String(localized: "Save Here")
+        panel.directoryURL = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first
+        guard panel.runModal() == .OK, let folder = panel.url else { return }
+        Task {
+            var saved = 0
+            for file in files {
+                do {
+                    let url = try await attachmentFile(file, of: message, in: thread)
+                    let destination = Self.freeName(for: AttachmentSafety.safeFilename(file.filename), in: folder)
+                    try FileManager.default.copyItem(at: url, to: destination)
+                    Self.markAsDownloaded(destination)
+                    saved += 1
+                } catch {
+                    show(error)
+                }
+            }
+            notice = Notice(text: String(localized: "Saved \(saved) files to \(folder.lastPathComponent)"))
+        }
+    }
+
+    /// "report.pdf", then "report 2.pdf", "report 3.pdf"… for a name already in the folder.
+    nonisolated static func freeName(for name: String, in folder: URL) -> URL {
+        let base = (name as NSString).deletingPathExtension, ext = (name as NSString).pathExtension
+        var candidate = folder.appending(path: name)
+        var number = 2
+        while FileManager.default.fileExists(atPath: candidate.path(percentEncoded: false)) {
+            candidate = folder.appending(path: ext.isEmpty ? "\(base) \(number)" : "\(base) \(number).\(ext)")
+            number += 1
+        }
+        return candidate
+    }
     #else
+    public func saveAttachments(_ files: [AttachmentInfo], of message: MailMessage, in thread: MailThread) {}
+
     /// No save panel on iPhone and iPad: open the file, where the share sheet can save it.
     public func saveAttachment(_ attachment: AttachmentInfo, of message: MailMessage, in thread: MailThread) {
         openAttachment(attachment, of: message, in: thread)
@@ -224,8 +265,41 @@ extension MailModel {
     }
 
     /// Answers the organizer with an iTIP reply that their calendar understands.
-    public func respond(to invite: CalendarInvite, in thread: MailThread, with response: CalendarInvite.Response) {
-        guard let account = account(thread.accountID), let organizer = invite.organizer else { return }
+    ///
+    /// Sent once per invitation and answer: a tap while an answer is still on its way does
+    /// nothing, and the same answer to the same version of the invitation isn't sent again.
+    /// The buttons show the answer at once; the notice says when the organizer has been told.
+    @discardableResult
+    public func respond(to invite: CalendarInvite, in thread: MailThread, with response: CalendarInvite.Response) -> Task<Void, Never>? {
+        guard answering[invite.uid] == nil else { return nil }
+        answering[invite.uid] = response
+        return sendAnswer(to: invite, in: thread, with: response, key: invite.uid)
+    }
+
+    /// Sends the reply for an answer already marked in `answering[key]`, and clears the mark
+    /// when it's done. Every path that answers by email ends here.
+    func sendAnswer(to invite: CalendarInvite, in thread: MailThread, with response: CalendarInvite.Response,
+                    key: String) -> Task<Void, Never>? {
+        func finish() {
+            answering[key] = nil
+            answering[invite.uid] = nil
+        }
+        if let sent = sentAnswers[invite.uid], sent.response == response, sent.sequence >= invite.sequence {
+            finish()
+            rsvps[invite.uid] = response
+            notice = Notice(text: String(localized: "\(response.verb) · already sent for “\(invite.summary)”"), isSent: true)
+            return nil
+        }
+        guard let account = account(thread.accountID), let organizer = invite.organizer else {
+            finish()
+            notice = Notice(text: String(localized: "This invitation has no organizer to answer."), isError: true)
+            return nil
+        }
+        // Answer as the address that was invited (an alias, say): the organizer's calendar
+        // matches the reply to its guest by that address.
+        let me = account.sendAddresses.first { address in
+            invite.attendees.contains { $0.id == address.address.lowercased() }
+        } ?? account.address
         let name = account.address.displayName
         let title = invite.summary
         let (subject, sentence) = switch response {
@@ -236,17 +310,72 @@ extension MailModel {
         case .declined:
             (String(localized: "Declined: \(title)"), String(localized: "\(name) declined this invitation."))
         }
-        var draft = Draft(from: account.address, to: [organizer], subject: subject, text: sentence)
-        draft.calendar = invite.reply(from: account.address, status: response)
-        Task {
+        var draft = Draft(from: me, to: [organizer], subject: subject, text: sentence)
+        draft.calendar = invite.reply(from: me, status: response)
+        let sending = Notice(text: String(localized: "Sending your answer to \(organizer.displayName)…"))
+        notice = sending
+        return Task {
+            defer { finish() }
             do {
                 try await provider(for: account).send(withSenderName(draft, account: account))
                 rsvps[invite.uid] = response
-                notice = Notice(text: String(localized: "\(response.verb) · \(organizer.displayName) has been told"))
+                rsvps[key] = response
+                sentAnswers[invite.uid] = SentAnswer(response: response, sequence: invite.sequence)
+                saveSentAnswers()
+                noteOwnAnswer(response, as: me, to: invite.uid)
+                notice = Notice(text: String(localized: "\(response.verb) · \(organizer.displayName) has been told"), isSent: true)
             } catch {
+                if notice?.id == sending.id { notice = nil }
                 show(error)
             }
         }
+    }
+
+    /// The answer the buttons show: the one being sent, else the one given to this version of
+    /// the invitation. After an update (a higher SEQUENCE) an answer sent earlier no longer counts.
+    public func answer(to invite: CalendarInvite) -> CalendarInvite.Response? {
+        if let sending = answering[invite.uid] { return sending }
+        if let sent = sentAnswers[invite.uid], sent.sequence < invite.sequence { return nil }
+        return rsvps[invite.uid]
+    }
+
+    /// Where your answer to an invitation stands, for the line above its buttons.
+    public enum AnswerState: Equatable {
+        /// Not answered yet.
+        case open
+        /// On its way to the organizer.
+        case sending(CalendarInvite.Response)
+        /// Sent from Margin to this version of the invitation.
+        case sent(CalendarInvite.Response)
+        /// Known from elsewhere (your calendar, or a reply sent from another app).
+        case answered(CalendarInvite.Response)
+        /// Answered, then the organizer changed the invitation: it waits for a new answer.
+        case changed(CalendarInvite.Response)
+    }
+
+    public func answerState(of invite: CalendarInvite) -> AnswerState {
+        if let sending = answering[invite.uid] { return .sending(sending) }
+        if let sent = sentAnswers[invite.uid] {
+            return sent.sequence < invite.sequence ? .changed(sent.response) : .sent(sent.response)
+        }
+        return rsvps[invite.uid].map(AnswerState.answered) ?? .open
+    }
+
+    /// Your answer, kept with the meeting as your entry in its guest list.
+    private func noteOwnAnswer(_ response: CalendarInvite.Response, as me: EmailAddress, to uid: String) {
+        var entries = calendarEntries
+        guard let index = entries.firstIndex(where: { $0.id == uid }) else { return }
+        if let at = entries[index].attendees.firstIndex(where: { $0.id == me.address.lowercased() }) {
+            guard entries[index].attendees[at].response != response else { return }
+            entries[index].attendees[at].response = response
+        } else {
+            entries[index].attendees.append(MeetingAttendee(address: me, kind: .required, response: response))
+        }
+        saveCalendar(entries)
+    }
+
+    func saveSentAnswers() {
+        JSONFile<[String: SentAnswer]>(url: environment.folder.appending(path: "sent-answers.json")).save(sentAnswers)
     }
 
     /// Hands the invitation to the calendar app.
@@ -325,4 +454,10 @@ extension MailModel {
         accounts[index].setSignature(NamedSignature(name: NamedSignature.defaultName, text: signature))
         try? environment.accounts.save(accounts)
     }
+}
+
+/// An answer emailed to an invitation, and the invitation's SEQUENCE it answered.
+struct SentAnswer: Codable, Equatable, Sendable {
+    var response: CalendarInvite.Response
+    var sequence: Int
 }

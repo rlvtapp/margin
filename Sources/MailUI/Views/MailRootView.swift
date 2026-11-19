@@ -49,6 +49,9 @@ public struct MailRootView: View {
                     // window too narrow for the column, it's a drawer (below).
                     // Without the account column, the sidebar stays on the Calendar too: it's the way back.
                     if !model.isSidebarOutOfSight && (model.place != .calendar || !model.showsAccountRail) {
+                        // A hairline between the account column and the mailboxes, as the Calendar
+                        // has between the account column and its own sidebar.
+                        if model.showsAccountRail { Rectangle().fill(Line.hairline).frame(width: 1) }
                         SidebarView(model: model)
                             .frame(width: MailModel.sidebarWidth)
                             .transition(.move(edge: .leading).combined(with: .opacity))

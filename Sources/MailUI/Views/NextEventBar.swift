@@ -68,7 +68,8 @@ struct NextEventChip: View {
             .padding(.trailing, event.joinURL != nil && (happening || close) ? 3 : 10)
             .frame(height: Look.gap(28))
             .glassCapsule(tint: nil)
-            .frame(maxWidth: 320)
+            // Any spare width goes on the left, so the chip sits right beside the icons after it.
+            .frame(maxWidth: 320, alignment: .trailing)
             .tip(event.location ?? event.title)
         }
     }

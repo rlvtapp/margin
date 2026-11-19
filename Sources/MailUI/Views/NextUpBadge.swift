@@ -24,7 +24,7 @@ struct NextUpBadge: View {
                 .padding(.horizontal, 10)
                 .frame(height: Look.gap(28))
                 .glassCapsule(tint: nil)
-                .frame(maxWidth: 320)
+                .frame(maxWidth: 320, alignment: .trailing)
             }
             .buttonStyle(.plain)
             .tip(thread.subject)

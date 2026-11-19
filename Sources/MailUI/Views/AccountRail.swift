@@ -8,6 +8,8 @@ import AppKit
 /// ⌃1 is All, ⌃2… are the mailboxes in order.
 struct AccountRail: View {
     @Bindable var model: MailModel
+    /// How tall the mailboxes are, as laid out.
+    @State private var listHeight: CGFloat = 0
     /// The mailbox being dragged to a new place, and how far the pointer has moved.
     @State private var dragging: UUID?
     @State private var dragStart = 0
@@ -117,9 +119,12 @@ struct AccountRail: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 6)
                 .padding(.bottom, 2)
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { listHeight = $0 }
             }
             .scrollBounceBehavior(.basedOnSize)
-            .frame(maxHeight: CGFloat(shown.count) * step + 8)
+            // As tall as the mailboxes really are (badges included), so none is cut off; only
+            // when the window is too short for them all does it scroll.
+            .frame(maxHeight: max(listHeight, CGFloat(shown.count) * step + 8))
             RailButton(help: Text("Add a mailbox"), badge: 0, isSelected: false) {
                 Image(systemName: "plus").font(.system(size: Look.size(13), weight: .medium))
             } action: { model.isAddingAccount = true }

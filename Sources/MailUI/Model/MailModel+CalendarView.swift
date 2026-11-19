@@ -10,6 +10,8 @@ public struct AgendaItem: Identifiable, Hashable, Sendable {
         case account(UUID, eventID: String)
         /// Only known from an invitation email; answered with a reply email.
         case invite(threadID: String, accountID: UUID?)
+        /// In this device's Calendar app, through EventKit.
+        case device(eventID: String)
     }
 
     public var id: String
@@ -29,6 +31,50 @@ public struct AgendaItem: Identifiable, Hashable, Sendable {
     public var invitationThreadID: String?
     /// Everyone invited, with their answers when known.
     public var attendees: [MeetingAttendee] = []
+    /// The iCalendar UID when known, to match the invitation email.
+    public var uid: String?
+    /// The calendar it's in, for events from this device.
+    public var calendarName: String?
+    /// The notes when the calendar gives them in full.
+    public var notes: String?
+    /// Whether it can be changed or deleted from here (`MailModel+EventEditing`).
+    public var canChange = false
+    /// Its colour, as an index into the account colours: the mailbox's, or the device
+    /// calendar's own colour brought to the nearest one.
+    public var colorIndex = 0
+    /// Which of a mailbox's calendars it's in, when the mailbox has several.
+    public var calendarID: String?
+
+    /// Which entry in the Calendar's list it belongs to, for hiding it.
+    public var calendarKey: String {
+        switch source {
+        case .account(let id, _): calendarID.map { MailModel.calendarKey(account: id, calendar: $0) } ?? MailModel.calendarKey(account: id)
+        case .invite(_, let id): id.map(MailModel.calendarKey(account:)) ?? "invitations"
+        case .device: MailModel.calendarKey(device: calendarName ?? "")
+        }
+    }
+
+    /// Whether Going? can be answered from here: you were invited, and it came from mail or an
+    /// account's calendar (the device's calendars can only be read).
+    public var canAnswer: Bool {
+        if isMine { return false }
+        if case .device = source { return false }
+        return true
+    }
+
+    /// Whether it came from this device's Calendar app.
+    public var isFromDevice: Bool {
+        if case .device = source { return true }
+        return false
+    }
+
+    /// The source's own id for the event.
+    public var eventID: String {
+        switch source {
+        case .account(_, let id), .device(let id): id
+        case .invite: id
+        }
+    }
 
     /// The same meeting as a calendar entry, for the parts of the app that show one.
     var asEntry: CalendarEntry {
@@ -44,6 +90,7 @@ public struct AgendaItem: Identifiable, Hashable, Sendable {
         switch source {
         case .account(let id, _): id
         case .invite(_, let id): id
+        case .device: nil
         }
     }
 }
@@ -51,6 +98,19 @@ public struct AgendaItem: Identifiable, Hashable, Sendable {
 extension MailModel {
     /// Counts and errors only, never what's in a calendar.
     static let calendarLog = Logger(subsystem: "app.relevate.margin", category: "calendar")
+
+    nonisolated static func calendarKey(account: UUID) -> String { "account:\(account.uuidString)" }
+    nonisolated static func calendarKey(account: UUID, calendar: String) -> String { "account:\(account.uuidString):\(calendar)" }
+    nonisolated static func calendarKey(device name: String) -> String { "device:\(name)" }
+    nonisolated static let remindersKey = "reminders"
+
+    /// Whether a calendar in the list is ticked.
+    public func isCalendarShown(_ key: String) -> Bool { !hiddenCalendars.contains(key) }
+
+    public func setCalendarShown(_ key: String, _ shown: Bool) {
+        if shown { hiddenCalendars.remove(key) } else { hiddenCalendars.insert(key) }
+        environment.defaults.set(Array(hiddenCalendars).sorted(), forKey: "calendar.hidden")
+    }
 
     /// Drops what was read from an account's calendar (after it's disconnected).
     public func forgetCalendar(of account: UUID) {
@@ -66,35 +126,146 @@ extension MailModel {
     /// Everything on the calendar between two moments, soonest first: account calendars, and
     /// invitations from mail that aren't already there. Cancelled events are left out.
     public func agenda(from start: Date, to end: Date) -> [AgendaItem] {
+        agenda(from: start, to: end, accountEvents: calendarEvents, deviceEvents: deviceEvents)
+    }
+
+    /// The same, from events read for another range (AI apps asking about other months), so the
+    /// page's own months stay as they are.
+    func agenda(from start: Date, to end: Date, accountEvents: [UUID: [CalendarEvent]], deviceEvents: [CalendarEvent]) -> [AgendaItem] {
         var items: [AgendaItem] = []
         var seen = Set<String>()
-        let invitations = Dictionary(calendarEntries.map { ($0.id.lowercased(), $0.threadID) }, uniquingKeysWith: { first, _ in first })
+        // An invitation in the mail and the same meeting in a calendar are one item. They're
+        // matched by UID (as calendars write it, see `meetingUID`), else by title and start.
+        let invitations = Dictionary(calendarEntries.map { (Self.meetingUID($0.id), $0.threadID) }, uniquingKeysWith: { first, _ in first })
+        let invitationsByTime = Dictionary(calendarEntries.map { (Self.sameMeetingKey($0.title, $0.start), $0.threadID) },
+                                           uniquingKeysWith: { first, _ in first })
+        var shownAt = Set<String>()
+        func invitation(uid: String?, title: String, start: Date) -> String? {
+            uid.flatMap { invitations[Self.meetingUID($0)] } ?? invitationsByTime[Self.sameMeetingKey(title, start)]
+        }
         for account in accounts {
-            for event in calendarEvents[account.id] ?? [] where !event.isCancelled && event.end > start && event.start < end {
-                let key = (event.uid ?? event.id).lowercased() + "|\(event.start.timeIntervalSince1970)"
+            for event in accountEvents[account.id] ?? [] where !event.isCancelled && event.end > start && event.start < end {
+                let key = Self.meetingUID(event.uid ?? event.id) + "|\(event.start.timeIntervalSince1970)"
                 guard seen.insert(key).inserted else { continue }
-                seen.insert((event.uid ?? event.id).lowercased())
+                seen.insert(Self.meetingUID(event.uid ?? event.id))
+                shownAt.insert(Self.sameMeetingKey(event.title, event.start))
                 items.append(AgendaItem(
                     id: "\(account.id)|\(event.id)", title: event.title, start: event.start, end: event.end, isAllDay: event.isAllDay,
                     location: event.location, joinURL: event.joinURL, organizer: event.organizer,
-                    response: rsvps[event.uid ?? event.id] ?? event.response, isMine: event.isOrganizer, repeats: event.repeats,
+                    response: answering[event.uid ?? event.id] ?? rsvps[event.uid ?? event.id] ?? event.response, isMine: event.isOrganizer, repeats: event.repeats,
                     source: .account(account.id, eventID: event.id),
-                    invitationThreadID: event.uid.flatMap { invitations[$0.lowercased()] }, attendees: event.attendees))
+                    invitationThreadID: invitation(uid: event.uid, title: event.title, start: event.start), attendees: event.attendees,
+                    uid: event.uid, calendarName: event.calendarName, notes: event.notes, canChange: event.canChange,
+                    colorIndex: colorIndex(of: event, in: account), calendarID: event.calendarID))
             }
         }
         let current = Set(accounts.map(\.id))
         let mine = Set(accounts.flatMap { [$0.address] + ($0.aliases ?? []) }.map { $0.address.lowercased() })
         for entry in calendarEntries where !entry.cancelled && entry.finish > start && entry.start < end {
-            guard !seen.contains(entry.id.lowercased()), entry.accountID.map(current.contains) ?? true else { continue }
+            guard !seen.contains(Self.meetingUID(entry.id)), !shownAt.contains(Self.sameMeetingKey(entry.title, entry.start)),
+                  entry.accountID.map(current.contains) ?? true else { continue }
             items.append(AgendaItem(
                 id: entry.id, title: entry.title, start: entry.start, end: entry.finish, isAllDay: entry.isAllDay,
                 location: entry.location, joinURL: entry.joinURL, organizer: entry.organizer,
-                response: rsvps[entry.id] ?? entry.attendees.first { mine.contains($0.address.address.lowercased()) }?.response,
+                response: answering[entry.id] ?? rsvps[entry.id] ?? entry.attendees.first { mine.contains($0.address.address.lowercased()) }?.response,
                 isMine: entry.isMine, repeats: false, source: .invite(threadID: entry.threadID, accountID: entry.accountID),
-                invitationThreadID: entry.threadID, attendees: entry.attendees))
+                invitationThreadID: entry.threadID, attendees: entry.attendees, uid: entry.id,
+                colorIndex: entry.accountID.flatMap { self.account($0)?.colorIndex } ?? 0))
+            seen.insert(Self.meetingUID(entry.id))
+        }
+        // This device's calendars last: a meeting already shown from the mail or an account
+        // (the same UID, or the same title at the same time) isn't shown twice.
+        if showsDeviceCalendar {
+            var shown = Set(items.map { Self.sameMeetingKey($0.title, $0.start) })
+            for event in deviceEvents where !event.isCancelled && event.end > start && event.start < end {
+                if let uid = event.uid, seen.contains(Self.meetingUID(uid)) { continue }
+                guard shown.insert(Self.sameMeetingKey(event.title, event.start)).inserted else { continue }
+                items.append(AgendaItem(
+                    id: event.id, title: event.title, start: event.start, end: event.end, isAllDay: event.isAllDay,
+                    location: event.location, joinURL: event.joinURL, organizer: event.isOrganizer ? nil : event.organizer,
+                    response: event.response, isMine: event.isOrganizer, repeats: event.repeats,
+                    source: .device(eventID: event.id), invitationThreadID: invitation(uid: event.uid, title: event.title, start: event.start),
+                    attendees: event.attendees, uid: event.uid, calendarName: event.calendarName,
+                    notes: event.notes, canChange: event.canChange, colorIndex: event.calendarColor.map(Palette.nearestAccountIndex(to:)) ?? 0))
+            }
+        }
+        // Hiding a mailbox hides all its calendars; each can also be hidden on its own.
+        items = items.filter { item in
+            if hiddenCalendars.contains(item.calendarKey) { return false }
+            if case .account(let id, _) = item.source, hiddenCalendars.contains(Self.calendarKey(account: id)) { return false }
+            return true
         }
         return items.sorted { ($0.isAllDay ? 0 : 1, $0.start, $0.title) < ($1.isAllDay ? 0 : 1, $1.start, $1.title) }
             .sorted { Calendar.current.startOfDay(for: $0.start) < Calendar.current.startOfDay(for: $1.start) }
+    }
+
+    /// A meeting's UID the same way however it arrived. Microsoft calendars give a meeting
+    /// from elsewhere an id of their own (hex, starting `040000008200E00074C5B7101A82E008`)
+    /// that carries the invitation's UID after a `vCal-Uid` marker, and give each occurrence of
+    /// a repeating meeting its own id by putting the day in bytes 16–19. Both are undone here.
+    static func meetingUID(_ uid: String) -> String {
+        let lower = uid.lowercased()
+        let prefix = "040000008200e00074c5b7101a82e008"
+        guard lower.hasPrefix(prefix), lower.count >= 40, lower.count % 2 == 0, let bytes = hexBytes(lower) else { return lower }
+        let marker = Array("vCal-Uid".utf8)
+        if let at = bytes.firstRange(of: marker) {
+            // The marker, then a 4-byte version, then the UID, ending in a zero byte.
+            let text = bytes[min(bytes.count, at.upperBound + 4)...].prefix { $0 != 0 }
+            if let uid = String(bytes: text, encoding: .utf8), !uid.isEmpty { return uid.lowercased() }
+        }
+        var series = bytes
+        for index in 16..<20 { series[index] = 0 }
+        return series.map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func hexBytes(_ hex: String) -> [UInt8]? {
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(hex.count / 2)
+        var index = hex.startIndex
+        while index < hex.endIndex {
+            let next = hex.index(index, offsetBy: 2)
+            guard let byte = UInt8(hex[index..<next], radix: 16) else { return nil }
+            bytes.append(byte)
+            index = next
+        }
+        return bytes
+    }
+
+    /// The mailbox's colour for its main calendar; another calendar's own colour when it has one.
+    func colorIndex(of event: CalendarEvent, in account: MailAccount) -> Int {
+        guard let id = event.calendarID, let color = event.calendarColor,
+              accountCalendars[account.id]?.first(where: { $0.id == id })?.isDefault != true else { return account.colorIndex }
+        return Palette.nearestAccountIndex(to: color)
+    }
+
+    static let defaultHourHeight: Double = 48
+
+    /// What else is on at the same time as a meeting (an invitation in the mail): timed events
+    /// you haven't declined, leaving out the meeting itself.
+    public func clashes(start: Date, end: Date, uid: String?, title: String) -> [AgendaItem] {
+        guard end > start else { return [] }
+        let same = uid.map(Self.meetingUID)
+        let key = Self.sameMeetingKey(title, start)
+        return agenda(from: start, to: end).filter { item in
+            !item.isAllDay && item.response != .declined && item.start < end && item.end > start
+                && (same == nil || Self.meetingUID(item.uid ?? item.id) != same)
+                && Self.sameMeetingKey(item.title, item.start) != key
+        }
+    }
+
+    /// Taller (1) or shorter (−1) hours in Day and Week, in steps; 0 goes back to the usual size.
+    public func zoomCalendar(_ step: Int) {
+        calendarHourHeight = step == 0 ? max(Self.defaultHourHeight, smallestHourHeight)
+            : min(max(calendarHourHeight + Double(step) * 8, smallestHourHeight), 120)
+    }
+
+    /// Whether ⌘+ and ⌘− zoom the hours instead of the text: Day or Week is on screen.
+    public var zoomsCalendar: Bool {
+        place == .calendar && ["day", "week"].contains(UserDefaults.standard.string(forKey: "calendarMode") ?? "")
+    }
+
+    static func sameMeetingKey(_ title: String, _ start: Date) -> String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() + "|\(Int(start.timeIntervalSince1970))"
     }
 
     /// The days in a range with something on them, for the dots in the month.
@@ -110,6 +281,9 @@ extension MailModel {
                 day = next
             }
         }
+        for reminder in dueReminders where isCalendarShown(Self.remindersKey) && !reminder.isDone && reminder.due >= start && reminder.due < end {
+            days.insert(calendar.startOfDay(for: reminder.due))
+        }
         return days
     }
 
@@ -120,6 +294,8 @@ extension MailModel {
         let month = calendar.dateInterval(of: .month, for: day) ?? DateInterval(start: day, duration: 31 * 86_400)
         let start = calendar.date(byAdding: .day, value: -7, to: month.start) ?? month.start
         let end = calendar.date(byAdding: .day, value: 14, to: month.end) ?? month.end
+        await refreshDeviceCalendar(around: day, force: force)
+        await refreshColleagues(around: day, force: force)
         if !force, let range = calendarEventsRange, range.contains(start), range.contains(end) { return }
         var readers: [(UUID, any CalendarReading)] = []
         for account in accounts where usesAccountCalendar(account) {
@@ -136,19 +312,20 @@ extension MailModel {
         }
         Self.calendarLog.info("calendar refresh: \(readers.count, privacy: .public) of \(self.accounts.count, privacy: .public) mailboxes connected")
         guard !readers.isEmpty else { return }
-        let results = await withTaskGroup(of: (UUID, Result<[CalendarEvent], Error>).self) { group in
+        let results = await withTaskGroup(of: (UUID, Result<([AccountCalendar]?, [CalendarEvent]), Error>).self) { group in
             for (id, reader) in readers {
                 group.addTask {
-                    do { return (id, .success(try await reader.events(from: start, to: end))) } catch { return (id, .failure(error)) }
+                    do { return (id, .success(try await Self.readAll(reader, from: start, to: end))) } catch { return (id, .failure(error)) }
                 }
             }
-            var all: [(UUID, Result<[CalendarEvent], Error>)] = []
+            var all: [(UUID, Result<([AccountCalendar]?, [CalendarEvent]), Error>)] = []
             for await result in group { all.append(result) }
             return all
         }
         for (id, result) in results {
             switch result {
-            case .success(let events):
+            case .success(let (calendars, events)):
+                if let calendars { accountCalendars[id] = calendars }
                 calendarEvents[id] = events
                 Self.calendarLog.info("calendar \(id.uuidString.prefix(8), privacy: .public): \(events.count, privacy: .public) events")
             case .failure(let error):
@@ -159,43 +336,89 @@ extension MailModel {
         calendarEventsRange = start...end
     }
 
+    /// Every calendar of a mailbox, each event marked with its calendar. A calendar that can't be
+    /// read (a shared one taken back) is left out rather than failing the rest. Without a list,
+    /// just the main calendar.
+    nonisolated static func readAll(_ reader: any CalendarReading, from start: Date, to end: Date) async throws -> ([AccountCalendar]?, [CalendarEvent]) {
+        guard let listing = reader as? any CalendarListing, let calendars = try? await listing.calendars(), !calendars.isEmpty else {
+            return (nil, try await reader.events(from: start, to: end))
+        }
+        let events = await withTaskGroup(of: [CalendarEvent].self) { group in
+            for calendar in calendars {
+                group.addTask { (try? await listing.events(in: calendar, from: start, to: end)) ?? [] }
+            }
+            var all: [CalendarEvent] = []
+            for await found in group { all += found }
+            return all
+        }
+        return (calendars, events)
+    }
+
     /// Answers an event: through the account's calendar when it came from there, otherwise
-    /// with a reply to the invitation email.
-    public func respond(to item: AgendaItem, with response: CalendarInvite.Response) {
-        let previous = rsvps[item.id]
+    /// with a reply to the invitation email. One answer at a time per event: taps while one is
+    /// on its way do nothing.
+    @discardableResult
+    public func respond(to item: AgendaItem, with response: CalendarInvite.Response) -> Task<Void, Never>? {
+        let key = eventKey(item)
+        guard answering[key] == nil else { return nil }
         switch item.source {
         case .account(let accountID, let eventID):
-            guard let account = account(accountID) else { return }
-            rsvps[eventKey(item)] = response
-            Task {
+            guard let account = account(accountID) else {
+                notice = Notice(text: String(localized: "Couldn't answer “\(item.title)”: its account isn't in Margin anymore."), isError: true)
+                return nil
+            }
+            let previous = rsvps[key]
+            answering[key] = response
+            rsvps[key] = response
+            return Task {
+                defer { answering[key] = nil }
                 do {
-                    guard let reader = try await calendarAdapter(for: account) as? any CalendarReading else { return }
+                    guard let reader = try await calendarAdapter(for: account) as? any CalendarReading else {
+                        rsvps[key] = previous
+                        notice = Notice(text: String(localized: "Couldn't answer “\(item.title)”: the account's calendar can't be reached."), isError: true)
+                        return
+                    }
                     try await reader.respond(toEvent: eventID, with: response)
                     if var events = calendarEvents[accountID], let index = events.firstIndex(where: { $0.id == eventID }) {
                         events[index].response = response
                         calendarEvents[accountID] = events
                     }
-                    notice = Notice(text: String(localized: "Replied \(response.shortTitle) to “\(item.title)”"))
+                    notice = Notice(text: String(localized: "Replied \(response.shortTitle) to “\(item.title)”"), isSent: true)
                 } catch {
-                    rsvps[eventKey(item)] = previous
+                    rsvps[key] = previous
                     show(error)
                 }
             }
+        case .device:
+            return nil
         case .invite(let threadID, _):
-            Task {
+            // Marked before the invitation is looked up, so a second tap meanwhile is ignored.
+            answering[key] = response
+            return Task {
                 guard let thread = await invitationThread(threadID) else {
+                    answering[key] = nil
                     notice = Notice(text: String(localized: "The invitation for “\(item.title)” isn't in your inbox anymore."))
                     return
                 }
                 let found = await askContext([thread]).first?.1 ?? [:]
                 guard let invite = thread.messages.reversed().compactMap({ found[$0.id]?.invite }).first(where: { $0.method != "REPLY" }) else {
+                    answering[key] = nil
                     notice = Notice(text: String(localized: "The invitation for “\(item.title)” couldn't be read."))
                     return
                 }
-                respond(to: invite, in: thread, with: response)
+                // The reader card may be sending an answer to this invitation already.
+                if invite.uid != key, answering[invite.uid] != nil {
+                    answering[key] = nil
+                    return
+                }
+                answering[invite.uid] = response
+                await sendAnswer(to: invite, in: thread, with: response, key: key)?.value
             }
         }
     }
+
+    /// Whether an answer to this event is still on its way.
+    public func isAnswering(_ item: AgendaItem) -> Bool { answering[eventKey(item)] != nil }
 
     /// A sample week in the first account's calendar, for screenshots and previews.
     public func addSampleCalendar() {
@@ -235,6 +458,8 @@ extension MailModel {
             CalendarEvent(id: "s8", title: "1:1 with Sam", start: at(3, 9, 30), end: at(3, 10), isOrganizer: true),
         ]
         calendarEventsRange = at(-40, 0)...at(60, 0)
+        addSampleDeviceCalendar(today: today)
+        addSampleColleagues(today: today)
     }
 
     /// Opens the email an invitation came in, wherever it is now, titled with the meeting.

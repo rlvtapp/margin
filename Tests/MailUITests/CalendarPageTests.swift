@@ -31,6 +31,58 @@ import Testing
             .contains(Calendar.current.startOfDay(for: start)))
     }
 
+    /// Microsoft gives a meeting from elsewhere its own id, carrying the invitation's UID, and
+    /// a different id per occurrence: the invitation and the calendar's event are still one item,
+    /// which opens the invitation's mail.
+    @Test func mergesWhenMicrosoftRewritesTheUID() async throws {
+        let model = MailModel(environment: .preview())
+        await model.reload()
+        let account = try #require(model.accounts.first)
+        let start = Date().addingTimeInterval(3600)
+        let marker = Array("vCal-Uid".utf8) + [1, 0, 0, 0] + Array("abc-123@example.com".utf8) + [0]
+        var bytes: [UInt8] = [0x04, 0x00, 0x00, 0x00, 0x82, 0x00, 0xE0, 0x00, 0x74, 0xC5, 0xB7, 0x10, 0x1A, 0x82, 0xE0, 0x08,
+                              0x07, 0xEA, 0x0B, 0x13] + Array(repeating: 0, count: 20)
+        bytes += [UInt8(marker.count), 0, 0, 0] + marker
+        let exchangeID = bytes.map { String(format: "%02X", $0) }.joined()
+        model.calendarEvents[account.id] = [
+            CalendarEvent(id: "e1", uid: exchangeID, title: "Kickoff", start: start, end: start.addingTimeInterval(1800)),
+        ]
+        var invite = CalendarEntry(id: "ABC-123@example.com", title: "Kickoff", start: start, end: start.addingTimeInterval(1800),
+                                   isAllDay: false, threadID: "t1", cancelled: false)
+        invite.accountID = account.id
+        model.saveCalendar([invite])
+        let items = model.agenda(from: Date(), to: Date().addingTimeInterval(86_400))
+        #expect(items.count == 1)
+        #expect(items.first?.source == .account(account.id, eventID: "e1"))
+        #expect(items.first?.invitationThreadID == "t1")
+    }
+
+    /// No UID in common, but the same title at the same time: still one item.
+    @Test func mergesSameTitleAndTime() async throws {
+        let model = MailModel(environment: .preview())
+        await model.reload()
+        let account = try #require(model.accounts.first)
+        let start = Date().addingTimeInterval(7200)
+        model.calendarEvents[account.id] = [
+            CalendarEvent(id: "e1", uid: "calendar-own-id", title: "Weekly sync", start: start, end: start.addingTimeInterval(1800)),
+        ]
+        var invite = CalendarEntry(id: "mail-uid", title: "Weekly sync ", start: start, end: start.addingTimeInterval(1800),
+                                   isAllDay: false, threadID: "t9", cancelled: false)
+        invite.accountID = account.id
+        model.saveCalendar([invite])
+        let items = model.agenda(from: Date(), to: Date().addingTimeInterval(86_400))
+        #expect(items.count == 1)
+        #expect(items.first?.invitationThreadID == "t9")
+    }
+
+    /// Occurrences of a repeating Microsoft meeting differ only in the day bytes.
+    @Test func occurrenceIDsShareTheSeriesUID() {
+        let series = "040000008200E00074C5B7101A82E00800000000A0B1C2D3E4F5A6B7C8D9E0F1"
+        let occurrence = "040000008200E00074C5B7101A82E00807EA0B13A0B1C2D3E4F5A6B7C8D9E0F1"
+        #expect(MailModel.meetingUID(series) == MailModel.meetingUID(occurrence))
+        #expect(MailModel.meetingUID("Plain-UID@Example.com") == "plain-uid@example.com")
+    }
+
     /// Meetings from the calendar reach Ask's facts.
     @Test func askKnowsTheCalendar() async throws {
         let model = MailModel(environment: .preview())
@@ -71,10 +123,11 @@ import Testing
         """
         let invite = try #require(CalendarInvite.parse(ics))
         let invitation = MailMessage(id: "inv", mailboxID: "Deleted Items", messageID: "inv@example.com", from: sam, to: [me],
-                                     subject: "Invitation: Second round", date: Date().addingTimeInterval(-2 * 86_400))
+                                     subject: "Invitation: Second round", date: Date().addingTimeInterval(-2 * 86_400),
+                                     calendarMethod: "REQUEST")
         let answer = try #require(CalendarInvite.parse(invite.reply(from: me, status: .accepted)))
         let reply = MailMessage(id: "ans", mailboxID: "Sent", messageID: "ans@example.com", from: me, to: [sam],
-                                subject: "Accepted: Second round", date: Date().addingTimeInterval(-86_400))
+                                subject: "Accepted: Second round", date: Date().addingTimeInterval(-86_400), calendarMethod: "REPLY")
         let cache = model.environment.cache
         await cache.saveThreads([MailThread(id: "inv", messages: [invitation])], account: account.id, mailbox: "Deleted Items")
         await cache.saveThreads([MailThread(id: "ans", messages: [reply])], account: account.id, mailbox: "Sent")
@@ -89,18 +142,8 @@ import Testing
     }
 }
 
-@MainActor @Suite struct AnswerSubjectTests {
-    /// Calendars name your answer at the front of the reply's subject, in your language.
-    @Test func readsAnswersFromSubjects() {
-        #expect(MailModel.answer(inSubject: "Accepted: Kaan x Engaige (second round)")! == (.accepted, "Kaan x Engaige (second round)"))
-        #expect(MailModel.answer(inSubject: "Geaccepteerd: Team meeting")! == (.accepted, "Team meeting"))
-        #expect(MailModel.answer(inSubject: "Tentatively accepted: Standup")! == (.tentative, "Standup"))
-        #expect(MailModel.answer(inSubject: "Refusé : Revue")! == (.declined, "Revue"))
-        #expect(MailModel.answer(inSubject: "Re: Accepted: no") == nil)
-        #expect(MailModel.answer(inSubject: "Accepted:") == nil)
-    }
-
-    /// Your "Accepted:" reply in Sent marks the meeting as Going, even without its calendar part.
+@MainActor @Suite struct AnswerDataTests {
+    /// Your answer in Sent marks the meeting as Going from its calendar data; its subject isn't read.
     @Test func answerFromYourReplyCounts() async throws {
         let model = MailModel(environment: .preview())
         await model.reload()
@@ -109,10 +152,45 @@ import Testing
         var entry = CalendarEntry(id: "uid-1", title: "Uitnodiging eerste gesprek", start: start, end: nil, isAllDay: false,
                                   threadID: "t", cancelled: false)
         entry.accountID = account.id
+        entry.attendees = [MeetingAttendee(address: account.address, kind: .required, response: nil)]
         model.saveCalendar([entry])
+        let ics = """
+        BEGIN:VCALENDAR\r
+        METHOD:REPLY\r
+        BEGIN:VEVENT\r
+        UID:uid-1\r
+        SUMMARY:Uitnodiging eerste gesprek\r
+        DTSTART:20991201T150000Z\r
+        ATTENDEE;PARTSTAT=ACCEPTED:mailto:\(account.address.address)\r
+        END:VEVENT\r
+        END:VCALENDAR\r
+        """
         let reply = MailMessage(id: "r", mailboxID: "Sent", messageID: "r@x", from: account.address, to: [],
-                                subject: "Accepted: Uitnodiging eerste gesprek", date: Date())
-        model.noteAnswers(in: [reply])
-        #expect(model.agenda(from: Date(), to: Date().addingTimeInterval(2 * 86_400)).first?.response == .accepted)
+                                subject: "Re", date: Date(), calendarMethod: "REPLY",
+                                body: MessageBody(text: "", invite: CalendarInvite.parse(ics)))
+        model.bodies[MailModel.bodyKey(account.id, reply.id)] = reply.body
+        model.noteInvites(in: MailModel.tag(MailThread(id: "r", messages: [reply]), account: account.id))
+        #expect(model.agenda(from: Date(), to: Date().addingTimeInterval(2 * 86_400)).first { $0.title == "Uitnodiging eerste gesprek" }?.response == .accepted)
+    }
+}
+
+@MainActor @Suite struct InviteClashTests {
+    /// An invitation says what else is on then: not itself (by UID or title and time), not
+    /// all-day events, not meetings you declined.
+    @Test func findsWhatElseIsOn() async throws {
+        let model = MailModel(environment: .preview())
+        await model.reload()
+        let account = try #require(model.accounts.first)
+        let start = Calendar.current.startOfDay(for: Date()).addingTimeInterval(3 * 86_400 + 10 * 3600)
+        var declined = CalendarEvent(id: "e3", title: "Skipped", start: start, end: start.addingTimeInterval(3600))
+        declined.response = .declined
+        model.calendarEvents[account.id] = [
+            CalendarEvent(id: "e1", uid: "invite-uid", title: "Kickoff", start: start, end: start.addingTimeInterval(1800)),
+            CalendarEvent(id: "e2", title: "Dentist", start: start.addingTimeInterval(900), end: start.addingTimeInterval(2700)),
+            CalendarEvent(id: "e4", title: "Offsite", start: Calendar.current.startOfDay(for: start), end: Calendar.current.startOfDay(for: start).addingTimeInterval(86_400), isAllDay: true),
+            declined,
+        ]
+        let clashes = model.clashes(start: start, end: start.addingTimeInterval(1800), uid: "INVITE-UID", title: "Kickoff")
+        #expect(clashes.map(\.title) == ["Dentist"])
     }
 }

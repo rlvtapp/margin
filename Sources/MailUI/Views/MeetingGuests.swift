@@ -90,9 +90,6 @@ struct MeetingDetail: View {
                         if let join = entry.joinURL {
                             Button("Join") { HTMLWebCoordinator.openInBrowser(join) }
                         }
-                        if model.hasDaybook {
-                            Button("Open in Daybook") { model.openInDaybook(entry) }
-                        }
                     }
                     Section {
                         MeetingGuests(attendees: entry.attendees, startsOpen: true)

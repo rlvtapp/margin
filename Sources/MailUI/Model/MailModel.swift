@@ -162,7 +162,7 @@ public struct Notice: Identifiable, Equatable {
 }
 
 public enum UndoKind: Equatable, Sendable {
-    case change, send, snooze
+    case change, send, snooze, calendar
 }
 
 
@@ -350,6 +350,8 @@ public final class MailModel {
     public var isAddingAccount = false
     public var isNewMeetingOpen = false
     public var isShowingOnboarding = false
+    /// The new version's notes, open once after Margin updates (`Changelog`).
+    public var isShowingWhatsNew = false
     /// The meeting shown on its own (one sent from here, with no message to open).
     public var shownMeetingID: String?
     /// Whether a new message, or a reply, is being written. These only change when writing starts
@@ -424,12 +426,51 @@ public final class MailModel {
     var snoozedCopies: [String: MailThread] = [:]
     public internal(set) var outbox: [ScheduledMessage]
     public internal(set) var templates: [MailTemplate]
-    /// Invitations answered in this session, by event id.
+    /// Your answer to each invitation, by event id: answered in this session, or sent by email
+    /// before (kept in `sentAnswers`).
     public internal(set) var rsvps: [String: CalendarInvite.Response] = [:]
+    /// Answers on their way to the organizer, by event id. One at a time per invitation, so a
+    /// second tap while the first is still sending can't send the reply twice.
+    public internal(set) var answering: [String: CalendarInvite.Response] = [:]
+    /// The answers already emailed, by invitation UID, with the invitation's SEQUENCE: the same
+    /// answer to the same version isn't sent again. Kept across launches.
+    var sentAnswers: [String: SentAnswer] = [:]
     /// Events read from accounts' own calendars (with Calendar access on), by account.
     public internal(set) var calendarEvents: [UUID: [CalendarEvent]] = [:]
     /// The days `calendarEvents` covers.
     @ObservationIgnored var calendarEventsRange: ClosedRange<Date>?
+    /// Events from this device's Calendar app, when it's shown (`MailModel+DeviceCalendar`).
+    public internal(set) var deviceEvents: [CalendarEvent] = []
+    /// Reminders with a due date from the Reminders app, when they're shown.
+    public internal(set) var dueReminders: [DueReminder] = []
+    /// Whether the Calendar shows this device's calendars and its reminders. Asked for once.
+    public internal(set) var showsDeviceCalendar = false
+    public internal(set) var showsReminders = false
+    /// The calendars in this device's Calendar app, once they're shown.
+    public internal(set) var deviceCalendars: [DeviceCalendarInfo] = []
+    /// Calendars ticked off in the Calendar's list (`AgendaItem.calendarKey`), kept across launches.
+    public internal(set) var hiddenCalendars: Set<String> = []
+    @ObservationIgnored var deviceCalendarRange: ClosedRange<Date>?
+    @ObservationIgnored var deviceCalendarWatcher: NSObjectProtocol?
+    /// What Undo does after an event was made, changed or deleted.
+    @ObservationIgnored var calendarUndo: (() async -> Void)?
+    /// Each connected mailbox's video call service (Teams, Meet), asked once.
+    @ObservationIgnored var videoCallServices: [UUID: String?] = [:]
+    /// Colleagues whose busy times the Calendar shows next to yours (`MailModel+Colleagues`).
+    public internal(set) var comparedPeople: [ComparedPerson] = []
+    /// People whose calendars a connected calendar can see (shared with you), for Compare with.
+    public internal(set) var calendarSharers: [EmailAddress] = []
+    /// Each connected mailbox's calendars (its own and ones shared with you), for the sidebar.
+    public internal(set) var accountCalendars: [UUID: [AccountCalendar]] = [:]
+    /// How tall an hour is in Day and Week: pinch, or ⌘+ and ⌘− while they're showing.
+    public var calendarHourHeight: Double = 48 { didSet { environment.defaults.set(calendarHourHeight, forKey: "calendar.hourHeight") } }
+    /// The shortest an hour may be: the whole day just fills the view. Set by the view.
+    public var smallestHourHeight: Double = 20
+    /// When each of them is busy, by lowercased address, for `colleagueRange`.
+    public internal(set) var colleagueBusy: [String: [BusyTime]] = [:]
+    /// Those whose calendar couldn't be seen.
+    public internal(set) var colleaguesHidden: Set<String> = []
+    @ObservationIgnored var colleagueRange: ClosedRange<Date>?
     public internal(set) var waitingCount = 0
     var pendingSend: PendingSend? { didSet { keepUnsent() } }
     var lastSnoozed: [String] = []
@@ -450,6 +491,8 @@ public final class MailModel {
     public var openSubscriptionID: String?
     /// Bumped when folder order or hiding changes, so views read it again.
     var folderRevision = 0
+    /// Bumped when saved searches change (`MailModel+SavedSearches`).
+    var savedSearchRevision = 0
     var swipeRevision = 0
     var backupRevision = 0
 
@@ -608,6 +651,10 @@ public final class MailModel {
     /// Conversations sorting has looked at, by label key, with the newest message it saw: those
     /// aren't asked about again until something new arrives. Loaded once (see `sortingChecked`).
     @ObservationIgnored var sortingCheckedCache: [String: String]?
+    /// The assistant reading the inbox (`judgeInbox`).
+    @ObservationIgnored var verdictTask: Task<Void, Never>?
+    /// Newest messages the assistant couldn't read or left out, by `MailVerdicts.key`.
+    @ObservationIgnored var verdictSkipped: Set<String> = []
     /// How far "Sort now" has come: done, of how many.
     public var sortingProgress: (done: Int, total: Int)?
     /// Counts clock ticks (every 20 seconds), so time-based views refresh.
@@ -685,6 +732,11 @@ public final class MailModel {
         layout = ListLayout(rawValue: environment.defaults.string(forKey: "layout") ?? "") ?? .panels
         insetPanel = environment.defaults.bool(forKey: "insetPanel")
         showsNextUp = environment.defaults.object(forKey: "showsNextUp") as? Bool ?? true
+        showsDeviceCalendar = environment.defaults.bool(forKey: "calendar.device")
+        showsReminders = environment.defaults.bool(forKey: "calendar.reminders")
+        hiddenCalendars = Set(environment.defaults.stringArray(forKey: "calendar.hidden") ?? [])
+        comparedPeople = (environment.defaults.data(forKey: "calendar.compare")).flatMap { try? JSONDecoder().decode([ComparedPerson].self, from: $0) } ?? []
+        calendarHourHeight = environment.defaults.object(forKey: "calendar.hourHeight") as? Double ?? Self.defaultHourHeight
         singleKeyShortcuts = environment.defaults.object(forKey: "singleKeyShortcuts") as? Bool ?? true
         colorBlindSafe = environment.defaults.bool(forKey: "colorBlindSafe")
         increaseContrast = environment.defaults.bool(forKey: "increaseContrast")
@@ -703,6 +755,9 @@ public final class MailModel {
         let days = environment.defaults.object(forKey: "followUpDays") as? Int
         followUpDays = days ?? 3
         snoozes = JSONFile<[String: Date]>(url: environment.folder.appending(path: "snoozes.json")).load() ?? [:]
+        let answers = JSONFile<[String: SentAnswer]>(url: environment.folder.appending(path: "sent-answers.json")).load() ?? [:]
+        sentAnswers = answers
+        rsvps = answers.mapValues(\.response)
         snoozedCopies = Self.loadSnoozedCopies(from: environment.folder)
         outbox = JSONFile<[ScheduledMessage]>(url: environment.folder.appending(path: "outbox.json")).load() ?? []
         templates = JSONFile<[MailTemplate]>(url: environment.folder.appending(path: "templates.json")).load() ?? MailTemplate.examples
@@ -780,11 +835,13 @@ public final class MailModel {
             pictureStore.forgetMissing()
         }
         if !hasOnboarded && !environment.isPreview { isShowingOnboarding = true }
+        if !environment.isPreview { showChangelogIfUpdated() }
         Self.noteLaunch("start")
         await forgetRemovedAccounts()
         pruneLearnedAliases()
         upgradeFormattedSignatures()
         Self.noteLaunch("before saved mail")
+        loadVerdicts()
         await loadSavedMail()
         Self.noteLaunch("saved mail shown")
         // The conversation that's open shows its saved text now. It used to wait for everything
@@ -947,7 +1004,7 @@ public final class MailModel {
         await apply(await Self.load(account.id, from: provider, limit: inboxLimit(account.id), previous: shelves[account.id]?.threads, mutationRevision: mutationRevision))
         lastUpdated = Date()
         applyInboxRules()
-        notifyAboutNewMail()
+        judgeThenNotify()
         // What just arrived is read ahead, so it opens at once.
         startReadingAhead()
         if selectedThread == nil { selectedThreadID = firstConversation }
@@ -977,7 +1034,7 @@ public final class MailModel {
         lastUpdated = Date()
         applyInboxRules()
         correspondents = await environment.cache.correspondents(of: Set(accounts.flatMap(\.sendAddresses).map { $0.address.lowercased() }))
-        notifyAboutNewMail()
+        judgeThenNotify()
         // The top of the list is read ahead, so those conversations open instantly.
         startReadingAhead()
         #if os(iOS) && canImport(WatchConnectivity)
@@ -1305,6 +1362,10 @@ public final class MailModel {
     }
 
     public func remove(_ id: UUID) {
+        // Shared mailboxes opened with this one's sign-in go with it.
+        if let owner = accounts.first(where: { $0.id == id }), owner.sharedMailbox == nil {
+            for shared in sharedMailboxes(of: owner) { remove(shared.id) }
+        }
         if let provider = providers.removeValue(forKey: id) {
             Task { await provider.disconnect() }
         }

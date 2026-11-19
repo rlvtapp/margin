@@ -106,13 +106,13 @@ extension MailModel {
         scheduleEventReminders()
     }
 
-    /// Loads mail in the inbox that looks like an invitation, so its event is known before
+    /// Loads inbox mail that carries calendar data, so its event is known before
     /// it's opened. Bodies come from the offline cache when they're there.
     public func findInvites() async {
-        let words = ["invitation", "invite", "uitnodiging", "invitación", "einladung", "invito", "convite", "meeting", "@ "]
         let recent = Date().addingTimeInterval(-30 * 86_400)
+        // Known from the message's structure: it carries a calendar part.
         let candidates = inboxThreads(nil).filter { thread in
-            thread.date > recent && words.contains { thread.subject.lowercased().contains($0) }
+            thread.date > recent && thread.messages.contains { $0.calendarMethod != nil }
         }
         for thread in candidates.prefix(40) {
             guard let account = account(thread.accountID), let provider = try? provider(for: account) else { continue }
@@ -137,11 +137,7 @@ extension MailModel {
     /// moves an invitation to Deleted Items once it's answered, and your answers sit in Sent.
     /// Oldest first, so a meeting is known before replies to it change who's coming.
     func findInvitesInSavedMail(now: Date = Date()) async {
-        let words = ["invitation", "invite", "uitnodiging", "invitación", "einladung", "invito", "convite", "@ ",
-                     "accepted:", "declined:", "tentative:", "geaccepteerd:", "afgewezen:", "angenommen:", "abgelehnt:",
-                     "aceptado:", "rechazado:", "accepté :", "accepté:", "refusé :", "updated invitation", "canceled", "cancelled",
-                     "geannuleerd", "abgesagt"]
-        let found = await environment.cache.recentMessages(since: now.addingTimeInterval(-60 * 86_400), subjectWords: words)
+        let found = await environment.cache.recentCalendarMessages(since: now.addingTimeInterval(-60 * 86_400))
             .filter { current(contains: $0.account) }
         // Bodies not on the device yet: newest first, so this week's answers come before old mail.
         var fetched = 0
@@ -164,55 +160,9 @@ extension MailModel {
             if bodies[key] == nil, let body = message.body { bodies[key] = body }
             noteInvites(in: Self.tag(MailThread(id: message.id, messages: [message]), account: accountID))
         }
-        noteAnswers(in: found.map(\.message))
     }
 
     private func current(contains account: UUID) -> Bool { accounts.contains { $0.id == account } }
-
-    /// Your answers from the subjects of replies you sent ("Accepted: Weekly sync"), for replies
-    /// whose calendar part isn't on the device. Matched to meetings by title; the newest wins.
-    func noteAnswers(in messages: [MailMessage]) {
-        let mine = Set(accounts.flatMap { [$0.address] + ($0.aliases ?? []) }.map { $0.address.lowercased() })
-        var entries = calendarEntries
-        var changed = false
-        for message in messages.sorted(by: { $0.date < $1.date }) where mine.contains(message.from.address.lowercased()) {
-            guard let (response, title) = Self.answer(inSubject: message.subject) else { continue }
-            for index in entries.indices
-            where entries[index].title.compare(title, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame {
-                rsvps[entries[index].id] = response
-                // Kept with the meeting too, as your entry in its guest list.
-                let me = message.from.address.lowercased()
-                if let at = entries[index].attendees.firstIndex(where: { $0.address.address.lowercased() == me }) {
-                    guard entries[index].attendees[at].response != response else { continue }
-                    entries[index].attendees[at].response = response
-                } else {
-                    entries[index].attendees.append(MeetingAttendee(address: message.from, kind: .required, response: response))
-                }
-                changed = true
-            }
-        }
-        if changed { saveCalendar(entries) }
-    }
-
-    /// "Accepted: Weekly sync" → (.accepted, "Weekly sync"), in the languages calendars write.
-    static func answer(inSubject subject: String) -> (CalendarInvite.Response, String)? {
-        let prefixes: [(String, CalendarInvite.Response)] = [
-            ("tentatively accepted:", .tentative), ("tentative:", .tentative), ("accepted:", .accepted), ("declined:", .declined),
-            ("voorlopig geaccepteerd:", .tentative), ("voorlopig:", .tentative), ("geaccepteerd:", .accepted), ("afgewezen:", .declined),
-            ("mit vorbehalt angenommen:", .tentative), ("angenommen:", .accepted), ("abgelehnt:", .declined),
-            ("aceptado provisionalmente:", .tentative), ("provisional:", .tentative), ("aceptado:", .accepted), ("rechazado:", .declined),
-            ("accepté provisoirement :", .tentative), ("provisoire :", .tentative), ("accepté :", .accepted), ("refusé :", .declined),
-            ("accepté:", .accepted), ("refusé:", .declined), ("accettato:", .accepted), ("rifiutato:", .declined),
-            ("aceito:", .accepted), ("recusado:", .declined),
-        ]
-        let trimmed = subject.trimmingCharacters(in: .whitespaces)
-        let lower = trimmed.lowercased()
-        for (prefix, response) in prefixes where lower.hasPrefix(prefix) {
-            let title = trimmed.dropFirst(prefix.count).trimmingCharacters(in: .whitespaces)
-            return title.isEmpty ? nil : (response, title)
-        }
-        return nil
-    }
 
     // MARK: Reminders
 
@@ -249,7 +199,8 @@ extension MailModel {
         #if canImport(UserNotifications)
         guard !environment.isPreview else { return }
         let minutes = eventReminderMinutes
-        let events = upcomingEvents.filter { !$0.isAllDay }.prefix(30)
+        // Events only in this device's calendars get their alerts from the Calendar app.
+        let events = upcomingEvents.filter { !$0.isAllDay && !$0.id.hasPrefix(DeviceCalendar.idPrefix) }.prefix(30)
         Task {
             let center = UNUserNotificationCenter.current()
             let pending = await center.pendingNotificationRequests().map(\.identifier).filter { $0.hasPrefix("event-") }

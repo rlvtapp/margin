@@ -48,10 +48,6 @@
 	<string>$(MARGIN_GOOGLE_CLIENT_ID)</string>
 	<key>MarginMicrosoftClientID</key>
 	<string>$(MARGIN_MICROSOFT_CLIENT_ID)</string>
-	<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>daybook</string>
-	</array>
 	<key>MarginPushRelayURL</key>
 	<string>$(MARGIN_PUSH_RELAY_URL)</string>
 	<key>MarginGmailPushTopic</key>
@@ -60,8 +56,10 @@
 	<string>Margin suggests people from your contacts while you address mail. They stay on this device.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Margin listens only while you dictate a question to Ask.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Margin shows the events in your calendars in its Calendar view when you turn them on there, and adds, moves or deletes an event only when you, or an AI app you allowed to make changes, ask it to.</string>
 	<key>NSRemindersFullAccessUsageDescription</key>
-	<string>Margin adds a reminder only when you choose Add to Reminders on a message.</string>
+	<string>Margin adds a reminder when you choose Add to Reminders on a message, shows reminders with a due date in its Calendar view when you turn them on there, and adds or ticks off a reminder when you, or an AI app you allowed to make changes, ask it to.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Margin turns what you dictate into text for Ask. It stays on this device when the device supports it.</string>
 	<key>UIBackgroundModes</key>

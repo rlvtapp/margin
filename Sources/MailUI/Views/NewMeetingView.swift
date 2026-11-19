@@ -42,6 +42,10 @@ struct NewMeetingView: View {
                     Picker("Length", selection: $minutes) {
                         ForEach([15, 30, 45, 60, 90, 120], id: \.self) { Text(Self.length($0)).tag($0) }
                     }
+                    if !attendees.isEmpty {
+                        SuggestedTimesRow(model: model, people: attendees, destination: account.map { .account($0.id) },
+                                          start: $start, end: Binding(get: { end }, set: { _ in }), showsBusy: false)
+                    }
                 }
                 Section {
                     TextField("People", text: $people, prompt: Text("Names or addresses"))
@@ -70,17 +74,6 @@ struct NewMeetingView: View {
             .navigationTitle("New Meeting")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                if model.hasDaybook {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button("Open in Daybook") {
-                            model.openNewMeetingInDaybook(title: title, start: start, end: end, attendees: attendees,
-                                                          location: rooms.isEmpty ? location : rooms.map(\.name).joined(separator: ", "),
-                                                          notes: notes)
-                            dismiss()
-                        }
-                        .tip("Find a time and send it from your calendar")
-                    }
-                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(isSending ? "Sending…" : "Send") { Task { await send() } }
                         .disabled(isSending || attendees.isEmpty && rooms.isEmpty || account == nil)

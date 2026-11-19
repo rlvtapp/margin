@@ -57,9 +57,7 @@ extension MailModel {
 
     /// Opens a meeting: its message, or for one sent from here, the meeting on its own.
     public func open(_ event: CalendarEntry) {
-        if hasDaybook {
-            openInDaybook(event)
-        } else if event.threadID.isEmpty {
+        if event.threadID.isEmpty {
             // Meetings sent from here open on their own; ones only in an account calendar, in the Calendar.
             if calendarEntries.contains(where: { $0.id == event.id }) { shownMeetingID = event.id } else { go(to: .calendar) }
         } else {

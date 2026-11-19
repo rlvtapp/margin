@@ -53,6 +53,7 @@ enum SampleMail {
                 inReplyTo: previous?.messageID, references: previous.map { $0.references + [$0.messageID!] } ?? [],
                 from: from, to: to ?? [me], subject: subject, date: now.addingTimeInterval(-minutesAgo * 60),
                 snippet: HTMLText.snippet(body), flags: flags, hasAttachments: attachment != nil, listHeaders: headers,
+                calendarMethod: invite.flatMap(CalendarInvite.parse).map { $0.method.uppercased() },
                 body: MessageBody(
                     text: body,
                     html: SampleHTML.html(for: subject),

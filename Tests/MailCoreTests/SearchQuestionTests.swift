@@ -3,9 +3,10 @@ import Testing
 
 @Suite struct SearchQuestionTests {
     @Test func recognisesQuestions() {
+        // By its shape, never its words: a question mark, or a sentence of five words or more.
         #expect(SearchQuery.looksLikeQuestion("when is my flight to Lisbon"))
         #expect(SearchQuery.looksLikeQuestion("what did Noor say about the flat?"))
-        #expect(SearchQuery.looksLikeQuestion("wanneer komt het pakket"))
+        #expect(SearchQuery.looksLikeQuestion("wanneer komt het pakket?"))
         #expect(SearchQuery.looksLikeQuestion("did Sam pay the invoice"))
         #expect(SearchQuery.looksLikeQuestion("rent for May?"))
     }

@@ -51,6 +51,9 @@ public protocol MailProvider: Sendable {
     /// or carry other flags now. `token` is the `token` of the answer before; with it, a server
     /// that keeps count of changes (CONDSTORE, QRESYNC, JMAP states) says only what changed.
     func checkSaved(_ ids: [String], in mailbox: Mailbox, since token: String?) async throws -> SavedMailCheck
+    /// Puts a label on every message of the threads, or takes it off, on a server that keeps
+    /// labels (`MailMessage.labels`). Others throw `notSupported`.
+    func changeLabel(_ label: String, adding: Bool, on threads: [MailThread]) async throws
 }
 
 /// A page of older mail (see `MailProvider.olderMessages`).
@@ -90,6 +93,10 @@ public struct SavedMailCheck: Sendable, Equatable {
 }
 
 extension MailProvider {
+    public func changeLabel(_ label: String, adding: Bool, on threads: [MailThread]) async throws {
+        throw MailError.notSupported(String(localized: "This account has folders, not labels."))
+    }
+
     public func openedBody(of message: MailMessage) async throws -> (body: MessageBody, isComplete: Bool) {
         (try await body(of: message), true)
     }

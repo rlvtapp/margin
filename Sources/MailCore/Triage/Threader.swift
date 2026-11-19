@@ -5,6 +5,10 @@ import Foundation
 /// conversation their people were in.
 public enum Threader {
     public static func threads(from messages: [MailMessage]) -> [MailThread] {
+        // On a server that keeps labels, one message can come from several folders (the inbox
+        // and All Mail): it's kept once, as first seen.
+        var seenServerIDs = Set<String>()
+        let messages = messages.filter { message in message.serverID.map { seenServerIDs.insert($0).inserted } ?? true }
         var parent = Array(0..<messages.count)
         func root(_ index: Int) -> Int {
             var node = index
@@ -22,6 +26,12 @@ public enum Threader {
         var byMessageID: [String: Int] = [:]
         for (index, message) in messages.enumerated() {
             if let id = message.messageID { byMessageID[id] = byMessageID[id] ?? index }
+        }
+        // The server's own conversation ids, where it keeps them, join first.
+        var byThreadID: [String: Int] = [:]
+        for (index, message) in messages.enumerated() {
+            guard let id = message.threadID else { continue }
+            if let first = byThreadID[id] { join(index, first) } else { byThreadID[id] = index }
         }
         // Earlier messages by subject: a reply with no known parent joins the conversation its
         // people were part of. Messages that aren't replies never join by subject alone, so

@@ -11,6 +11,12 @@ public actor IMAPProvider: MailProvider {
     /// first one's commands.
     private var watcher: IMAPClient?
     private var folders: [Mailbox] = []
+    /// On a server that keeps labels, the label each listed folder stands for, by folder id
+    /// (see `IMAPLabels.label(for:)`); empty on other servers.
+    private var folderLabels: [String: String] = [:]
+    /// Label colours by label name, read over HTTPS where the account allows it, and when.
+    private var labelColors: [String: String] = [:]
+    private var labelColorsRead: Date?
     /// When the folder list was last read from the server. Folders rarely change, so a check
     /// doesn't ask for the list again within `folderListAge`.
     private var foldersListed: Date?
@@ -41,8 +47,19 @@ public actor IMAPProvider: MailProvider {
     /// mail, so this is enough to show it; the rest follows.
     static let openingBytes = 200_000
 
-    /// The parts of a message a list needs: no body.
+    /// The parts of a message a list needs: no body. A server that keeps labels adds its own
+    /// (see `listItems(_:)`).
     static let listItems = "(UID FLAGS ENVELOPE RFC822.SIZE INTERNALDATE BODYSTRUCTURE BODY.PEEK[HEADER.FIELDS (LIST-ID LIST-UNSUBSCRIBE LIST-UNSUBSCRIBE-POST PRECEDENCE REFERENCES AUTO-SUBMITTED FEEDBACK-ID X-CSA-COMPLAINTS X-MAILGUN-SID X-SES-OUTGOING X-SG-EID X-MC-USER X-MS-REACTIONS)])"
+
+    /// `listItems`, with labels, conversation and message ids where the server keeps them.
+    private func listItems(_ client: IMAPClient) async -> String {
+        await client.supportsLabels ? String(Self.listItems.dropLast()) + " " + IMAPLabels.fetchItems + ")" : Self.listItems
+    }
+
+    /// What a check of known messages asks for: flags, and labels where the server keeps them.
+    private func flagItems(_ client: IMAPClient) async -> String {
+        await client.supportsLabels ? "(UID FLAGS X-GM-LABELS)" : "(UID FLAGS)"
+    }
 
     public init(account: MailAccount, credentials: any CredentialSource, syncStore: IMAPSyncStore? = nil) throws {
         guard case .imap(let incoming, let outgoing) = account.connection else {
@@ -93,8 +110,35 @@ public actor IMAPProvider: MailProvider {
     /// reconnect, or when a folder is made, renamed or deleted here); in between, every check
     /// would otherwise spend a round trip on a list that hasn't changed.
     public func mailboxes() async throws -> [Mailbox] {
-        if !folders.isEmpty, let listed = foldersListed, Date().timeIntervalSince(listed) < Self.folderListAge { return folders }
-        return try await listedAgain()
+        let list: [Mailbox]
+        if !folders.isEmpty, let listed = foldersListed, Date().timeIntervalSince(listed) < Self.folderListAge {
+            list = folders
+        } else {
+            list = try await listedAgain()
+        }
+        guard !folderLabels.isEmpty else { return list }
+        // On the side: a slow answer mustn't hold up the folder list. The colours show from
+        // the next call on.
+        if labelColorsRead.map({ Date().timeIntervalSince($0) >= 60 * 60 }) ?? true {
+            labelColorsRead = Date()
+            Task { await self.readLabelColors() }
+        }
+        guard !labelColors.isEmpty else { return list }
+        return list.map { folder in
+            var copy = folder
+            if let label = folderLabels[folder.id] { copy.labelColor = labelColors[label] }
+            return copy
+        }
+    }
+
+    /// Label colours aren't part of IMAP; an account signed in with a token that also opens
+    /// the provider's HTTPS interface reads them there, at most hourly. A failure leaves them out.
+    private func readLabelColors() async {
+        guard case .oauth(.google, _) = account.auth else { return }
+        guard let token = try? await credentials.secret(for: account) else { return }
+        let http = BearerHTTP(token: token, send: BearerHTTP.urlSession)
+        guard let request = try? http.request(IMAPLabels.labelListURL), let data = try? await http.data(for: request) else { return }
+        labelColors = IMAPLabels.colors(fromLabelList: data)
     }
 
     private func listedAgain() async throws -> [Mailbox] {
@@ -108,10 +152,15 @@ public actor IMAPProvider: MailProvider {
         if foldersListed != before { return folders }
         let items = try await client.list().filter(\.isSelectable)
         let names = Set(items.map(\.name))
+        let labelled = await client.supportsLabels
+        folderLabels = [:]
         folders = items.map { item in
             // Folders inside others show their own name, nested under the parent.
             let parent = item.parent.flatMap { names.contains($0) ? $0 : nil }
-            return Mailbox(id: item.name, name: ModifiedUTF7.decode(parent == nil ? item.name : item.shortName), role: item.role, parentID: parent)
+            let label = labelled ? IMAPLabels.label(for: item) : nil
+            if let label { folderLabels[item.name] = label }
+            return Mailbox(id: item.name, name: ModifiedUTF7.decode(parent == nil ? item.name : item.shortName), role: item.role, parentID: parent,
+                           label: label)
         }
         foldersListed = Date()
         return folders
@@ -313,6 +362,14 @@ public actor IMAPProvider: MailProvider {
         let client = try await connected()
         let byMailbox = Dictionary(grouping: threads.flatMap(\.messages), by: \.mailboxID)
         for (mailboxID, messages) in byMailbox {
+            // Labels instead of folders: leaving the inbox and moving are label changes.
+            // Only where every message can be found in All Mail by its server id; otherwise the
+            // usual moves, which these servers also understand.
+            if folder(.all) != nil, messages.allSatisfy({ $0.serverID != nil }),
+               let change = labelChange(for: action, from: mailboxID) {
+                try await changeLabels(adding: change.adding, removing: change.removing, on: messages, client: client)
+                continue
+            }
             let uids = messages.compactMap(Self.uid(of:))
             if await client.selected != mailboxID { try await client.select(mailboxID) }
             switch action {
@@ -346,6 +403,79 @@ public actor IMAPProvider: MailProvider {
         }
     }
 
+    // MARK: Labels
+
+    /// What an action does to labels on a server that keeps them; nil when it's a plain move
+    /// or a flag (Trash and Spam are moved to, and out of, as folders).
+    func labelChange(for action: MailAction, from mailboxID: String) -> (adding: [String], removing: [String])? {
+        guard !folderLabels.isEmpty else { return nil }
+        let source = folderLabels[mailboxID]
+        let sourceIsFolder = source == nil && mailboxID != folder(.all)?.id
+        switch action {
+        case .done:
+            // Archiving takes the inbox label off; the mail stays in All Mail and its other labels.
+            guard !sourceIsFolder else { return nil }
+            return ([], [IMAPLabels.inbox])
+        case .moveToInbox:
+            guard !sourceIsFolder else { return nil }
+            return ([IMAPLabels.inbox], [])
+        case .move(let target):
+            guard !sourceIsFolder, target != mailboxID else { return nil }
+            let removing = source.flatMap { IMAPLabels.leavesWithMove($0) ? [$0] : nil } ?? []
+            if target == folder(.all)?.id { return removing.isEmpty ? nil : ([], removing) }
+            guard let label = folderLabels[target] else { return nil }
+            return ([label], removing)
+        default:
+            return nil
+        }
+    }
+
+    public func changeLabel(_ label: String, adding: Bool, on threads: [MailThread]) async throws {
+        try await exclusive {
+            try await self.reliably {
+                let client = try await self.connected()
+                guard await client.supportsLabels else {
+                    throw MailError.notSupported(String(localized: "This account has folders, not labels."))
+                }
+                try await self.changeLabels(adding: adding ? [label] : [], removing: adding ? [] : [label],
+                                            on: threads.flatMap(\.messages), client: client)
+            }
+        }
+    }
+
+    /// Adds and takes off labels with `UID STORE … X-GM-LABELS`. The change is made on each
+    /// message's copy in All Mail, found by its server id: a folder can't change the label it
+    /// stands for on its own copies. Messages without a server id are changed where they are.
+    private func changeLabels(adding: [String], removing: [String], on messages: [MailMessage], client: IMAPClient) async throws {
+        let commands = [IMAPLabels.store(adding, adding: true), IMAPLabels.store(removing, adding: false)].compactMap { $0 }
+        guard !commands.isEmpty else { return }
+        let identified = messages.compactMap(\.serverID)
+        if let all = folder(.all), identified.count == messages.count {
+            if await client.selected != all.id { try await client.select(all.id) }
+            for chunk in stride(from: 0, to: identified.count, by: 100).map({ Array(identified[$0..<min($0 + 100, identified.count)]) }) {
+                guard let criteria = IMAPLabels.search(serverIDs: chunk) else { continue }
+                let uids = try await client.uidSearch(criteria)
+                for command in commands { try await client.store(uids: uids, command) }
+            }
+        } else {
+            for (mailboxID, group) in Dictionary(grouping: messages, by: \.mailboxID) {
+                if await client.selected != mailboxID { try await client.select(mailboxID) }
+                let uids = group.compactMap(Self.uid(of:))
+                for command in commands { try await client.store(uids: uids, command) }
+            }
+        }
+        // What's remembered follows at once, so the next check doesn't bring back the old labels.
+        let ids = Set(identified)
+        for name in sync.keys {
+            for (uid, message) in sync[name]!.messages where message.serverID.map(ids.contains) == true {
+                var labels = message.labels ?? []
+                labels.removeAll { label in removing.contains { $0.caseInsensitiveCompare(label) == .orderedSame } }
+                for label in adding where !labels.contains(where: { $0.caseInsensitiveCompare(label) == .orderedSame }) { labels.append(label) }
+                sync[name]!.messages[uid]?.labels = labels
+            }
+        }
+    }
+
     public func send(_ draft: Draft) async throws {
         let message = MessageBuilder.build(draft)
         let smtp = try SMTPClient(endpoint: outgoing)
@@ -366,28 +496,34 @@ public actor IMAPProvider: MailProvider {
         }
     }
 
-    /// Searches the inbox, the archive (or all mail) and Sent on the server.
+    /// Searches on the server: the folder `in:` names, or else the inbox, the archive (or all
+    /// mail) and Sent. A server with raw search gets the query in its own syntax, over all mail.
     public func search(_ text: String, limit: Int) async throws -> [MailThread] {
-        let words = text.split(separator: " ").map(String.init).filter { !$0.contains(":") }
-        guard !words.isEmpty else { return [] }
-        // Quoted strings must be plain ASCII unless the server accepts UTF-8; others are searched locally only.
-        guard let criteria = try? words.map({ word -> String in
-            guard word.unicodeScalars.allSatisfy(\.isASCII), let quoted = IMAPParser.quoted(word) else { throw MailError.notSupported("") }
-            return "TEXT \(quoted)"
-        }).joined(separator: " ") else { return [] }
-        return try await exclusive { try await self.reliably { try await self.searchServer(criteria, limit: limit) } }
+        let query = SearchQuery(text)
+        guard !query.isEmpty else { return [] }
+        return try await exclusive { try await self.reliably { try await self.searchServer(query, limit: limit) } }
     }
 
-    private func searchServer(_ criteria: String, limit: Int) async throws -> [MailThread] {
+    private func searchServer(_ query: SearchQuery, limit: Int) async throws -> [MailThread] {
         let client = try await connected()
-        var boxes = [folder(.inbox), folder(.archive) ?? folder(.all), folder(.sent)].compactMap { $0 }
+        let raw = await client.capabilities.contains(IMAPSearch.rawCapability)
+        // Text outside ASCII can't be sent as a quoted string; saved mail is searched for it instead.
+        guard let criteria = raw ? IMAPSearch.rawCriteria(query) : IMAPSearch.criteria(query) else { return [] }
+        var boxes: [Mailbox]
+        if let named = query.mailbox(in: folders) {
+            boxes = [named]
+        } else if raw, let all = folder(.all) {
+            boxes = [all]
+        } else {
+            boxes = [folder(.inbox), folder(.archive) ?? folder(.all), folder(.sent)].compactMap { $0 }
+        }
         if boxes.isEmpty { boxes = [Mailbox(id: "INBOX", name: "Inbox", role: .inbox)] }
         var messages: [MailMessage] = []
         for mailbox in boxes {
             try await client.select(mailbox.id)
             let uids = try await client.uidSearch(criteria).suffix(limit)
             guard !uids.isEmpty else { continue }
-            let items = try await client.fetch(IMAPClient.set(Array(uids)), Self.listItems, byUID: true)
+            let items = try await client.fetch(IMAPClient.set(Array(uids)), await self.listItems(client), byUID: true)
             messages += items.compactMap { message(from: $0, mailbox: mailbox.id) }
         }
         return Array(Threader.threads(from: messages).sorted { $0.date > $1.date }.prefix(limit))
@@ -417,7 +553,7 @@ public actor IMAPProvider: MailProvider {
                     top = place
                 }
                 let first = max(1, top - limit + 1)
-                let items = try await client.fetch("\(first):\(top)", Self.listItems)
+                let items = try await client.fetch("\(first):\(top)", await self.listItems(client))
                     .filter { item in below.map { (item.uid ?? .max) < $0 } ?? true }
                 var page = IMAPFolderSync(uidValidity: selection.uidValidity ?? 0, uidNext: nil, exists: selection.exists, messages: [:], window: 0)
                 await self.add(items, to: &page, mailbox: mailbox.id, client: client)
@@ -612,7 +748,7 @@ public actor IMAPProvider: MailProvider {
             state.messages = state.messages.filter { uid, _ in !selection.vanished.contains { $0.contains(uid) } }
             for item in selection.changed {
                 guard let uid = item.uid else { continue }
-                if state.messages[uid] != nil { state.update(item) } else if uid > highest { fresh.insert(uid) }
+                if state.messages[uid] != nil { state.update(item, folderLabel: folderLabels[name]) } else if uid > highest { fresh.insert(uid) }
             }
             // Every new message raises HIGHESTMODSEQ, so an unchanged one means none arrived.
             if current != old { fresh.formUnion(try await client.uidSearch("UID \(highest + 1):*").filter { $0 > highest }) }
@@ -623,9 +759,9 @@ public actor IMAPProvider: MailProvider {
                 // old count plus the arrivals) nothing left either, and no SEARCH is needed.
                 var arrived = Set<Int>()
                 if current != old {
-                    for item in try await client.fetch("\(lowest):*", "(UID FLAGS) (CHANGEDSINCE \(old))", byUID: true) {
+                    for item in try await client.fetch("\(lowest):*", "\(await flagItems(client)) (CHANGEDSINCE \(old))", byUID: true) {
                         guard let uid = item.uid else { continue }
-                        if uid > highest { arrived.insert(uid) } else { state.update(item) }
+                        if uid > highest { arrived.insert(uid) } else { state.update(item, folderLabel: folderLabels[name]) }
                     }
                 }
                 if selection.exists == state.exists + arrived.count {
@@ -639,17 +775,26 @@ public actor IMAPProvider: MailProvider {
             if !unchanged {
                 // The flags of everything from the lowest known UID up: that lists what's still
                 // there (and so what left), what's new, and every flag, in one command.
-                let items = try await client.fetch("\(lowest):*", "(UID FLAGS)", byUID: true)
+                let items = try await client.fetch("\(lowest):*", await flagItems(client), byUID: true)
                 fresh = state.reconcile(with: items.compactMap(\.uid), above: highest)
-                for item in items { state.update(item) }
+                for item in items { state.update(item, folderLabel: folderLabels[name]) }
             } else if !state.messages.isEmpty {
-                for item in try await client.fetch(known, "(UID FLAGS)", byUID: true) { state.update(item) }
+                for item in try await client.fetch(known, await flagItems(client), byUID: true) { state.update(item, folderLabel: folderLabels[name]) }
+            }
+        }
+        // Saved from before labels were read: their labels, once.
+        if await client.supportsLabels, case let unlabelled = state.messages.filter({ $0.value.labels == nil }).map(\.key), !unlabelled.isEmpty {
+            for item in try await client.fetch(IMAPClient.set(unlabelled), "(UID X-GM-LABELS X-GM-THRID X-GM-MSGID)", byUID: true) {
+                guard let uid = item.uid, item.labels != nil else { continue }
+                state.messages[uid]?.labels = IMAPLabels.adding(folderLabels[name], to: item.labels)
+                state.messages[uid]?.threadID = item.threadID
+                state.messages[uid]?.serverID = item.serverID
             }
         }
 
         let wanted = fresh.sorted().suffix(state.window)
         if !wanted.isEmpty {
-            await add(try await client.fetch(IMAPClient.set(Array(wanted)), Self.listItems, byUID: true), to: &state, mailbox: name, client: client)
+            await add(try await client.fetch(IMAPClient.set(Array(wanted)), await self.listItems(client), byUID: true), to: &state, mailbox: name, client: client)
         }
         state.trim()
         state.exists = selection.exists
@@ -676,7 +821,7 @@ public actor IMAPProvider: MailProvider {
         if selection.exists > 0, window > 0 {
             let first = max(1, selection.exists - window + 1)
             let started = ContinuousClock.now
-            let items = try await client.fetch("\(first):\(selection.exists)", Self.listItems)
+            let items = try await client.fetch("\(first):\(selection.exists)", await listItems(client))
             StepTimes.send("\(tag) full download of \(items.count) messages: list items \(StepTimes.milliseconds(since: started)) ms")
             await add(items, to: &state, mailbox: name, client: client)
         }
@@ -691,7 +836,7 @@ public actor IMAPProvider: MailProvider {
         let missing = min(state.window, state.exists) - state.messages.count
         guard missing > 0 else { return }
         let top = state.exists - state.messages.count
-        await add(try await client.fetch("\(top - missing + 1):\(top)", Self.listItems), to: &state, mailbox: mailbox, client: client)
+        await add(try await client.fetch("\(top - missing + 1):\(top)", await listItems(client)), to: &state, mailbox: mailbox, client: client)
     }
 
     private func add(_ items: [IMAPFetchItem], to state: inout IMAPFolderSync, mailbox: String, client: IMAPClient) async {
@@ -856,7 +1001,7 @@ public actor IMAPProvider: MailProvider {
         guard let uid = item.uid, let envelope = item.envelope else { return nil }
         let headerBytes = item.sections.first { $0.key.hasPrefix("HEADER.FIELDS") }?.value ?? []
         let headers = MIMEHeaders.parse(String(decoding: headerBytes, as: UTF8.self))
-        return MailMessage(
+        var message = MailMessage(
             id: "\(mailbox)/\(uid)",
             mailboxID: mailbox,
             messageID: envelope.messageID,
@@ -869,8 +1014,13 @@ public actor IMAPProvider: MailProvider {
             date: envelope.date ?? item.internalDate ?? .distantPast,
             flags: item.flags,
             hasAttachments: item.bodyStructureHasAttachment,
-            listHeaders: InboxSplit.compact(headers.fields)
+            listHeaders: InboxSplit.compact(headers.fields),
+            calendarMethod: item.calendarMethod
         )
+        message.labels = IMAPLabels.adding(folderLabels[mailbox], to: item.labels)
+        message.threadID = item.threadID
+        message.serverID = item.serverID
+        return message
     }
 
     static func uid(of message: MailMessage) -> Int? {
@@ -903,9 +1053,10 @@ struct IMAPFolderSync: Sendable, Codable, Equatable {
     var window: Int
 
     /// Applies new flags from a FETCH.
-    mutating func update(_ item: IMAPFetchItem) {
-        guard let uid = item.uid, item.hasFlags else { return }
-        messages[uid]?.flags = item.flags
+    mutating func update(_ item: IMAPFetchItem, folderLabel: String? = nil) {
+        guard let uid = item.uid else { return }
+        if item.hasFlags { messages[uid]?.flags = item.flags }
+        if item.labels != nil { messages[uid]?.labels = IMAPLabels.adding(folderLabel, to: item.labels) }
     }
 
     /// Takes the UIDs still in the folder from `lowest` up: drops known ones that are gone

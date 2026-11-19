@@ -89,7 +89,7 @@ import Testing
         await cache.saveThreads([MailThread(id: "1", messages: [message])], account: account, mailbox: "INBOX")
         #expect(await cache.search("When does the Lisbon deposit need paying?", anyWord: true).count == 1)
         #expect(await cache.search("When does the Lisbon deposit need paying?").isEmpty)
-        #expect(MailCache.ftsAnyQuery("what is the") == nil)
+        #expect(MailCache.ftsAnyQuery("a") == nil)
     }
 
     @Test func templatesFillIn() {

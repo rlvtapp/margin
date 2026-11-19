@@ -165,11 +165,12 @@ public actor JMAPProvider: MailProvider {
     public func disconnect() async { session = nil }
 
     public func search(_ text: String, limit: Int) async throws -> [MailThread] {
-        let words = text.split(separator: " ").map(String.init).filter { !$0.contains(":") }.joined(separator: " ")
-        guard !words.isEmpty else { return [] }
+        let query = SearchQuery(text)
+        guard !query.isEmpty else { return [] }
         let session = try await connected()
+        guard let filter = JMAPSearch.filter(query, mailboxID: query.mailbox(in: folders)?.id) else { return [] }
         let responses = try await call([
-            ["Email/query", ["accountId": session.accountID, "filter": ["text": words],
+            ["Email/query", ["accountId": session.accountID, "filter": filter,
                              "sort": [["property": "receivedAt", "isAscending": false]], "limit": limit], "q"],
             ["Email/get", ["accountId": session.accountID, "#ids": ["resultOf": "q", "name": "Email/query", "path": "/ids"],
                            "properties": JMAPEmail.listProperties], "e"],

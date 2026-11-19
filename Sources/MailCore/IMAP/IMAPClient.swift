@@ -40,6 +40,8 @@ actor IMAPClient {
     var supportsIdle: Bool { capabilities.contains("IDLE") }
     /// CONDSTORE (RFC 7162): mod-sequences, so changed flags can be asked for alone.
     var supportsCondStore: Bool { capabilities.contains("CONDSTORE") || capabilities.contains("QRESYNC") }
+    /// Keeps labels instead of folders (see `IMAPLabels`).
+    var supportsLabels: Bool { capabilities.contains(IMAPLabels.capability) }
     /// Whether `ENABLE QRESYNC` succeeded on this connection.
     private(set) var qresyncEnabled = false
 

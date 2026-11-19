@@ -11,11 +11,13 @@ import Testing
         return MailThread(id: message.id, messages: [message])
     }
 
-    @Test func clearMailIsSortedByRules() {
+    @Test func withoutAnAssistantOnlyHeadersSort() {
+        // No keywords: an invoice waits for an assistant; a mailing list is a newsletter by its headers.
         let groups = EmailGroup.starters
-        #expect(EmailSorter.ruleGroup(for: thread("Your invoice for March"), groups: groups)?.name == groups[3].name)
-        #expect(EmailSorter.ruleGroup(for: thread("Your order has shipped"), groups: groups)?.name == groups[5].name)
-        #expect(EmailSorter.ruleGroup(for: thread("Boarding pass for AMS → LIS"), groups: groups)?.name == groups[6].name)
+        #expect(EmailSorter.ruleGroup(for: thread("Your invoice for March"), groups: groups) == nil)
+        let issue = MailMessage(id: UUID().uuidString, mailboxID: "INBOX", from: EmailAddress(address: "hello@paper.example"),
+                                subject: "Issue 12", date: Date(), snippet: "", listHeaders: ["list-id": "<paper.example>"])
+        #expect(EmailSorter.ruleGroup(for: MailThread(id: issue.id, messages: [issue]), groups: groups)?.name == groups[10].name)
         #expect(EmailSorter.ruleGroup(for: thread("Lunch on Friday?", from: "noor@example.com"), groups: groups) == nil)
     }
 

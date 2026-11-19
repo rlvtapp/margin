@@ -253,16 +253,14 @@ public actor MailCache {
         index(message, row: row, body: body.text)
     }
 
-    /// Saved messages from every folder since a date whose subject contains one of the words,
-    /// oldest first: invitations, also ones moved to Deleted Items once answered, and your replies.
-    public func recentMessages(since date: Date, subjectWords: [String], limit: Int = 80) -> [(account: UUID, message: MailMessage)] {
-        let words = subjectWords.map { $0.lowercased() }
+    /// Saved messages from every folder since a date that carry calendar data, oldest first:
+    /// invitations, also ones moved to Deleted Items once answered, and answers, yours included.
+    public func recentCalendarMessages(since date: Date, limit: Int = 80) -> [(account: UUID, message: MailMessage)] {
         let rows = query("SELECT account, json, body FROM messages WHERE date > ? ORDER BY date ASC",
                          [.real(date.timeIntervalSince1970)]) { row -> (UUID, MailMessage)? in
             guard let account = row.text(0).flatMap(UUID.init(uuidString:)),
                   let json = row.blob(1), var message = try? JSONDecoder().decode(MailMessage.self, from: json) else { return nil }
-            let subject = message.subject.lowercased()
-            guard words.contains(where: subject.contains) else { return nil }
+            guard message.calendarMethod != nil else { return nil }
             message.body = row.blob(2).flatMap { try? JSONDecoder().decode(MessageBody.self, from: $0) }
             return (account, message)
         }
@@ -488,16 +486,9 @@ public actor MailCache {
         }.joined(separator: " ")
     }
 
-    /// Small words that say nothing about which mail is meant.
-    static let stopWords: Set<String> = [
-        "a", "an", "and", "are", "about", "did", "do", "does", "for", "from", "has", "have", "how", "i", "in", "is", "it",
-        "me", "my", "of", "on", "or", "say", "said", "tell", "that", "the", "to", "was", "were", "what", "when", "where",
-        "which", "who", "why", "will", "with", "you", "de", "het", "een", "en", "van", "wat", "wie", "waar", "wanneer",
-    ]
-
     static func ftsAnyQuery(_ text: String) -> String? {
         let words = text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber })
-            .map(String.init).filter { $0.count > 1 && !stopWords.contains($0) }
+            .map(String.init).filter { $0.count > 1 }
         guard !words.isEmpty else { return nil }
         return words.map { "\"\($0)\"*" }.joined(separator: " OR ")
     }

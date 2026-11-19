@@ -111,9 +111,7 @@ import Testing
 
     @Test func providerFromTheServerForCustomDomains() {
         let account = MailAccount(label: "Work", address: EmailAddress(address: "kaan@relevate.app"),
-                                  connection: .imap(incoming: ServerEndpoint(host: "outlook.office365.com", port: 993, security: .tls),
-                                                    outgoing: ServerEndpoint(host: "smtp.office365.com", port: 587, security: .startTLS)),
-                                  auth: .password(username: "kaan@relevate.app"))
+                                  connection: .graph(), auth: .oauth(provider: .microsoft, username: "kaan@relevate.app"))
         #expect(ProviderCatalog.preset(for: account)?.id == "microsoft")
     }
 }

@@ -15,8 +15,15 @@ struct IMAPFetchItem: Sendable {
     /// `BODY[…]` sections by their section text (`HEADER.FIELDS (LIST-ID)`, ``, `TEXT`).
     var sections: [String: [UInt8]] = [:]
     var bodyStructureHasAttachment = false
+    /// The METHOD of a calendar part in BODYSTRUCTURE (see `MailMessage.calendarMethod`).
+    var calendarMethod: String?
     /// The part a preview is read from, found in BODYSTRUCTURE.
     var textPart: IMAPTextPart?
+    /// `X-GM-LABELS`, decoded (see `IMAPLabels`); nil when the response didn't carry them.
+    var labels: [String]?
+    /// `X-GM-THRID` and `X-GM-MSGID`, kept as text: they are unsigned 64-bit numbers.
+    var threadID: String?
+    var serverID: String?
 
     init?(_ values: [IMAPValue]) {
         guard values.count >= 3, let sequence = values[0].int,
@@ -33,11 +40,15 @@ struct IMAPFetchItem: Sendable {
                 flags = Self.flags(value.list ?? [])
                 hasFlags = true
             case "MODSEQ": modSeq = value.list?.first?.int
+            case "X-GM-LABELS": labels = IMAPLabels.parse(value)
+            case "X-GM-THRID": threadID = value.string
+            case "X-GM-MSGID": serverID = value.string
             case "ENVELOPE": envelope = value.list.flatMap(IMAPEnvelope.init)
             case "RFC822.SIZE": size = value.int
             case "INTERNALDATE": internalDate = value.string.flatMap(MailDate.parseInternal)
             case "BODYSTRUCTURE", "BODY":
                 bodyStructureHasAttachment = Self.containsAttachment(value)
+                calendarMethod = Self.calendarMethod(in: value)
                 textPart = IMAPTextPart.find(in: value)
             default:
                 if key.hasPrefix("BODY[") || key.hasPrefix("BINARY[") {
@@ -57,6 +68,24 @@ struct IMAPFetchItem: Sendable {
             return true
         }
         return items.contains(where: containsAttachment)
+    }
+
+    /// A `text/calendar` (or `application/ics`) part's METHOD parameter, uppercased; "" when it
+    /// has none; nil when there's no such part. A part is `("TEXT" "CALENDAR" ("METHOD" "REPLY" …) …)`.
+    static func calendarMethod(in value: IMAPValue) -> String? {
+        guard let items = value.list else { return nil }
+        if items.count >= 3, let type = items[0].string?.lowercased(), let subtype = items[1].string?.lowercased(),
+           (type == "text" && subtype == "calendar") || (type == "application" && subtype == "ics") {
+            let params = items[2].list ?? []
+            var index = 0
+            while index + 1 < params.count {
+                if params[index].string?.uppercased() == "METHOD" { return params[index + 1].string?.uppercased() ?? "" }
+                index += 2
+            }
+            return ""
+        }
+        for item in items { if let found = calendarMethod(in: item) { return found } }
+        return nil
     }
 
     static func flags(_ values: [IMAPValue]) -> MessageFlags {

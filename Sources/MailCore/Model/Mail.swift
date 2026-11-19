@@ -15,13 +15,22 @@ public struct Mailbox: Identifiable, Hashable, Codable, Sendable {
     public var unreadCount: Int?
     /// The folder this one sits inside, by id; nil at the top level.
     public var parentID: String?
+    /// On an account that keeps labels rather than folders (a message can carry several, and
+    /// shows in each), the label this folder shows: `\Inbox`, or the person's own "Projects/2026".
+    /// Nil for folders that aren't one label (All Mail, Trash) and on other accounts.
+    public var label: String?
+    /// The label's colour on the server, as `#rrggbb`, when the server keeps one.
+    public var labelColor: String?
 
-    public init(id: String, name: String, role: MailboxRole, unreadCount: Int? = nil, parentID: String? = nil) {
+    public init(id: String, name: String, role: MailboxRole, unreadCount: Int? = nil, parentID: String? = nil,
+                label: String? = nil, labelColor: String? = nil) {
         self.id = id
         self.name = name
         self.role = role
         self.unreadCount = unreadCount
         self.parentID = parentID
+        self.label = label
+        self.labelColor = labelColor
     }
 
     /// Folders in tree order (each followed by the folders inside it) with how deep each sits.
@@ -71,14 +80,26 @@ public struct MailMessage: Identifiable, Hashable, Codable, Sendable {
     public var hasAttachments: Bool
     /// Header fields the triage rules read (lowercased names).
     public var listHeaders: [String: String]
+    /// The METHOD of a calendar part (`text/calendar`), uppercased: REQUEST for an invitation,
+    /// REPLY for an answer, CANCEL; "" for a calendar part without one; nil when there's none.
+    /// Read from the message's structure, so it's known before the body is downloaded.
+    public var calendarMethod: String?
     /// Filled in once the body has been fetched.
     public var body: MessageBody?
+    /// The server's labels on this message, on accounts that keep labels (IMAP `X-GM-LABELS`):
+    /// system ones as `\Inbox`, `\Important`…, the person's own by name ("Projects/2026").
+    /// Nil where the server has no labels.
+    public var labels: [String]?
+    /// The server's own conversation id (`X-GM-THRID`), when it keeps one.
+    public var threadID: String?
+    /// The server's id for the message itself, the same in every label it shows in (`X-GM-MSGID`).
+    public var serverID: String?
 
     public init(
         id: String, mailboxID: String, messageID: String? = nil, inReplyTo: String? = nil,
         references: [String] = [], from: EmailAddress, to: [EmailAddress] = [], cc: [EmailAddress] = [],
         subject: String, date: Date, snippet: String = "", flags: MessageFlags = [],
-        hasAttachments: Bool = false, listHeaders: [String: String] = [:], body: MessageBody? = nil
+        hasAttachments: Bool = false, listHeaders: [String: String] = [:], calendarMethod: String? = nil, body: MessageBody? = nil
     ) {
         self.id = id
         self.mailboxID = mailboxID
@@ -94,6 +115,7 @@ public struct MailMessage: Identifiable, Hashable, Codable, Sendable {
         self.flags = flags
         self.hasAttachments = hasAttachments
         self.listHeaders = listHeaders
+        self.calendarMethod = calendarMethod
         self.body = body
     }
 

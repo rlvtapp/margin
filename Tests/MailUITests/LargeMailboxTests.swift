@@ -249,6 +249,8 @@ import Testing
         var threads = (0..<600).map { thread($0, account: account.id, from: "no-reply@shop.example") }
         // Row 450: someone you've written to wrote, and you haven't answered.
         threads[450] = thread(450, account: account.id, from: "noor@example.com")
+        // The assistant read that she's waiting on an answer.
+        MailVerdicts.shared.set([MailVerdicts.key(threads[450].latest): MailVerdict(automated: false, needsReply: true, asksToPay: false)])
         model.setInbox(threads, for: account.id)
         model.correspondents = ["noor@example.com"]
         model.go(to: .home(group: nil))

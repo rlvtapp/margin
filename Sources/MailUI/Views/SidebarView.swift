@@ -62,6 +62,7 @@ struct SidebarView: View {
                     // Mailboxes themselves are in the rail on the left; here only their folders.
                     if let scope { folders(scope) } else { combinedFolders }
                     labelsSection
+                    SavedSearchesSection(model: model)
                     // Not part of any one mailbox: every newsletter, from all of them together.
                     // Home and the Calendar are in the rail on the left, so they aren't repeated here.
                     Rectangle().fill(Line.hairline).frame(height: 1)
@@ -76,7 +77,7 @@ struct SidebarView: View {
             }
             footer
         }
-        .alert(naming?.mailbox == nil ? "New folder" : "Rename folder", isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
+        .alert(namesLabel ? (naming?.mailbox == nil ? "New label" : "Rename label") : (naming?.mailbox == nil ? "New folder" : "Rename folder"), isPresented: Binding(get: { naming != nil }, set: { if !$0 { naming = nil } })) {
             TextField("Name", text: $folderName)
             Button("Cancel", role: .cancel) { naming = nil }
             Button(naming?.mailbox == nil ? "Create" : "Rename") {
@@ -98,7 +99,11 @@ struct SidebarView: View {
                 deleting = nil
             }
         } message: {
-            Text("The folder is removed on the server. Mail that's only in it goes too.")
+            if deleting.map({ model.foldersAreLabels($0.accountID) }) == true {
+                Text("The label is removed on the server. Its mail isn't deleted and keeps its other labels.")
+            } else {
+                Text("The folder is removed on the server. Mail that's only in it goes too.")
+            }
         }
     }
 
@@ -119,16 +124,21 @@ struct SidebarView: View {
         }
     }
 
-    /// One mailbox's folders: the standard ones first, then the person's own.
+    /// Whether the folder being named is a label (the account keeps labels, not folders).
+    private var namesLabel: Bool { naming.map { model.foldersAreLabels($0.accountID) } ?? false }
+
+    /// One mailbox's folders: the standard ones first, then the person's own. On an account that
+    /// keeps labels, the person's own are labels: nested by "/", in the label's colour.
     @ViewBuilder
     private func folders(_ accountID: UUID) -> some View {
         let all = model.folders(of: accountID)
+        let keepsLabels = model.foldersAreLabels(accountID)
         let standard = all.filter { $0.role != .other }
         let own = model.ownFolders(of: accountID, includingHidden: showsHidden)
         let hiddenCount = model.hiddenFolders(of: accountID).count
         ForEach(standard) { folderRow($0, accountID) }
         HStack {
-            foldTitle("Folders", key: "folders")
+            if keepsLabels { foldTitle("Labels", key: "folders") } else { foldTitle("Folders", key: "folders") }
             Spacer()
             Button { naming = FolderNaming(accountID: accountID, mailbox: nil) } label: {
                 Image(systemName: "plus").font(.system(size: Look.size(10), weight: .semibold)).foregroundStyle(Ink.tertiary)
@@ -136,7 +146,7 @@ struct SidebarView: View {
             .buttonStyle(.plain)
             .padding(.top, Space.l)
             .padding(.trailing, 8)
-            .tip("New folder")
+            .tip(keepsLabels ? "New label" : "New folder")
         }
         // Folders inside others are indented under them. Drag a folder onto another to put it
         // before that one.
@@ -169,6 +179,7 @@ struct SidebarView: View {
                 .contextMenu {
                     Button("Rename…") { naming = FolderNaming(accountID: accountID, mailbox: mailbox) }
                     Button(hidden ? "Show in sidebar" : "Hide from sidebar") { model.setHidden(!hidden, mailbox, in: accountID) }
+                    if let label = mailbox.label, !IMAPLabels.isSystem(label) { LabelColorMenu(model: model, label: label) }
                     Divider()
                     Button("Delete", role: .destructive) { deleting = FolderNaming(accountID: accountID, mailbox: mailbox) }
                 }
@@ -218,7 +229,11 @@ struct SidebarView: View {
 
     private func folderRow(_ mailbox: Mailbox, _ accountID: UUID) -> some View {
         let place = Place.mailbox(account: accountID, mailbox)
-        return SidebarRow(title: mailbox.name, symbol: Self.symbol(mailbox.role), count: nil, isSelected: model.place == place) {
+        // A label of the person's own wears its colour; the server's own ones (Important) a plain tag.
+        let label = mailbox.role == .other ? mailbox.label : nil
+        let tint = label.flatMap { IMAPLabels.isSystem($0) ? nil : GroupStyle.color($0) }
+        return SidebarRow(title: mailbox.name, symbol: label == nil ? Self.symbol(mailbox.role) : (tint == nil ? "tag" : "tag.fill"),
+                          count: nil, isSelected: model.place == place, tint: tint) {
             model.go(to: place)
         }
     }

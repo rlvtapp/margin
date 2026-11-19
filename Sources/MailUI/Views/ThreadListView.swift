@@ -62,6 +62,14 @@ struct ThreadListView: View {
             Spacer(minLength: Space.s)
             // New message lives in the sidebar; with the sidebar hidden, it's here instead. The
             // sidebar's own button is in the top bar.
+            if let text = model.currentSearchText {
+                // Keeps this search in the sidebar; clicked again, it's taken out.
+                if let saved = model.savedSearch(for: text) {
+                    IconButton("bookmark.fill", help: "Remove from saved searches") { model.deleteSavedSearch(saved.id) }
+                } else {
+                    IconButton("bookmark", help: "Save search") { model.saveSearch(text) }
+                }
+            }
             IconButton("arrow.clockwise", help: "Check for new mail  ⇧⌘N") { Task { await model.reload() } }
             if model.isSidebarOutOfSight {
                 IconButton("square.and.pencil", help: "New message  C") { model.startCompose() }
@@ -222,8 +230,7 @@ struct ThreadListView: View {
             // and the reader's header names the mailbox.
             account: nil,
             showsRecipients: model.place.isOutgoing || model.place == .waiting(account: model.place.accountID),
-            // Home already sorts by what matters, so its rows leave the label chips out.
-            labels: model.place.isHome ? [] : model.labels(for: thread),
+            labels: model.rowLabels(for: thread),
             snoozedUntil: model.snoozedUntil(thread),
             compact: model.compactRows,
             isPinned: model.isPinned(thread),

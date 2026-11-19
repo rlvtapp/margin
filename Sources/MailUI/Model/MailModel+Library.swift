@@ -68,11 +68,13 @@ extension MailModel {
         isSearchingServers = true
         Task {
             // Saved mail first, so results show while servers are asked.
-            let local = await environment.cache.search(trimmed)
+            // Operators aren't words to find: saved mail is searched for the words and the people
+            // and subjects named, then narrowed by the rest.
+            let local = await environment.cache.search(query.savedMailTerms)
             var found = Dictionary(grouping: local, by: \.account).flatMap { account, rows in
                 Threader.threads(from: rows.map(\.message)).map { Self.tag($0, account: account) }
             }
-            found += inboxThreads(nil).filter { query.matches($0) }
+            found += inboxThreads(nil).filter { query.matches($0, in: mailboxes[$0.accountID ?? UUID()] ?? []) }
             show(found, for: trimmed, operators: operators)
 
             let jobs = accounts.compactMap { account in (try? provider(for: account)).map { (account.id, $0) } }
@@ -98,7 +100,7 @@ extension MailModel {
         var seen = Set<String>()
         folder = threads.sorted { $0.date > $1.date }.filter { thread in
             let key = "\(thread.accountID?.uuidString ?? "")|\(thread.messages.first?.messageID ?? thread.id)"
-            return seen.insert(key).inserted && operators.matches(thread)
+            return seen.insert(key).inserted && operators.matches(thread, in: mailboxes[thread.accountID ?? UUID()] ?? [])
         }
         if selectedThread == nil, opensFirstConversation { selectedThreadID = folder.first?.id }
     }

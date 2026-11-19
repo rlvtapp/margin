@@ -183,7 +183,7 @@ struct TouchThreadList: View {
             // and the reader's header names the mailbox.
             account: nil,
             showsRecipients: model.place.isOutgoing || model.place == .waiting(account: model.place.accountID),
-            labels: model.place.isHome ? [] : model.labels(for: thread),
+            labels: model.rowLabels(for: thread),
             snoozedUntil: model.snoozedUntil(thread),
             compact: model.compactRows,
             isPinned: model.isPinned(thread),

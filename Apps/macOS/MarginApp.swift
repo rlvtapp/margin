@@ -169,7 +169,7 @@ struct MarginCommands: Commands {
             }
         }
         CommandGroup(before: .toolbar) {
-            Button(model.isSidebarHidden ? "Show Sidebar" : "Hide Sidebar") { model.toggleSidebar() }
+            Button((model.place == .calendar ? model.calendarSidebarHidden : model.isSidebarHidden) ? "Show Sidebar" : "Hide Sidebar") { model.toggleSidebar() }
                 .keyboardShortcut("s", modifiers: [.control, .command])
         }
         CommandMenu("Message") {

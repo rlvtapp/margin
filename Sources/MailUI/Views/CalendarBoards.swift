@@ -146,12 +146,15 @@ struct CalendarTimeline: View {
             swipe += dx
             return
         }
+        // A swipe during the snap takes over from where the days are now.
+        slider.stopSpring()
         if !slider.isSliding { slider.isSliding = true }
-        // One swipe moves at most the days in view (a week, or a day), however hard it's flicked.
+        // One swipe moves at most the days in view (a week, or a day): it grows heavier towards
+        // that, rather than hitting a wall.
         let cap = CGFloat(visibleDays.count) * columnWidth
-        let travel = min(max(slider.travel + dx, -cap), cap)
-        let dx = travel - slider.travel
-        slider.travel = travel
+        let dx = CalendarScroll.resisted(dx, travel: slider.travel, cap: cap)
+        slider.travel += dx
+        slider.noteMove(dx)
         var next = slider.offset + dx
         // Only past the extra days drawn on each side do the days in view change mid-swipe.
         let reach = CGFloat(buffer - 1) * columnWidth
@@ -167,19 +170,18 @@ struct CalendarTimeline: View {
             swipe = 0
             return
         }
-        // Heading on only as far as the swipe may still go.
-        let room = CGFloat(visibleDays.count) * columnWidth - abs(slider.travel)
-        let carry = max(min(velocity * 10, room), -room) / 10
-        let snap = CalendarScroll.settle(slide: slider.offset, column: columnWidth, velocity: carry)
-        if snap.days != 0 { scrollDays(snap.days) }
-        slider.offset = snap.slide
-        // The spring starts at the speed the days were moving (points per event, about 120 a
-        // second), so there's no catch where the fingers' movement hands over to the snap.
-        let speed = velocity * 120
-        let initial = snap.slide == 0 ? 0 : speed / -snap.slide
-        withAnimation(.interpolatingSpring(stiffness: 170, damping: 26, initialVelocity: initial)) { slider.offset = 0 } completion: {
-            if slider.offset == 0 { slider.isSliding = false }
-        }
+        // Where this swipe ends, all told, and the part of it not already moved mid-swipe.
+        let alreadyMoved = Int(((slider.offset - slider.travel) / columnWidth).rounded())
+        // The first day shown when this swipe began, to find the real weeks around it.
+        let began = visibleDays.first.flatMap { Calendar.current.date(byAdding: .day, value: -alreadyMoved, to: $0) }
+        let total = CalendarScroll.swipeDays(travel: slider.travel, speed: slider.speed, column: columnWidth, days: visibleDays.count,
+                                             daysToWeekStart: visibleDays.count == 7 ? began.map { CalendarScroll.daysToWeekStart(from: $0) } : nil)
+        let days = total - alreadyMoved
+        if days != 0 { scrollDays(days) }
+        slider.offset += CGFloat(days) * columnWidth
+        // A soft spring, run frame by frame from the speed the days were really moving, so
+        // there's no catch at the hand-over, no bounce, and a new swipe can take it over.
+        slider.springHome()
     }
 
     // MARK: Zooming
@@ -224,6 +226,9 @@ struct CalendarTimeline: View {
         }
         .fixedSize(horizontal: false, vertical: true)
         .padding(.bottom, 6)
+        // The same room on the right as the hours, so each date sits exactly over its column,
+        // also while the days slide.
+        .padding(.trailing, trailing)
     }
 
     /// In Day with colleagues: You, then each of them, with their face and where they are now.
@@ -293,6 +298,7 @@ struct CalendarTimeline: View {
                 }
             }
         }
+        .padding(.trailing, trailing)
         .frame(height: CGFloat(rows) * Look.gap(22) + 6, alignment: .top)
         .padding(.top, days.count > 1 ? 0 : 4)
     }
@@ -385,7 +391,8 @@ struct CalendarTimeline: View {
             .onAppear {
                 let start = Calendar.current.component(.hour, from: now)
                 let showsToday = visibleDays.contains { Calendar.current.isDateInToday($0) }
-                position.scrollTo(y: CGFloat(showsToday ? max(0, min(start - 1, 15)) : 8) * hourHeight)
+                let hour = Self.snapshotHour ?? (showsToday ? max(0, min(start - 1, 15)) : 8)
+                position.scrollTo(y: CGFloat(hour) * hourHeight)
             }
             .onChange(of: model.calendarHourHeight) { old, new in
                 // ⌘+ and ⌘−: keep the middle of the view where it was.
@@ -493,6 +500,14 @@ struct CalendarTimeline: View {
         let minutes = now.timeIntervalSince(Calendar.current.startOfDay(for: now)) / 60
         return abs(minutes - Double(hour * 60)) < 20
     }
+
+    /// For pictures of the app (`-snapshot-hour 8`): the hour Day and Week open at, whatever
+    /// the time, so they can be taken at night.
+    static let snapshotHour: Int? = {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-snapshot-hour"), index + 1 < arguments.count else { return nil }
+        return Int(arguments[index + 1])
+    }()
 
     /// Working hours, the same ones suggested times keep to; the rest of a weekday is quieter.
     static let workday = 9..<17
@@ -1276,15 +1291,82 @@ private struct FreeTogetherBand: View {
     }
 }
 
-/// Where a sideways swipe has the days: observed only by the layers that slide.
+/// Where a sideways swipe has the days: observed only by the layers that slide. Settling is a
+/// spring it runs itself on the display's refresh, so it can be taken over mid-way.
 @MainActor @Observable
-final class DaySlider {
+final class DaySlider: NSObject {
     /// How far the days have moved, in points, short of a whole day.
     var offset: CGFloat = 0
     /// From the first sideways movement until the days settle on whole columns.
     var isSliding = false
     /// How far this swipe has moved the days, to keep it within one week.
     @ObservationIgnored var travel: CGFloat = 0
+    /// How fast the days are moving, in points a second.
+    @ObservationIgnored private var velocity: CGFloat = 0
+    @ObservationIgnored private var lastMove: CFTimeInterval = 0
+    #if os(macOS)
+    @ObservationIgnored private var link: CADisplayLink?
+    #endif
+
+    /// How fast the days were moving when the fingers lifted, in points a second.
+    /// Held still before lifting: no speed at all.
+    var speed: CGFloat { CACurrentMediaTime() - lastMove > 0.08 ? 0 : velocity }
+
+    /// The fingers (or their momentum) moved the days by `dx`: keeps a smoothed speed.
+    func noteMove(_ dx: CGFloat) {
+        let now = CACurrentMediaTime()
+        let dt = now - lastMove
+        lastMove = now
+        guard dt > 0, dt < 0.1 else { velocity = 0; return }
+        velocity = velocity * 0.4 + (dx / CGFloat(dt)) * 0.6
+    }
+
+    /// Springs the offset to zero from the speed the days had.
+    func springHome() {
+        // Heading home, never faster than the spring can stop without passing it; heading
+        // away, it turns round.
+        let limit = CalendarScroll.springOmega * abs(offset)
+        if velocity * offset < 0 { velocity = max(min(velocity, limit), -limit) }
+        velocity = min(max(velocity, -3000), 3000)
+        #if os(macOS)
+        stopSpring()
+        guard let screen = NSScreen.main else { finish(); return }
+        let link = screen.displayLink(target: self, selector: #selector(step(_:)))
+        link.add(to: .main, forMode: .common)
+        self.link = link
+        #else
+        withAnimation(.spring(response: 0.42, dampingFraction: 1)) { offset = 0 } completion: { [weak self] in
+            if self?.offset == 0 { self?.isSliding = false }
+        }
+        #endif
+    }
+
+    func stopSpring() {
+        #if os(macOS)
+        link?.invalidate()
+        link = nil
+        #endif
+    }
+
+    #if os(macOS)
+    @objc private func step(_ link: CADisplayLink) {
+        let dt = min(max(link.targetTimestamp - link.timestamp, 1.0 / 240), 1.0 / 30)
+        let next = CalendarScroll.springStep(offset: offset, velocity: velocity, dt: dt)
+        velocity = next.velocity
+        if abs(next.offset) < 0.3 && abs(next.velocity) < 6 {
+            finish()
+        } else {
+            offset = next.offset
+        }
+    }
+    #endif
+
+    private func finish() {
+        stopSpring()
+        offset = 0
+        velocity = 0
+        isSliding = false
+    }
 }
 
 /// A layer of the grid while it slides: a day wider on each side, moved under a fixed gutter.

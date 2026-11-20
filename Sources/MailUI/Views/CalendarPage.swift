@@ -322,6 +322,9 @@ struct MonthGrid: View {
                 IconButton("chevron.right", help: "Next month") { step(1) }
             }
             let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
+            // The old and new month fade over each other in one place. Stacked in the column, both
+            // would take room for a moment and push everything below down and back up.
+            ZStack(alignment: .top) {
             LazyVGrid(columns: columns, spacing: 6) {
                 ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
                     Text(verbatim: symbol)
@@ -341,6 +344,7 @@ struct MonthGrid: View {
             }
             .id(month)
             .transition(.opacity)
+            }
         }
     }
 

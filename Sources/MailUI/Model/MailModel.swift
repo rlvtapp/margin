@@ -311,9 +311,11 @@ public final class MailModel {
     public var isSidebarOutOfSight: Bool { isSidebarHidden || sidebarNeedsDrawer }
 
     /// The sidebar button and its shortcut: shows or hides the column, or the drawer when
-    /// there's no room for the column.
+    /// there's no room for the column. On the Calendar, its own sidebar (the month and calendars).
     public func toggleSidebar() {
-        if sidebarNeedsDrawer {
+        if place == .calendar {
+            calendarSidebarHidden.toggle()
+        } else if sidebarNeedsDrawer {
             isSidebarDrawerOpen.toggle()
         } else {
             isSidebarHidden.toggle()

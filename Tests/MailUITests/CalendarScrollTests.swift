@@ -68,3 +68,55 @@ import Testing
         #expect(byDay[day.addingTimeInterval(2 * 86_400)] == nil)
     }
 }
+
+@MainActor @Suite struct CalendarSpringTests {
+    /// The snap comes to rest within about half a second, never past zero, even thrown hard.
+    @Test func settlesSoftlyWithoutOvershoot() {
+        // As `DaySlider.springHome` starts it: heading home no faster than it can stop.
+        var offset: CGFloat = 80, velocity: CGFloat = -min(2500, CalendarScroll.springOmega * 80)
+        var crossed = false
+        for _ in 0..<120 {
+            (offset, velocity) = CalendarScroll.springStep(offset: offset, velocity: velocity, dt: 1.0 / 120)
+            if offset < -12 { crossed = true }
+        }
+        #expect(abs(offset) < 0.5)
+        #expect(!crossed)
+    }
+
+    /// Up to a week the days move freely; past it they stretch; going back is free.
+    @Test func weekEndStretches() {
+        #expect(CalendarScroll.resisted(-10, travel: -600, cap: 700) == -10)
+        #expect(abs(CalendarScroll.resisted(-10, travel: -700, cap: 700) + 1.5) < 0.01)
+        #expect(CalendarScroll.resisted(10, travel: -700, cap: 700) == 10)
+    }
+
+    /// A gentle swipe lands a day or two on; a normal one carries past half a week to the week.
+    @Test func swipesLandOnAWeekOrADay() {
+        // 180-point days: a gentle swipe (80 points, 500 a second) moves one day.
+        #expect(CalendarScroll.swipeDays(travel: -80, speed: -500, column: 180, days: 7) == 1)
+        // A normal swipe (200 points, 1,500 a second) moves the week.
+        #expect(CalendarScroll.swipeDays(travel: -200, speed: -1500, column: 180, days: 7) == 7)
+        #expect(CalendarScroll.swipeDays(travel: 200, speed: 1500, column: 180, days: 7) == -7)
+        // A slow drag stays where it's let go, on the nearer day.
+        #expect(CalendarScroll.swipeDays(travel: -380, speed: 0, column: 180, days: 7) == 2)
+        // Day: one day at a time.
+        #expect(CalendarScroll.swipeDays(travel: -260, speed: 0, column: 400, days: 1) == 1)
+    }
+
+    /// A fast swipe in Week lands on the first day of a real week, wherever it began.
+    @Test func fastSwipesLockToTheWeek() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.firstWeekday = 2
+        calendar.timeZone = TimeZone(identifier: "Europe/Amsterdam")!
+        // Thursday 19 November 2026: Monday the 23rd is 4 days on, Monday the 16th 3 days back.
+        let thursday = calendar.date(from: DateComponents(year: 2026, month: 11, day: 19))!
+        let weeks = CalendarScroll.daysToWeekStart(from: thursday, calendar: calendar)
+        #expect(weeks.next == 4 && weeks.previous == -3)
+        let monday = calendar.date(from: DateComponents(year: 2026, month: 11, day: 16))!
+        #expect(CalendarScroll.daysToWeekStart(from: monday, calendar: calendar) == (7, -7))
+        #expect(CalendarScroll.swipeDays(travel: -100, speed: -1500, column: 100, days: 7, daysToWeekStart: weeks) == 4)
+        #expect(CalendarScroll.swipeDays(travel: 100, speed: 1500, column: 100, days: 7, daysToWeekStart: weeks) == -3)
+        // A gentle swipe: a day or two, never the week's start.
+        #expect(CalendarScroll.swipeDays(travel: -60, speed: -300, column: 100, days: 7, daysToWeekStart: weeks) == 2)
+    }
+}

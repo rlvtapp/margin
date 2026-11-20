@@ -22,7 +22,12 @@ struct WindowBar: View {
                 // message that's been put away, waiting.
                 .overlay(alignment: .leading) {
                     HStack(spacing: Space.s) {
-                        if model.place != .calendar {
+                        if model.place == .calendar {
+                            // The Calendar's own sidebar, the month and calendars, in the same place.
+                            IconButton("sidebar.left", help: model.calendarSidebarHidden ? "Show sidebar  ⌃⌘S" : "Hide sidebar  ⌃⌘S") {
+                                withAnimation(Motion.quick) { model.toggleSidebar() }
+                            }
+                        } else {
                             IconButton("sidebar.left", help: (model.sidebarNeedsDrawer ? !model.isSidebarDrawerOpen : model.isSidebarHidden)
                                        ? "Show sidebar  ⌃⌘S" : "Hide sidebar  ⌃⌘S") {
                                 withAnimation(Motion.present) { model.toggleSidebar() }
@@ -52,12 +57,7 @@ struct WindowBar: View {
                             OutboxButton(model: model)
                         }
                         SyncStatusButton(model: model)
-                        if model.place == .calendar {
-                            // On the Calendar, the same place puts its sidebar away and back.
-                            IconButton("sidebar.left", help: model.calendarSidebarHidden ? "Show Sidebar" : "Hide Sidebar") {
-                                withAnimation(Motion.quick) { model.calendarSidebarHidden.toggle() }
-                            }
-                        } else if MailModel.nextUpAvailable && model.layout == .panels && !model.isWindowNarrow {
+                        if model.place != .calendar && MailModel.nextUpAvailable && model.layout == .panels && !model.isWindowNarrow {
                             IconButton("sidebar.right", help: model.showsNextUp ? "Hide Next up" : "Show Next up") {
                                 withAnimation(Motion.quick) { model.showsNextUp.toggle() }
                             }

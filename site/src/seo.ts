@@ -9,13 +9,15 @@ type Page = {
 	description: string;
 	/** Pages that shouldn't be in search results (the 404 page). */
 	hidden?: boolean;
+	/** Questions and answers shown on the page, also given to search engines as an FAQ. */
+	faq?: { q: string; a: string }[];
 };
 
 /**
  * Everything a page tells search engines and link previews: title, description, canonical
  * address, Open Graph and X (Twitter) cards. Each route's `head` returns this.
  */
-export function seo({ path, title, description, hidden }: Page) {
+export function seo({ path, title, description, hidden, faq }: Page) {
 	const url = `${site.url}${path}`;
 	const fullTitle = path === "/" ? title : `${title} · ${site.name}`;
 	const image = `${site.url}/images/share.jpg`;
@@ -43,7 +45,47 @@ export function seo({ path, title, description, hidden }: Page) {
 			{ name: "twitter:image:alt", content: imageAlt },
 		],
 		links: hidden ? [] : [{ rel: "canonical", href: url }],
+		scripts: hidden ? [] : [{ type: "application/ld+json", children: JSON.stringify(pageData({ path, url, fullTitle, description, faq })) }],
 	};
+}
+
+/**
+ * The page itself for search engines: what it is, where it sits under the home page, and on a
+ * page with questions, the questions and their answers. The site-wide graph (`structuredData`)
+ * is in every page too.
+ */
+function pageData({ path, url, fullTitle, description, faq }: { path: string; url: string; fullTitle: string; description: string; faq?: Page["faq"] }) {
+	const graph: Record<string, unknown>[] = [
+		{
+			"@type": "WebPage",
+			"@id": `${url}#webpage`,
+			url,
+			name: fullTitle,
+			description,
+			inLanguage: "en",
+			isPartOf: { "@id": `${site.url}/#website` },
+			about: { "@id": `${site.url}/#app` },
+			...(path === "/" ? {} : { breadcrumb: { "@id": `${url}#breadcrumb` } }),
+		},
+	];
+	if (path !== "/") {
+		graph.push({
+			"@type": "BreadcrumbList",
+			"@id": `${url}#breadcrumb`,
+			itemListElement: [
+				{ "@type": "ListItem", position: 1, name: site.name, item: `${site.url}/` },
+				{ "@type": "ListItem", position: 2, name: fullTitle.split(" · ")[0], item: url },
+			],
+		});
+	}
+	if (faq?.length) {
+		graph.push({
+			"@type": "FAQPage",
+			"@id": `${url}#faq`,
+			mainEntity: faq.map(({ q, a }) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })),
+		});
+	}
+	return { "@context": "https://schema.org", "@graph": graph };
 }
 
 /**
@@ -79,7 +121,12 @@ export const structuredData = {
 			applicationCategory: "CommunicationApplication",
 			operatingSystem: "macOS",
 			image: `${site.url}/images/share.jpg`,
-			screenshot: [`${site.url}/images/mac-hero-light.jpg`, `${site.url}/images/mac-cal-week-light.jpg`],
+			softwareVersion: site.version,
+			screenshot: [
+				`${site.url}/images/mac-hero-light.jpg`,
+				`${site.url}/images/mac-cal-week-light.jpg`,
+				`${site.url}/images/mac-cal-day-light.jpg`,
+			],
 			offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
 			isAccessibleForFree: true,
 			license: "https://www.apache.org/licenses/LICENSE-2.0",

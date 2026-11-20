@@ -17,6 +17,7 @@ export const Route = createFileRoute("/")({
 			title: "Margin: a free, open-source mail and calendar app for Mac",
 			description:
 				"Margin is a free, open-source mail and calendar app for Mac. It connects straight to Gmail, Outlook, iCloud and any IMAP or JMAP account, so nobody else handles your mail.",
+			faq: questions,
 		}),
 });
 

@@ -16,6 +16,8 @@ export const site = {
 	 * redirects there too (worker.js), for links that should never change.
 	 */
 	download: "https://github.com/rlvtapp/margin/releases/latest/download/Margin.dmg",
+	/** The version the download is, for search engines (a version is its release date). */
+	version: "2026.11.19",
 	/** Who publishes Margin. */
 	publisher: "Relevate",
 	publisherURL: "https://relevate.app",

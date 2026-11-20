@@ -106,8 +106,9 @@ pnpm types:check
   `-snapshot-place home` and `subscription`, all three with `-snapshot-meeting` so the next
   meeting's pill shows at the top right, beside the sync and sidebar icons, and the calendar's `-snapshot-place calendar
   -snapshot-calendar-mode day` (or `week`, `month`). The sample meetings sit around the time
-  you take them, and Day and Week scroll to just before now, so take the calendar's in the
-  afternoon. Then
+  you take them; Day and Week scroll to just before now, or to the hour given with
+  `-snapshot-hour 8`, so the calendar's can be taken at any time (the times in the mail list
+  and next meeting still follow the clock, so the afternoon still reads best). Then
   `sips -s format jpeg -s formatOptions 80 -Z 2600`, and a smaller copy next to each with
   `-Z 1600` named `…-1600.jpg` (the pages offer both through `srcset`; the hero's light picture
   is the one loaded first, the dark one only when it's shown). The window isn't the active one, so its
@@ -142,7 +143,10 @@ change. The relay's own list of what it stores is in `relay/README.md`.
 - The root route adds theme colours, the web manifest (`public/site.webmanifest`), PNG icons
   next to `icon.svg`, and the structured data from `structuredData` in `src/seo.ts` (Relevate as
   the organization, the site, Margin as a free app under the Apache 2.0 licence, and its source on
-  GitHub). Keep that to facts the site states.
+  GitHub, with `softwareVersion` from `site.version`: bump it with each release). Keep that to
+  facts the site states. Each page's `seo()` adds its own block too: a `WebPage`, a
+  `BreadcrumbList` under the home page on the other pages, and on the home page an `FAQPage`
+  made from the questions shown (`faq: questions`), so the two never differ.
 - `public/_headers` sets caching: built files in `/assets` for a year (their names change with
   each build), pictures and icons for a day.
 - `public/robots.txt` points to `public/sitemap.xml`. Add new pages to the sitemap and update

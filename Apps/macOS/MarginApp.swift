@@ -10,6 +10,7 @@ import UserNotifications
 enum Entry {
     static func main() {
         if CommandLine.arguments.contains("--mcp") {
+            if MCPBridge.isCore { MCPBridge.runCore() }
             MCPBridge.run()
         } else {
             MarginApp.main()

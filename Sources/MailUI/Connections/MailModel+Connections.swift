@@ -20,6 +20,16 @@ extension MailModel {
         connectionSettings = settings
         environment.defaults.set(try? JSONEncoder().encode(settings), forKey: "connectionSettings")
         restartConnection()
+        Self.announceConnectionSettingsChanged()
+    }
+
+    /// The signal AI apps' connections (`Margin --mcp`) wait for, so they tell their app the
+    /// tools changed: posted once when the settings change, never polled.
+    public static let connectionSettingsChanged = "app.relevate.margin.connection-settings-changed"
+
+    static func announceConnectionSettingsChanged() {
+        CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(),
+                                             CFNotificationName(connectionSettingsChanged as CFString), nil, nil, true)
     }
 
     /// A new token; apps set up with the old one have to be updated.

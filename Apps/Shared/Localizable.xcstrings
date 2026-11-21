@@ -24764,6 +24764,218 @@
         }
       }
     },
+    "All of Margin. A size picked here is kept until you follow the system again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ganz Margin. Eine hier gewählte Größe bleibt, bis du wieder dem System folgst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todo Margin. El tamaño elegido aquí se mantiene hasta que vuelvas a seguir al sistema."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout Margin. La taille choisie ici reste jusqu’à ce que vous suiviez de nouveau le système."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout Margin. La taille choisie ici reste jusqu’à ce que vous suiviez de nouveau le système."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पूरा Margin। यहाँ चुना गया आकार तब तक रहता है जब तक आप फिर से सिस्टम को नहीं अपनाते।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az egész Margin. Az itt választott méret marad, amíg újra a rendszert nem követed."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutto Margin. La dimensione scelta qui resta finché non torni a seguire il sistema."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin 全体。ここで選んだサイズは、システムに戻すまで保たれます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin 전체. 여기서 고른 크기는 다시 시스템을 따를 때까지 유지됩니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heel Margin. Een hier gekozen grootte blijft tot je het systeem weer volgt."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cały Margin. Wybrany tu rozmiar zostaje, dopóki znów nie wybierzesz ustawienia systemu."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todo o Margin. O tamanho escolhido aqui fica até você voltar a seguir o sistema."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Весь Margin. Выбранный здесь размер сохраняется, пока вы снова не выберете размер системы."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hela Margin. En storlek du väljer här gäller tills du följer systemet igen."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin’in tamamı. Burada seçilen boyut, yeniden sistemi izleyene kadar kalır."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整个 Margin。这里选的大小会一直保留，直到重新跟随系统。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整個 Margin。這裡選的大小會一直保留，直到重新跟隨系統。"
+          }
+        }
+      }
+    },
+    "All of Margin. ⌘+ and ⌘− change it anywhere; ⌘0 follows the system again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ganz Margin. ⌘+ und ⌘− ändern sie überall; ⌘0 folgt wieder dem System."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todo Margin. ⌘+ y ⌘− lo cambian en cualquier lugar; ⌘0 vuelve a seguir al sistema."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout Margin. ⌘+ et ⌘− la changent partout ; ⌘0 revient à celle du système."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout Margin. ⌘+ et ⌘− la changent partout; ⌘0 revient à celle du système."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पूरा Margin। ⌘+ और ⌘− इसे कहीं से भी बदलते हैं; ⌘0 फिर से सिस्टम को अपनाता है।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az egész Margin. A ⌘+ és ⌘− bárhol módosítja; a ⌘0 újra a rendszert követi."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutto Margin. ⌘+ e ⌘− la cambiano ovunque; ⌘0 torna a seguire il sistema."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin 全体。⌘+ と ⌘− でどこからでも変更でき、⌘0 でシステムに戻ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin 전체. ⌘+와 ⌘−로 어디서든 바꾸고, ⌘0을 누르면 다시 시스템을 따릅니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heel Margin. ⌘+ en ⌘− veranderen het overal; ⌘0 volgt weer het systeem."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cały Margin. ⌘+ i ⌘− zmieniają go w dowolnym miejscu; ⌘0 znów stosuje ustawienie systemu."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todo o Margin. ⌘+ e ⌘− mudam em qualquer lugar; ⌘0 volta a seguir o sistema."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Весь Margin. ⌘+ и ⌘− меняют его где угодно; ⌘0 снова берёт размер системы."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hela Margin. ⌘+ och ⌘− ändrar den var som helst; ⌘0 följer systemet igen."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin’in tamamı. ⌘+ ve ⌘− her yerde değiştirir; ⌘0 yeniden sistemi izler."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整个 Margin。⌘+ 和 ⌘− 随处可改；⌘0 重新跟随系统。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整個 Margin。⌘+ 和 ⌘− 隨處可改；⌘0 重新跟隨系統。"
+          }
+        }
+      }
+    },
     "All white, no gray." : {
       "localizations" : {
         "de" : {
@@ -27922,6 +28134,112 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Applösenord"
+          }
+        }
+      }
+    },
+    "App size" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App-Größe"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tamaño de la app"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taille de l’app"
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taille de l’app"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ऐप का आकार"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appméret"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dimensioni dell’app"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリのサイズ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱 크기"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App-grootte"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rozmiar aplikacji"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tamanho do app"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Размер приложения"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appstorlek"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uygulama boyutu"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App 大小"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App 大小"
           }
         }
       }
@@ -36512,6 +36830,112 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更好的搜尋"
+          }
+        }
+      }
+    },
+    "Bigger" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Größer"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Más grande"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus grand"
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus grand"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "बड़ा"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nagyobb"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Più grande"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "大きく"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "크게"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Groter"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Większy"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maior"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Больше"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Större"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daha büyük"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "放大"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "放大"
           }
         }
       }
@@ -62680,6 +63104,112 @@
         }
       }
     },
+    "Email text size" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Textgröße in E-Mails"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tamaño del texto del correo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taille du texte des e-mails"
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taille du texte des courriels"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ईमेल टेक्स्ट का आकार"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Levelek szövegmérete"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dimensioni del testo delle email"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メール本文のサイズ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이메일 텍스트 크기"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekstgrootte van e-mail"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rozmiar tekstu e-maili"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tamanho do texto do e-mail"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Размер текста писем"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Textstorlek i mejl"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-posta metin boyutu"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "邮件文字大小"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "郵件文字大小"
+          }
+        }
+      }
+    },
     "Emoji" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -66025,6 +66555,112 @@
         }
       }
     },
+    "Follow the system's text size" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Textgröße des Systems verwenden"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usar el tamaño de texto del sistema"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suivre la taille du texte du système"
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suivre la taille du texte du système"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सिस्टम का टेक्स्ट आकार अपनाएँ"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A rendszer szövegméretének követése"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Segui le dimensioni del testo del sistema"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "システムの文字サイズに合わせる"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시스템 텍스트 크기 따르기"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tekstgrootte van het systeem volgen"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Używaj rozmiaru tekstu systemu"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seguir o tamanho do texto do sistema"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Как размер текста в системе"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Följ systemets textstorlek"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sistemin metin boyutunu izle"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟随系统文字大小"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跟隨系統文字大小"
+          }
+        }
+      }
+    },
     "Follow up" : {
       "localizations" : {
         "de" : {
@@ -66975,6 +67611,218 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "För svar och vidarebefordringar"
+          }
+        }
+      }
+    },
+    "For the mail you read, on top of the app size (Appearance)." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für die E-Mails, die du liest, zusätzlich zur App-Größe (Darstellung)."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para el correo que lees, además del tamaño de la app (Apariencia)."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour les e-mails que vous lisez, en plus de la taille de l’app (Apparence)."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour les courriels que vous lisez, en plus de la taille de l’app (Apparence)."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आप जो मेल पढ़ते हैं उसके लिए, ऐप के आकार (दिखावट) के ऊपर।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az olvasott levelekhez, az appméret (Megjelenés) felett."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per le email che leggi, in aggiunta alle dimensioni dell’app (Aspetto)."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "読むメールに、アプリのサイズ（外観）に加えて適用されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "읽는 메일에 앱 크기(모양)에 더해 적용됩니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voor de mail die je leest, bovenop de app-grootte (Weergave)."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dla czytanych e-maili, dodatkowo do rozmiaru aplikacji (Wygląd)."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para os e-mails que você lê, além do tamanho do app (Aparência)."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для читаемых писем, поверх размера приложения (Оформление)."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "För mejlen du läser, utöver appstorleken (Utseende)."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Okuduğun e-postalar için, uygulama boyutunun (Görünüm) üstüne."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用于你阅读的邮件，在 App 大小（外观）之上。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用於你閱讀的郵件，在 App 大小（外觀）之上。"
+          }
+        }
+      }
+    },
+    "For the mail you read, on top of the app size (Appearance). ⌥⌘+ and ⌥⌘− change it." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für die E-Mails, die du liest, zusätzlich zur App-Größe (Darstellung). ⌥⌘+ und ⌥⌘− ändern sie."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para el correo que lees, además del tamaño de la app (Apariencia). ⌥⌘+ y ⌥⌘− lo cambian."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour les e-mails que vous lisez, en plus de la taille de l’app (Apparence). ⌥⌘+ et ⌥⌘− la changent."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour les courriels que vous lisez, en plus de la taille de l’app (Apparence). ⌥⌘+ et ⌥⌘− la changent."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आप जो मेल पढ़ते हैं उसके लिए, ऐप के आकार (दिखावट) के ऊपर। ⌥⌘+ और ⌥⌘− इसे बदलते हैं।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az olvasott levelekhez, az appméret (Megjelenés) felett. A ⌥⌘+ és ⌥⌘− módosítja."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per le email che leggi, in aggiunta alle dimensioni dell’app (Aspetto). ⌥⌘+ e ⌥⌘− la cambiano."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "読むメールに、アプリのサイズ（外観）に加えて適用されます。⌥⌘+ と ⌥⌘− で変更できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "읽는 메일에 앱 크기(모양)에 더해 적용됩니다. ⌥⌘+와 ⌥⌘−로 바꿀 수 있습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voor de mail die je leest, bovenop de app-grootte (Weergave). ⌥⌘+ en ⌥⌘− veranderen het."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dla czytanych e-maili, dodatkowo do rozmiaru aplikacji (Wygląd). Zmieniają go ⌥⌘+ i ⌥⌘−."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para os e-mails que você lê, além do tamanho do app (Aparência). ⌥⌘+ e ⌥⌘− mudam."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для читаемых писем, поверх размера приложения (Оформление). Меняется клавишами ⌥⌘+ и ⌥⌘−."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "För mejlen du läser, utöver appstorleken (Utseende). ⌥⌘+ och ⌥⌘− ändrar den."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Okuduğun e-postalar için, uygulama boyutunun (Görünüm) üstüne. ⌥⌘+ ve ⌥⌘− değiştirir."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用于你阅读的邮件，在 App 大小（外观）之上。⌥⌘+ 和 ⌥⌘− 可更改。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用於你閱讀的郵件，在 App 大小（外觀）之上。⌥⌘+ 和 ⌥⌘− 可更改。"
           }
         }
       }
@@ -156505,6 +157353,112 @@
         }
       }
     },
+    "Settings → Display & Brightness → Text Size." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einstellungen → Anzeige & Helligkeit → Textgröße."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajustes → Pantalla y brillo → Tamaño del texto."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages → Luminosité et affichage → Taille du texte."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages → Luminosité et affichage → Taille du texte."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सेटिंग्स → डिस्प्ले और ब्राइटनेस → टेक्स्ट का आकार।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beállítások → Kijelző és fényerő → Szövegméret."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impostazioni → Schermo e luminosità → Dimensioni testo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定 → 画面表示と明るさ → テキストサイズを変更。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "설정 → 디스플레이 및 밝기 → 텍스트 크기."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instellingen → Beeldscherm en helderheid → Tekstgrootte."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ustawienia → Ekran i jasność → Rozmiar tekstu."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajustes → Tela e Brilho → Tamanho do Texto."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Настройки → Экран и яркость → Размер текста."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inställningar → Skärm och ljusstyrka → Textstorlek."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayarlar → Ekran ve Parlaklık → Metin Boyutu."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置 → 显示与亮度 → 文字大小。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定 → 螢幕顯示與亮度 → 文字大小。"
+          }
+        }
+      }
+    },
     "Shared" : {
       "localizations" : {
         "de" : {
@@ -165514,6 +166468,112 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "小"
+          }
+        }
+      }
+    },
+    "Smaller" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kleiner"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Más pequeño"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus petit"
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus petit"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "छोटा"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kisebb"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Più piccolo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "小さく"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "작게"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kleiner"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mniejszy"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menor"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Меньше"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mindre"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Daha küçük"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "缩小"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "縮小"
           }
         }
       }
@@ -175982,6 +177042,112 @@
         }
       }
     },
+    "System Settings → Accessibility → Display → Text size." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Systemeinstellungen → Bedienungshilfen → Anzeige → Textgröße."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajustes del Sistema → Accesibilidad → Pantalla → Tamaño del texto."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages Système → Accessibilité → Affichage → Taille du texte."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages système → Accessibilité → Affichage → Taille du texte."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सिस्टम सेटिंग्स → एक्सेसिबिलिटी → डिस्प्ले → टेक्स्ट का आकार।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rendszerbeállítások → Kisegítő lehetőségek → Kijelző → Szövegméret."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impostazioni di Sistema → Accessibilità → Monitor → Dimensioni testo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "システム設定 → アクセシビリティ → ディスプレイ → テキストサイズ。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "시스템 설정 → 손쉬운 사용 → 디스플레이 → 텍스트 크기."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Systeeminstellingen → Toegankelijkheid → Weergave → Tekstgrootte."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ustawienia systemowe → Dostępność → Monitor → Rozmiar tekstu."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajustes do Sistema → Acessibilidade → Tela → Tamanho do texto."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Системные настройки → Универсальный доступ → Дисплей → Размер текста."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Systeminställningar → Hjälpmedel → Skärm → Textstorlek."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sistem Ayarları → Erişilebilirlik → Ekran → Metin boyutu."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系统设置 → 辅助功能 → 显示 → 文字大小。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "系統設定 → 輔助使用 → 顯示器 → 文字大小。"
+          }
+        }
+      }
+    },
     "TLS" : {
       "localizations" : {
         "de" : {
@@ -180113,6 +181279,324 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最左側的信箱欄。關閉後，「所有收件匣」、首頁、行事曆和你的信箱會移到側邊欄頂端。"
+          }
+        }
+      }
+    },
+    "The connection dropped as your message went out, so it was probably sent. A copy is in Drafts in case it wasn't: check Sent before sending it again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Verbindung brach ab, als deine Nachricht hinausging. Sie wurde also wahrscheinlich gesendet. Falls nicht, liegt eine Kopie in Entwürfe: Sieh in Gesendet nach, bevor du sie erneut sendest."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La conexión se cortó cuando salía tu mensaje, así que probablemente se envió. Hay una copia en Borradores por si no: mira en Enviados antes de volver a enviarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La connexion a été coupée pendant l’envoi de votre message ; il a donc probablement été envoyé. Une copie est dans Brouillons au cas où : vérifiez Envoyés avant de le renvoyer."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La connexion a été coupée pendant l’envoi de votre message; il a donc probablement été envoyé. Une copie est dans Brouillons au cas où : vérifiez Envoyés avant de le renvoyer."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपका संदेश जाते समय कनेक्शन टूट गया, इसलिए यह शायद भेजा जा चुका है। अगर नहीं गया तो एक कॉपी ड्राफ़्ट में है: दोबारा भेजने से पहले भेजे गए देखें।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A kapcsolat megszakadt az üzenet küldése közben, így valószínűleg elküldve. Ha mégsem, egy másolat a Piszkozatokban van: újraküldés előtt nézd meg az Elküldöttet."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La connessione si è interrotta mentre il messaggio partiva, quindi probabilmente è stato inviato. Una copia è in Bozze nel caso non lo fosse: controlla Inviati prima di rimandarlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信中に接続が切れたため、おそらく送信済みです。念のため下書きにコピーがあります。再送する前に送信済みを確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메시지가 나가는 중 연결이 끊겨 아마 전송되었을 것입니다. 혹시 몰라 임시 저장에 사본이 있으니, 다시 보내기 전에 보낸 편지함을 확인하세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De verbinding viel weg terwijl je bericht verstuurd werd, dus het is waarschijnlijk verzonden. Voor het geval dat staat er een kopie in Concepten: kijk in Verzonden voordat je het opnieuw verstuurt."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Połączenie zerwało się podczas wysyłania wiadomości, więc prawdopodobnie została wysłana. Na wszelki wypadek kopia jest w Wersjach roboczych: sprawdź Wysłane, zanim wyślesz ją ponownie."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A conexão caiu enquanto sua mensagem saía, então provavelmente foi enviada. Há uma cópia em Rascunhos caso não tenha ido: veja em Enviados antes de enviar de novo."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Соединение оборвалось во время отправки, так что письмо, скорее всего, отправлено. На всякий случай копия есть в Черновиках: проверьте Отправленные, прежде чем отправлять снова."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anslutningen bröts medan meddelandet skickades, så det skickades troligen. En kopia finns i Utkast om det inte gjorde det: titta i Skickat innan du skickar det igen."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İletin giderken bağlantı koptu, bu yüzden büyük olasılıkla gönderildi. Gönderilmemiş olma ihtimaline karşı Taslaklar’da bir kopyası var: yeniden göndermeden önce Gönderilenler’e bak."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "邮件发出时连接中断了，所以它很可能已经发送。草稿中留有副本以防万一：再次发送前请先查看已发送。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "郵件送出時連線中斷了，所以它很可能已經送出。草稿中留有副本以防萬一：再次傳送前請先查看寄件備份。"
+          }
+        }
+      }
+    },
+    "The connection dropped as your message went out, so it was probably sent. Check Sent before writing it again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Verbindung brach ab, als deine Nachricht hinausging. Sie wurde also wahrscheinlich gesendet. Sieh in Gesendet nach, bevor du sie neu schreibst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La conexión se cortó cuando salía tu mensaje, así que probablemente se envió. Mira en Enviados antes de volver a escribirlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La connexion a été coupée pendant l’envoi de votre message ; il a donc probablement été envoyé. Vérifiez Envoyés avant de le réécrire."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La connexion a été coupée pendant l’envoi de votre message; il a donc probablement été envoyé. Vérifiez Envoyés avant de le réécrire."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपका संदेश जाते समय कनेक्शन टूट गया, इसलिए यह शायद भेजा जा चुका है। दोबारा लिखने से पहले भेजे गए देखें।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A kapcsolat megszakadt az üzenet küldése közben, így valószínűleg elküldve. Mielőtt újraírnád, nézd meg az Elküldöttet."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La connessione si è interrotta mentre il messaggio partiva, quindi probabilmente è stato inviato. Controlla Inviati prima di riscriverlo."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信中に接続が切れたため、おそらく送信済みです。書き直す前に送信済みを確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메시지가 나가는 중 연결이 끊겨 아마 전송되었을 것입니다. 다시 쓰기 전에 보낸 편지함을 확인하세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De verbinding viel weg terwijl je bericht verstuurd werd, dus het is waarschijnlijk verzonden. Kijk in Verzonden voordat je het opnieuw schrijft."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Połączenie zerwało się podczas wysyłania wiadomości, więc prawdopodobnie została wysłana. Sprawdź Wysłane, zanim napiszesz ją ponownie."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A conexão caiu enquanto sua mensagem saía, então provavelmente foi enviada. Veja em Enviados antes de escrever de novo."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Соединение оборвалось во время отправки, так что письмо, скорее всего, отправлено. Проверьте Отправленные, прежде чем писать его заново."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anslutningen bröts medan meddelandet skickades, så det skickades troligen. Titta i Skickat innan du skriver det igen."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "İletin giderken bağlantı koptu, bu yüzden büyük olasılıkla gönderildi. Yeniden yazmadan önce Gönderilenler’e bak."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "邮件发出时连接中断了，所以它很可能已经发送。重新撰写前请先查看已发送。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "郵件送出時連線中斷了，所以它很可能已經送出。重新撰寫前請先查看寄件備份。"
+          }
+        }
+      }
+    },
+    "The connection dropped just as the message went out, so it was probably sent." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Verbindung brach ab, als die Nachricht hinausging. Sie wurde also wahrscheinlich gesendet."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La conexión se cortó justo cuando salía el mensaje, así que probablemente se envió."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La connexion a été coupée au moment où le message partait ; il a donc probablement été envoyé."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La connexion a été coupée au moment où le message partait; il a donc probablement été envoyé."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "संदेश जाते समय ही कनेक्शन टूट गया, इसलिए यह शायद भेजा जा चुका है।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A kapcsolat épp az üzenet elküldésekor szakadt meg, így valószínűleg elküldve."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La connessione si è interrotta proprio mentre il messaggio partiva, quindi probabilmente è stato inviato."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メッセージの送信中に接続が切れました。おそらく送信済みです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메시지가 나가는 순간 연결이 끊겼습니다. 아마 전송되었을 것입니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De verbinding viel weg net toen het bericht verstuurd werd, dus het is waarschijnlijk verzonden."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Połączenie zerwało się w chwili wysyłania wiadomości, więc prawdopodobnie została wysłana."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A conexão caiu bem quando a mensagem saía, então provavelmente foi enviada."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Соединение оборвалось в момент отправки, так что письмо, скорее всего, отправлено."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anslutningen bröts precis när meddelandet skickades, så det skickades troligen."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bağlantı ileti giderken koptu, bu yüzden büyük olasılıkla gönderildi."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "邮件发出时连接中断了，所以它很可能已经发送。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "郵件送出時連線中斷了，所以它很可能已經送出。"
           }
         }
       }
@@ -220275,6 +221759,854 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "… förkortat här. Spara .eml för att få hela meddelandet."
+          }
+        }
+      }
+    },
+    "All of Margin, bigger or smaller" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ganz Margin größer oder kleiner"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todo Margin, más grande o más pequeño"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout Margin, plus grand ou plus petit"
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout Margin, plus grand ou plus petit"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पूरा Margin, बड़ा या छोटा"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az egész Margin nagyobban vagy kisebben"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tutto Margin, più grande o più piccolo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin全体を大きく・小さく"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin 전체를 크게 또는 작게"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heel Margin groter of kleiner"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cały Margin większy lub mniejszy"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todo o Margin, maior ou menor"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Весь Margin крупнее или мельче"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hela Margin större eller mindre"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin'in tamamı daha büyük ya da küçük"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整个 Margin 放大或缩小"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整個 Margin 放大或縮小"
+          }
+        }
+      }
+    },
+    "Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin folgt der Textgröße deines Mac, und mit ⌘+ und ⌘− wird alles größer oder kleiner. Für E-Mail-Text gibt es ⌥⌘+ und ⌥⌘−."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin sigue el tamaño de texto de tu Mac, y ⌘+ y ⌘− lo hacen todo más grande o más pequeño. El texto de los correos tiene ⌥⌘+ y ⌥⌘−."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin suit la taille du texte de votre Mac, et ⌘+ et ⌘− agrandissent ou réduisent tout. Le texte des e-mails a ⌥⌘+ et ⌥⌘−."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin suit la taille du texte de votre Mac, et ⌘+ et ⌘− agrandissent ou réduisent tout. Le texte des courriels a ⌥⌘+ et ⌥⌘−."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin आपके Mac के टेक्स्ट आकार का पालन करता है, और ⌘+ और ⌘− सब कुछ बड़ा या छोटा करते हैं। ईमेल टेक्स्ट के लिए ⌥⌘+ और ⌥⌘− हैं।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Margin követi a Mac szövegméretét, a ⌘+ és ⌘− pedig mindent nagyobbá vagy kisebbé tesz. Az e-mailek szövegéhez ⌥⌘+ és ⌥⌘− való."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin segue la dimensione del testo del Mac, e ⌘+ e ⌘− ingrandiscono o rimpiccioliscono tutto. Per il testo delle email ci sono ⌥⌘+ e ⌥⌘−."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MarginはMacの文字サイズに従い、⌘+と⌘−ですべてを拡大・縮小できます。メールの文字は⌥⌘+と⌥⌘−です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin은 Mac의 텍스트 크기를 따르며, ⌘+와 ⌘−로 모든 것을 크게 또는 작게 할 수 있습니다. 이메일 텍스트는 ⌥⌘+와 ⌥⌘−입니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin volgt de tekstgrootte van je Mac, en met ⌘+ en ⌘− maak je alles groter of kleiner. Voor de tekst van e-mails is er ⌥⌘+ en ⌥⌘−."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin dostosowuje się do rozmiaru tekstu na Macu, a ⌘+ i ⌘− powiększają lub pomniejszają wszystko. Tekst e-maili zmieniasz przez ⌥⌘+ i ⌥⌘−."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Margin segue o tamanho do texto do seu Mac, e ⌘+ e ⌘− deixam tudo maior ou menor. O texto dos e-mails tem ⌥⌘+ e ⌥⌘−."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin следует размеру текста на Mac, а ⌘+ и ⌘− делают всё крупнее или мельче. Для текста писем есть ⌥⌘+ и ⌥⌘−."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin följer textstorleken på din Mac, och ⌘+ och ⌘− gör allt större eller mindre. För texten i mejl finns ⌥⌘+ och ⌥⌘−."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin, Mac'inizin metin boyutunu izler; ⌘+ ve ⌘− her şeyi büyütür ya da küçültür. E-posta metni için ⌥⌘+ ve ⌥⌘− var."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin 跟随 Mac 的文字大小，⌘+ 和 ⌘− 可放大或缩小一切。邮件文字用 ⌥⌘+ 和 ⌥⌘−。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin 跟隨 Mac 的文字大小，⌘+ 和 ⌘− 可放大或縮小一切。郵件文字用 ⌥⌘+ 和 ⌥⌘−。"
+          }
+        }
+      }
+    },
+    "Sends from the address you pick" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sendet von der Adresse, die du wählst"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envía desde la dirección que elijas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoie depuis l'adresse que vous choisissez"
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoie depuis l'adresse que vous choisissez"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपके चुने पते से भेजता है"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A választott címről küld"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invia dall'indirizzo che scegli"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選んだアドレスから送信"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "선택한 주소로 보내기"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verstuurt vanaf het adres dat je kiest"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wysyła z wybranego adresu"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envia do endereço que você escolher"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отправляет с выбранного адреса"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skickar från adressen du väljer"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seçtiğiniz adresten gönderir"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从你选择的地址发送"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從你選擇的地址寄出"
+          }
+        }
+      }
+    },
+    "Mail from an Outlook address goes out from that address, not another one on the same account." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mails von einer Outlook-Adresse gehen von genau dieser Adresse raus, nicht von einer anderen desselben Kontos."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El correo desde una dirección de Outlook sale desde esa dirección, no desde otra de la misma cuenta."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un e-mail envoyé depuis une adresse Outlook part de cette adresse, et non d'une autre du même compte."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un courriel envoyé depuis une adresse Outlook part de cette adresse, et non d'une autre du même compte."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outlook पते से भेजा गया मेल उसी पते से जाता है, उसी खाते के किसी दूसरे पते से नहीं।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az Outlook-címről küldött levél erről a címről megy ki, nem ugyanannak a fióknak egy másik címéről."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La posta da un indirizzo Outlook parte da quell'indirizzo, non da un altro dello stesso account."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outlookのアドレスから送ったメールは、同じアカウントの別のアドレスではなく、そのアドレスから送信されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outlook 주소로 보낸 메일은 같은 계정의 다른 주소가 아닌 그 주소로 보내집니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mail vanaf een Outlook-adres gaat ook echt vanaf dat adres de deur uit, niet vanaf een ander adres van hetzelfde account."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poczta z adresu Outlook wychodzi z tego adresu, a nie z innego adresu tego samego konta."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-mails de um endereço do Outlook saem desse endereço, não de outro da mesma conta."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Письма с адреса Outlook отправляются с этого адреса, а не с другого адреса той же учётной записи."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mejl från en Outlook-adress skickas från just den adressen, inte från en annan på samma konto."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir Outlook adresinden gönderilen posta, aynı hesaptaki başka bir adresten değil, o adresten çıkar."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从 Outlook 地址发出的邮件会从该地址发出，而不是同一账户的另一个地址。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "從 Outlook 地址寄出的郵件會從該地址寄出，而不是同一帳號的另一個地址。"
+          }
+        }
+      }
+    },
+    "Meeting times from Outlook" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Besprechungszeiten aus Outlook"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Horas de reuniones de Outlook"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heures des réunions Outlook"
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Heures des réunions Outlook"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outlook से मीटिंग समय"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Értekezletidőpontok az Outlookból"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orari delle riunioni da Outlook"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outlookからの会議時刻"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outlook 회의 시간"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vergadertijden uit Outlook"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Godziny spotkań z Outlooka"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Horários de reuniões do Outlook"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Время встреч из Outlook"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mötestider från Outlook"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outlook'tan toplantı saatleri"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来自 Outlook 的会议时间"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "來自 Outlook 的會議時間"
+          }
+        }
+      }
+    },
+    "Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einladungen aus Outlook und Exchange erscheinen zur richtigen Uhrzeit, egal aus welcher Zeitzone sie kommen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las invitaciones de Outlook y Exchange aparecen a la hora correcta, sea cual sea la zona horaria desde la que se enviaron."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les invitations d'Outlook et d'Exchange s'affichent à la bonne heure, quel que soit le fuseau horaire d'envoi."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les invitations d'Outlook et d'Exchange s'affichent à la bonne heure, peu importe le fuseau horaire d'envoi."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outlook और Exchange के निमंत्रण सही समय पर दिखते हैं, चाहे वे किसी भी समय क्षेत्र से भेजे गए हों।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az Outlook és Exchange meghívói a helyes időpontban jelennek meg, bármelyik időzónából küldték őket."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gli inviti da Outlook ed Exchange appaiono all'ora giusta, da qualunque fuso orario siano stati inviati."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OutlookとExchangeからの招待は、どのタイムゾーンから送られても正しい時刻で表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outlook과 Exchange의 초대는 어느 시간대에서 보냈든 올바른 시각에 표시됩니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uitnodigingen uit Outlook en Exchange staan op het juiste uur, uit welke tijdzone ze ook komen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zaproszenia z Outlooka i Exchange pokazują się o właściwej godzinie, niezależnie od strefy czasowej nadawcy."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Convites do Outlook e do Exchange aparecem no horário certo, seja qual for o fuso horário de onde vieram."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Приглашения из Outlook и Exchange показываются в правильное время, из какого бы часового пояса их ни отправили."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inbjudningar från Outlook och Exchange visas på rätt tid, oavsett vilken tidszon de skickades från."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Outlook ve Exchange davetleri, hangi saat diliminden gönderilmiş olursa olsun doğru saatte görünür."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "来自 Outlook 和 Exchange 的邀请会显示在正确的时间，无论从哪个时区发出。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "來自 Outlook 和 Exchange 的邀請會顯示在正確的時間，無論從哪個時區寄出。"
+          }
+        }
+      }
+    },
+    "Never sent twice" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie doppelt gesendet"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nunca se envía dos veces"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jamais envoyé deux fois"
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jamais envoyé deux fois"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कभी दो बार नहीं भेजा जाता"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Soha nem megy el kétszer"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mai inviato due volte"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "二重送信しません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "두 번 보내지 않음"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nooit twee keer verstuurd"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nigdy nie wysyła się dwa razy"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nunca enviado duas vezes"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Никогда не отправляется дважды"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skickas aldrig två gånger"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Asla iki kez gönderilmez"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "绝不重复发送"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "絕不重複寄出"
+          }
+        }
+      }
+    },
+    "If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bricht die Verbindung genau beim Senden ab, wird die Nachricht nicht erneut gesendet: Eine Kopie wartet in den Entwürfen, falls sie nicht angekommen ist."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si la conexión se corta justo al enviar un mensaje, no se vuelve a enviar: una copia espera en Borradores por si no llegó."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si la connexion se coupe au moment où un message part, il n'est pas renvoyé : une copie attend dans les brouillons au cas où il ne serait pas arrivé."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si la connexion se coupe au moment où un message part, il n'est pas renvoyé : une copie attend dans les brouillons au cas où il ne serait pas arrivé."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अगर संदेश भेजते समय कनेक्शन टूट जाए, तो वह दोबारा नहीं भेजा जाता: अगर वह न पहुँचा हो, तो उसकी एक कॉपी ड्राफ़्ट में रहती है।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ha a kapcsolat épp küldés közben szakad meg, az üzenet nem megy el újra: egy másolat vár a Piszkozatokban arra az esetre, ha nem érkezett meg."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se la connessione cade proprio mentre parte un messaggio, non viene inviato di nuovo: una copia aspetta nelle Bozze nel caso non sia arrivato."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信の瞬間に接続が切れても、メッセージは再送されません。届いていない場合に備えて、コピーが下書きに残ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "메시지를 보내는 순간 연결이 끊겨도 다시 보내지 않습니다. 도착하지 않았을 경우를 위해 사본이 임시 보관함에 남습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valt de verbinding weg precies als een bericht vertrekt, dan wordt het niet opnieuw verstuurd: een kopie staat in Concepten voor het geval het niet is aangekomen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeśli połączenie zerwie się w chwili wysyłania, wiadomość nie zostanie wysłana ponownie: kopia czeka w Wersjach roboczych, na wypadek gdyby nie dotarła."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se a conexão cair bem na hora em que uma mensagem sai, ela não é enviada de novo: uma cópia fica nos Rascunhos caso não tenha chegado."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Если соединение прервётся в момент отправки, письмо не уйдёт повторно: копия ждёт в черновиках на случай, если оно не дошло."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Om anslutningen bryts precis när ett meddelande skickas skickas det inte igen: en kopia väntar i Utkast ifall det inte kom fram."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bağlantı tam bir ileti giderken koparsa ileti yeniden gönderilmez: Ulaşmamış olma ihtimaline karşı bir kopyası Taslaklar'da bekler."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果在邮件发出的那一刻连接中断，它不会被再次发送：一份副本会留在草稿中，以防它没有送达。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果在郵件寄出的那一刻連線中斷，它不會被再次寄出：一份副本會留在草稿中，以防它沒有送達。"
           }
         }
       }

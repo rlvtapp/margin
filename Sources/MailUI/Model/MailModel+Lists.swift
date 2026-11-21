@@ -418,7 +418,7 @@ extension MailModel {
 
     /// Older mail that was asked for at the end of the list has come: its first rows are shown
     /// straight away, without waiting for the last row to come on screen a second time.
-    private func showOlderMail(in place: Place) {
+    func showOlderMail(in place: Place) {
         if self.place == place, listHasMoreRows { listWindow += Self.listPage }
     }
 

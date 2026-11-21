@@ -10,6 +10,8 @@ struct ThreadListView: View {
     @State private var listWidth: CGFloat = 0
     /// Home's note margin takes about 80 points, so it only shows from this list width.
     static let marginWidth: CGFloat = 560
+    /// How many rows before the end the next page is asked for.
+    static let askEarly = 40
 
     var body: some View {
         VStack(spacing: 0) {
@@ -161,6 +163,9 @@ struct ThreadListView: View {
                 ListMessage(title: model.split != nil ? "You're all caught up" : "Nothing here", detail: nil, action: nil)
             }
         } else {
+            // About 40 rows before the end, the next page is asked for already, so it's
+            // usually there by the time the end is reached instead of waiting on the servers.
+            let early = model.canShowMore && threads.count > Self.askEarly * 2 ? threads[threads.count - Self.askEarly].id : nil
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 2) {
@@ -179,10 +184,16 @@ struct ThreadListView: View {
                                 } else {
                                     ListSectionHeader(section: section).id(section.id)
                                 }
-                                ForEach(section.threads) { row($0) }
+                                ForEach(section.threads) { thread in
+                                    row(thread)
+                                    if thread.id == early { NearListEnd(model: model, shown: threads.count) }
+                                }
                             }
                         } else {
-                            ForEach(threads) { row($0) }
+                            ForEach(threads) { thread in
+                                row(thread)
+                                if thread.id == early { NearListEnd(model: model, shown: threads.count) }
+                            }
                         }
                         // The last row: coming on screen, it brings in the next rows, and
                         // older mail once everything loaded is shown.
@@ -268,6 +279,20 @@ struct ThreadListView: View {
 /// The row after the last conversation while the list can still grow. When it comes on screen
 /// the list shows its next rows, or asks for older mail. It's made anew whenever the list has
 /// grown, so staying on screen asks again.
+/// Invisible, some rows before the end: coming on screen, it asks for the next page early.
+struct NearListEnd: View {
+    let model: MailModel
+    let shown: Int
+
+    var body: some View {
+        Color.clear
+            .frame(height: 0)
+            .onAppear { model.listReachedEnd() }
+            .id("near-end-\(shown)")
+            .accessibilityHidden(true)
+    }
+}
+
 struct ListEndRow: View {
     let model: MailModel
     let shown: Int

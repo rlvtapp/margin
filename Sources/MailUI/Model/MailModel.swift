@@ -1163,9 +1163,19 @@ public final class MailModel {
         for (accountID, _, mailbox) in jobs {
             saved += await environment.cache.threads(account: accountID, mailbox: mailbox.id, limit: folderLimit, bodies: false).map { Self.tag($0, account: accountID) }
         }
-        if !saved.isEmpty, self.place == place, folder.isEmpty, canReplaceFolder() {
-            folder = saved.sorted { $0.date > $1.date }
-            folderMemory[place] = folder
+        if !saved.isEmpty, self.place == place, canReplaceFolder() {
+            if folder.isEmpty {
+                folder = saved.sorted { $0.date > $1.date }
+                folderMemory[place] = folder
+            } else if saved.count > folder.count {
+                // The next page while scrolling: what's saved further down shows at once, after
+                // what's on screen, instead of waiting for the server's whole list again.
+                let shown = Set(folder.map(\.id))
+                let floor = folder.map(\.date).min() ?? .distantFuture
+                folder += saved.filter { !shown.contains($0.id) && $0.date <= floor }.sorted { $0.date > $1.date }
+                folderMemory[place] = folder
+                showOlderMail(in: place)
+            }
         }
         let limit = folderLimit
         let answers = await withTaskGroup(of: (UUID, Result<[MailThread], Error>).self) { group in

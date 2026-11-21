@@ -222610,6 +222610,324 @@
           }
         }
       }
+    },
+    "Answer while Margin is closed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antworten, wenn Margin geschlossen ist"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Responder con Margin cerrado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Répondre quand Margin est fermé"
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Répondre quand Margin est fermé"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin बंद होने पर भी जवाब दें"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Válaszolás, amikor a Margin be van zárva"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rispondi quando Margin è chiuso"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marginを閉じていても応答"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin이 닫혀 있어도 응답"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Antwoorden als Margin gesloten is"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odpowiadaj, gdy Margin jest zamknięty"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Responder com o Margin fechado"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отвечать, когда Margin закрыт"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Svara när Margin är stängt"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin kapalıyken yanıtla"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin 关闭时也响应"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin 關閉時也回應"
+          }
+        }
+      }
+    },
+    "AI apps can read your mail and calendar without Margin open: a small helper starts when they ask and quits after 5 quiet minutes. Off, they ask you to open Margin." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "KI-Apps können deine Mails und deinen Kalender lesen, ohne dass Margin offen ist: Ein kleiner Helfer startet, wenn sie fragen, und beendet sich nach 5 ruhigen Minuten. Aus: Sie bitten dich, Margin zu öffnen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las apps de IA pueden leer tu correo y tu calendario sin Margin abierto: un pequeño asistente se inicia cuando lo piden y se cierra tras 5 minutos sin actividad. Desactivado, te piden que abras Margin."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les apps d'IA peuvent lire vos e-mails et votre calendrier sans que Margin soit ouvert : un petit assistant démarre quand elles le demandent et se ferme après 5 minutes d'inactivité. Désactivé, elles vous demandent d'ouvrir Margin."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les apps d'IA peuvent lire vos courriels et votre calendrier sans que Margin soit ouvert : un petit assistant démarre quand elles le demandent et se ferme après 5 minutes d'inactivité. Désactivé, elles vous demandent d'ouvrir Margin."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI ऐप Margin खोले बिना आपका मेल और कैलेंडर पढ़ सकते हैं: उनके पूछने पर एक छोटा सहायक शुरू होता है और 5 शांत मिनट बाद बंद हो जाता है। बंद होने पर, वे आपसे Margin खोलने को कहते हैं।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az MI-alkalmazások a Margin megnyitása nélkül is olvashatják a leveleidet és a naptáradat: egy kis segéd elindul, amikor kérik, és 5 csendes perc után kilép. Kikapcsolva megkérnek, hogy nyisd meg a Margint."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le app di IA possono leggere posta e calendario senza Margin aperto: un piccolo aiutante parte quando lo chiedono e si chiude dopo 5 minuti di inattività. Disattivato, ti chiedono di aprire Margin."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marginを開いていなくても、AIアプリがメールとカレンダーを読めます。求められたときに小さなヘルパーが起動し、5分間何もなければ終了します。オフにすると、Marginを開くよう求められます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin을 열지 않아도 AI 앱이 메일과 캘린더를 읽을 수 있습니다. 요청이 있을 때 작은 도우미가 시작되고 5분 동안 조용하면 종료됩니다. 끄면 Margin을 열라고 안내합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-apps kunnen je mail en agenda lezen zonder dat Margin open is: een kleine helper start als ze iets vragen en stopt na 5 stille minuten. Uit: ze vragen je Margin te openen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aplikacje AI mogą czytać Twoją pocztę i kalendarz bez otwartego Margina: mały pomocnik uruchamia się, gdy o to poproszą, i kończy po 5 minutach ciszy. Wyłączone: poproszą Cię o otwarcie Margina."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apps de IA podem ler seus e-mails e sua agenda sem o Margin aberto: um pequeno ajudante inicia quando pedem e fecha após 5 minutos sem uso. Desligado, eles pedem que você abra o Margin."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ИИ-приложения могут читать почту и календарь без открытого Margin: небольшой помощник запускается по их запросу и закрывается после 5 минут бездействия. Если выключено, они попросят открыть Margin."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI-appar kan läsa din mejl och kalender utan att Margin är öppet: en liten hjälpare startar när de frågar och avslutas efter 5 tysta minuter. Av: de ber dig öppna Margin."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yapay zekâ uygulamaları Margin açık olmadan postanızı ve takviminizi okuyabilir: istediklerinde küçük bir yardımcı başlar ve 5 sessiz dakikanın ardından kapanır. Kapalıyken Margin'i açmanızı isterler."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "即使 Margin 未打开，AI 应用也能读取你的邮件和日历：它们请求时会启动一个小助手，空闲 5 分钟后退出。关闭后，它们会请你打开 Margin。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "即使 Margin 沒有打開，AI App 也能讀取你的郵件和行事曆：它們請求時會啟動一個小助手，閒置 5 分鐘後結束。關閉後，它們會請你打開 Margin。"
+          }
+        }
+      }
+    },
+    "Margin is closed. Open Margin, or turn on Settings → AI Apps → Answer while Margin is closed." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin ist geschlossen. Öffne Margin oder schalte Einstellungen → KI-Apps → Antworten, wenn Margin geschlossen ist ein."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin está cerrado. Abre Margin o activa Ajustes → Apps de IA → Responder con Margin cerrado."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin est fermé. Ouvrez Margin ou activez Réglages → Apps d'IA → Répondre quand Margin est fermé."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin est fermé. Ouvrez Margin ou activez Réglages → Apps d'IA → Répondre quand Margin est fermé."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin बंद है। Margin खोलें, या सेटिंग्स → AI ऐप → Margin बंद होने पर भी जवाब दें चालू करें।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Margin be van zárva. Nyisd meg a Margint, vagy kapcsold be: Beállítások → MI-alkalmazások → Válaszolás, amikor a Margin be van zárva."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin è chiuso. Apri Margin oppure attiva Impostazioni → App di IA → Rispondi quando Margin è chiuso."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marginは閉じています。Marginを開くか、設定 → AIアプリ → Marginを閉じていても応答 をオンにしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin이 닫혀 있습니다. Margin을 열거나 설정 → AI 앱 → Margin이 닫혀 있어도 응답을 켜세요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin is gesloten. Open Margin, of zet Instellingen → AI-apps → Antwoorden als Margin gesloten is aan."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin jest zamknięty. Otwórz Margin lub włącz Ustawienia → Aplikacje AI → Odpowiadaj, gdy Margin jest zamknięty."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Margin está fechado. Abra o Margin ou ative Ajustes → Apps de IA → Responder com o Margin fechado."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin закрыт. Откройте Margin или включите Настройки → ИИ-приложения → Отвечать, когда Margin закрыт."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin är stängt. Öppna Margin eller slå på Inställningar → AI-appar → Svara när Margin är stängt."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin kapalı. Margin'i açın ya da Ayarlar → Yapay Zekâ Uygulamaları → Margin kapalıyken yanıtla seçeneğini açın."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin 已关闭。请打开 Margin，或开启“设置 → AI 应用 → Margin 关闭时也响应”。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin 已關閉。請打開 Margin，或開啟「設定 → AI App → Margin 關閉時也回應」。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

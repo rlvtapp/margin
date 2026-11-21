@@ -354,6 +354,8 @@ public final class MailModel {
     public var isShowingOnboarding = false
     /// The new version's notes, open once after Margin updates (`Changelog`).
     public var isShowingWhatsNew = false
+    /// A crash report from the last time Margin quit unexpectedly, offered to send.
+    public var pendingCrashReport: URL?
     /// The meeting shown on its own (one sent from here, with no message to open).
     public var shownMeetingID: String?
     /// Whether a new message, or a reply, is being written. These only change when writing starts
@@ -841,6 +843,9 @@ public final class MailModel {
         }
         if !hasOnboarded && !environment.isPreview { isShowingOnboarding = true }
         if !environment.isPreview { showChangelogIfUpdated() }
+        #if os(macOS)
+        if !environment.isPreview { checkForCrash() }
+        #endif
         Self.noteLaunch("start")
         await forgetRemovedAccounts()
         pruneLearnedAliases()

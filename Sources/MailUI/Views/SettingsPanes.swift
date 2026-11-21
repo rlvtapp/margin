@@ -881,7 +881,11 @@ struct AboutSettings: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("Made by Relevate"))
                 .padding(.top, 32)
-                Button("Show Welcome") { showingWelcome = true }
+                HStack(spacing: 18) {
+                    // To Margin's own inbox, from your mailbox, with the version at the bottom.
+                    Button("Send Feedback…") { model.startFeedback() }
+                    Button("Show Welcome") { showingWelcome = true }
+                }
                 .buttonStyle(.borderless)
                 .font(TypeScale.label)
                 .padding(.top, 10)

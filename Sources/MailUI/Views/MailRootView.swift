@@ -151,6 +151,13 @@ public struct MailRootView: View {
         .sheet(isPresented: $model.isNewMeetingOpen) { NewMeetingView(model: model) }
         .sheet(isPresented: $model.isShowingOnboarding) { OnboardingView(model: model).interactiveDismissDisabled() }
         .sheet(isPresented: $model.isShowingWhatsNew) { WhatsNewView(model: model) }
+        .alert(Text("Margin quit unexpectedly"),
+               isPresented: Binding(get: { model.pendingCrashReport != nil }, set: { if !$0 { model.pendingCrashReport = nil } })) {
+            Button("Send Report…") { model.sendCrashReport() }
+            Button("Not Now", role: .cancel) { model.pendingCrashReport = nil }
+        } message: {
+            Text("Sending the crash report helps fix it. It opens as a message from your mailbox, so you can see what's in it, or remove it, before it goes.")
+        }
         .sheet(item: Binding(get: { model.shownMeetingID.map(ShownMeeting.init) }, set: { model.shownMeetingID = $0?.id })) {
             MeetingDetail(model: model, id: $0.id)
         }

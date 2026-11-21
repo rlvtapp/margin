@@ -2,15 +2,16 @@ import MailCore
 import SwiftUI
 
 extension MailModel {
-    /// Where feedback and problem reports go, for now.
-    static let feedbackAddress = "hello@relevate.app"
+    /// Where feedback and problem reports go: Margin's own inbox, where they're sorted into
+    /// feature requests and support.
+    static let feedbackAddress = "margin@mail.relevate.app"
 
-    /// A new message to the Margin team with what was said and which version this is. Nothing
-    /// goes out until the person sends it.
+    /// A new message to the Margin team from the person's own mailbox, with what was said and,
+    /// at the bottom in plain sight, which version and system this is. The subject is theirs
+    /// to write. Nothing goes out until they send it, and nothing is attached.
     public func startFeedback(_ text: String = "", problem: Bool = false) {
         var state = ComposeState(account: currentAccount)
         state.to = Self.feedbackAddress
-        state.draft.subject = problem ? "Margin: a problem" : "Margin feedback"
         let said = text.trimmingCharacters(in: .whitespacesAndNewlines)
         state.draft.text = (said.isEmpty ? "\n" : said + "\n") + "\n— " + Self.appDescription + state.draft.text
         isAsking = false

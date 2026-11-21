@@ -15,8 +15,9 @@ import Testing
         model.isShowingHelp = true
         model.startFeedback("Dark mode is lovely")
         let draft = try #require(model.compose)
-        #expect(draft.to == "hello@relevate.app")
-        #expect(draft.draft.subject == "Margin feedback")
+        // To Margin's own inbox, with the subject left for the person to write.
+        #expect(draft.to == "margin@mail.relevate.app")
+        #expect(draft.draft.subject.isEmpty)
         #expect(draft.draft.text.hasPrefix("Dark mode is lovely\n\n— Margin "))
         #expect(!model.isShowingHelp)
 
@@ -25,7 +26,8 @@ import Testing
         model.send(askInput: "/feedback  Please add a dark icon")
         #expect(model.compose?.draft.text.hasPrefix("Please add a dark icon") == true)
         model.startFeedback(problem: true)
-        #expect(model.compose?.draft.subject == "Margin: a problem")
+        #expect(model.compose?.to == "margin@mail.relevate.app")
+        #expect(model.compose?.draft.attachments.isEmpty == true)
     }
 
     @Test func settingsGoBackAndForwardLikeABrowser() {

@@ -39,7 +39,11 @@ Margin follows the system language unless told otherwise. On the Mac, Settings �
 Language is a menu: **Same as Mac**, then every language Margin is translated into, each named in
 itself. Picking one saves it as Margin's own `AppleLanguages` (the same place System Settings →
 Language & Region → Applications writes), and **Restart Margin** appears beside it, since a
-language is read when Margin starts (`LanguageSetting`). Same as Mac removes it again. On iPhone
+language is read when Margin starts (`LanguageSetting`). Restarting quits this Margin first, the
+usual way (anything waiting to reach a server is still sent), and a small helper opens Margin
+again once it has gone, so there is never a second Margin beside the first, and it comes back in
+the Dock icon it was in (`Relaunch`). If Margin hasn't quit within a minute, because the quit was
+stopped, the helper gives up rather than opening Margin later. Same as Mac removes it again. On iPhone
 and iPad, Settings → General → Language opens Settings → Margin, where iOS keeps it. To try one while developing, launch with
 `-AppleLanguages "(nl)"`.
 

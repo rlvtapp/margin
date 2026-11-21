@@ -106,13 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     /// more than a few seconds for a slow or unreachable server.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         if snapshot != nil { return .terminateNow }
-        Task {
-            await withTaskGroup(of: Void.self) { group in
-                group.addTask { await self.model.flushPendingChange() }
-                group.addTask { try? await Task.sleep(for: .seconds(3)) }
-                await group.next()
-                group.cancelAll()
-            }
+        Relaunch.finish({ [model] in await model.flushPendingChange() }, atMost: .seconds(3)) {
             sender.reply(toApplicationShouldTerminate: true)
         }
         return .terminateLater

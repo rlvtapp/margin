@@ -40,7 +40,7 @@ struct LanguageSetting: View {
     var body: some View {
         HStack(spacing: Space.s) {
             if needsRestart {
-                Button("Restart Margin") { Self.relaunch() }
+                Button("Restart Margin") { Relaunch.now() }
             }
             Picker("Language", selection: Binding(get: { chosen ?? "" }, set: { choose($0.isEmpty ? nil : $0) })) {
                 Text("Same as Mac").tag("")
@@ -62,15 +62,6 @@ struct LanguageSetting: View {
             UserDefaults.standard.removeObject(forKey: "AppleLanguages")
         }
         needsRestart = true
-    }
-
-    /// Opens a fresh Margin and quits this one, so the new language is used everywhere.
-    static func relaunch() {
-        let configuration = NSWorkspace.OpenConfiguration()
-        configuration.createsNewApplicationInstance = true
-        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, _ in
-            DispatchQueue.main.async { NSApp.terminate(nil) }
-        }
     }
     #else
     var body: some View {

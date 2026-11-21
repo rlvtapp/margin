@@ -233,7 +233,14 @@ seconds by default) before it goes: `MailModel.queueSend`.
   pictures survive Undo and a failed send. Otherwise it starts from the plain words, as before.
 - Sending a second message while one is still waiting sends the first at once (`deliver`); if
   that fails it reopens like any failed send. Offline, a message waits in the outbox instead.
-- Tests: `UndoSendTests`.
+- **Probably sent.** When the whole message reached the server and the connection broke before
+  the server confirmed it (`MailError.deliveryUnconfirmed`, raised by `SMTPClient.send` after
+  the final dot), it was most likely delivered. It's never reopened as failed, put in the
+  outbox or sent again by itself, which would deliver it twice. A copy goes to Drafts and the
+  notice says to check Sent before sending it again (`keepUnconfirmed`). The same goes for an
+  outbox message, which leaves the outbox. An AI app sending through Margin gets that notice as
+  its answer. Only plain SMTP sending tells this apart; Microsoft 365 and JMAP don't yet.
+- Tests: `UndoSendTests`, `UnconfirmedSendTests`, and the SMTP drop cases in `LiveProtocolTests`.
 
 ## Replying to one message
 

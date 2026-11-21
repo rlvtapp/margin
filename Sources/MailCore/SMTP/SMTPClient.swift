@@ -64,7 +64,12 @@ actor SMTPClient {
         }
         try expect(try await command("DATA"), 354)
         try await connection.write(Self.dotStuffed(message) + Array(".\r\n".utf8))
-        try expect(try await reply(), 250)
+        // From here the server has the whole message. A refusal is a refusal, but losing the
+        // connection now means it was most likely accepted: sending it again would deliver it
+        // twice (RFC 5321 §4.1.1.4, §6.1).
+        let accepted: Reply
+        do { accepted = try await reply() } catch { throw MailError.deliveryUnconfirmed }
+        try expect(accepted, 250)
     }
 
     func quit() async {

@@ -97,6 +97,10 @@ extension MailModel {
     private func deliver(_ pending: PendingSend) async {
         let state = pending.state
         if let error = await attemptSend(state) {
+            if error as? MailError == .deliveryUnconfirmed {
+                // Probably sent already: kept in Drafts by `attemptSend`, never queued to go again.
+                return
+            }
             if MailError.isConnectionProblem(error), let draft = try? state.validated() {
                 // Offline: it waits in the outbox and goes out once there's a connection.
                 outbox.append(ScheduledMessage(accountID: state.accountID, draft: draft, sendAt: Date(), waitsForConnection: true))
@@ -446,6 +450,11 @@ extension MailModel {
                 saveOutbox()
                 notice = Notice(text: item.waitsForConnection ? String(localized: "Back online: your message was sent")
                                                               : String(localized: "Scheduled message sent"))
+            } catch MailError.deliveryUnconfirmed {
+                // Probably sent: out of the outbox, so it never goes a second time.
+                outbox.removeAll { $0.id == item.id }
+                saveOutbox()
+                keepUnconfirmed(item.draft, accountID: item.accountID, replacing: nil)
             } catch where MailError.isConnectionProblem(error) {
                 // Still offline: keep it and try again on the next tick, quietly.
                 if let index = outbox.firstIndex(where: { $0.id == item.id }), !outbox[index].waitsForConnection {

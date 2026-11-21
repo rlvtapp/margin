@@ -116,10 +116,81 @@ import Testing
         #expect(log.lines.contains("Subject: Hello"))
     }
 
+    /// A scripted SMTP server; `afterMessage` answers the final dot (nil hangs up instead).
+    private func smtpServer(afterMessage: String?, hangUpAfterRCPT: Bool = false) async throws -> FakeServer {
+        let state = Log()
+        let holder = ServerHolder()
+        let server = try await FakeServer(greeting: "220 fake.example ESMTP") { line in
+            if state.lines.last == "DATA" {
+                guard line == "." else { return "" }
+                state.append("DONE")
+                if let afterMessage { return afterMessage }
+                holder.server?.hangUp()
+                return ""
+            }
+            state.append(line.uppercased().hasPrefix("DATA") ? "DATA" : "CMD")
+            switch line.prefix(4).uppercased() {
+            case "EHLO": return "250-fake.example\r\n250 AUTH PLAIN\r\n"
+            case "AUTH": return "235 ok\r\n"
+            case "MAIL": return "250 ok\r\n"
+            case "RCPT":
+                if hangUpAfterRCPT { holder.server?.hangUp(); return "" }
+                return "250 ok\r\n"
+            case "DATA": return "354 go\r\n"
+            default: return "221 bye\r\n"
+            }
+        }
+        holder.server = server
+        return server
+    }
+
+    private func send(through server: FakeServer) async throws {
+        let client = try SMTPClient(endpoint: ServerEndpoint(host: "127.0.0.1", port: server.port, security: .plain))
+        try await client.open(security: .plain)
+        try await client.authenticate(username: "me@example.com", password: "pw")
+        let draft = Draft(from: EmailAddress(address: "me@example.com"), to: [EmailAddress(address: "maya@studio.example")],
+                          subject: "Hello", text: "Hi")
+        try await client.send(from: "me@example.com", to: ["maya@studio.example"], message: MessageBuilder.build(draft))
+    }
+
+    /// The whole message went over and the line went dead before the server's answer: that's
+    /// "probably sent", never a connection problem that would be tried again.
+    @Test func aDroppedAnswerAfterTheMessageIsUnconfirmed() async throws {
+        let server = try await smtpServer(afterMessage: nil)
+        defer { server.stop() }
+        await #expect(throws: MailError.deliveryUnconfirmed) { try await send(through: server) }
+    }
+
+    @Test func aRefusalAfterTheMessageIsStillARefusal() async throws {
+        let server = try await smtpServer(afterMessage: "554 5.7.1 rejected\r\n")
+        defer { server.stop() }
+        await #expect(throws: MailError.serverRejected("554 5.7.1 rejected")) { try await send(through: server) }
+    }
+
+    @Test func aDropBeforeTheMessageIsAnOrdinaryConnectionProblem() async throws {
+        let server = try await smtpServer(afterMessage: "250 ok\r\n", hangUpAfterRCPT: true)
+        defer { server.stop() }
+        do {
+            try await send(through: server)
+            Issue.record("Expected the send to fail")
+        } catch {
+            #expect(error as? MailError != .deliveryUnconfirmed)
+        }
+    }
+
     @Test func refusesPlainTextToRemoteHosts() {
         #expect(throws: MailError.insecureConnection) {
             try LineConnection(endpoint: ServerEndpoint(host: "mail.example.com", port: 143, security: .plain))
         }
+    }
+}
+
+final class ServerHolder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: FakeServer?
+    var server: FakeServer? {
+        get { lock.withLock { stored } }
+        set { lock.withLock { stored = newValue } }
     }
 }
 

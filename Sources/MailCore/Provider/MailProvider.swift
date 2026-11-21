@@ -149,6 +149,9 @@ public enum MailError: LocalizedError, Equatable, Sendable {
     case missingCredentials
     case notSupported(String)
     case invalidAddress(String)
+    /// The whole message reached the server, then the connection broke before the server said
+    /// it took it. It was most likely sent, so it must never be sent again by itself.
+    case deliveryUnconfirmed
 
     public var errorDescription: String? {
         switch self {
@@ -162,6 +165,7 @@ public enum MailError: LocalizedError, Equatable, Sendable {
         case .missingCredentials: String(localized: "This account has no saved password or token.")
         case .notSupported(let detail): detail
         case .invalidAddress(let address): String(localized: "“\(address)” isn't an email address.")
+        case .deliveryUnconfirmed: String(localized: "The connection dropped just as the message went out, so it was probably sent.")
         }
     }
 }

@@ -292,14 +292,17 @@ extension MailModel {
     /// Sends from the draft's account; on failure the draft stays open with the error.
     public func send(_ state: ComposeState) async -> Bool {
         if let error = await attemptSend(state) {
-            show(error, account: state.accountID)
+            // Probably sent: its own notice is already up and says what to check.
+            if error as? MailError != .deliveryUnconfirmed { show(error, account: state.accountID) }
             return false
         }
         return true
     }
 
-    /// Sends, and on failure returns why instead of showing it.
+    /// Sends, and on failure returns why instead of showing it. When the server got the whole
+    /// message but its answer was lost, it's kept as probably sent (`keepUnconfirmed`).
     func attemptSend(_ state: ComposeState) async -> Error? {
+        var sending: Draft?
         do {
             var draft = try state.validated(includingForward: false)
             // Very large photos are made smaller first, as most mail apps do.
@@ -321,6 +324,7 @@ extension MailModel {
                                                     pictures: used.pictures ?? [], after: state.sentFrom)
             }
             if let forwarded = state.forwarded { draft = forwarded.appended(to: draft) }
+            sending = draft
             try await provider(for: account).send(withSenderName(draft, account: account))
             noteSent(draft, account: account)
             learnWriting(from: draft, account: account)
@@ -332,8 +336,27 @@ extension MailModel {
                 notice = Notice(text: String(localized: "Sent from \(sender)"), isSent: true)
             }
             return nil
+        } catch MailError.deliveryUnconfirmed {
+            keepUnconfirmed(sending ?? state.draft, accountID: state.accountID, replacing: state.editedDraft)
+            return MailError.deliveryUnconfirmed
         } catch {
             return error
+        }
+    }
+
+    /// The server got the whole message, then the connection broke before it said so: it was
+    /// most likely sent. It's never sent again by itself (that would deliver it twice); a copy
+    /// goes to Drafts in case it didn't arrive, and the notice says to check Sent first.
+    func keepUnconfirmed(_ draft: Draft, accountID: UUID, replacing old: MailThread?) {
+        notice = Notice(text: String(localized: "The connection dropped as your message went out, so it was probably sent. A copy is in Drafts in case it wasn't: check Sent before sending it again."))
+        guard let account = account(accountID), let provider = try? provider(for: account) else { return }
+        Task {
+            do {
+                try await provider.saveDraft(draft)
+                if let old { await apply(.trash, to: [old], announce: false) }
+            } catch {
+                notice = Notice(text: String(localized: "The connection dropped as your message went out, so it was probably sent. Check Sent before writing it again."))
+            }
         }
     }
 }

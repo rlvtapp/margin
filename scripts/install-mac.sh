@@ -17,7 +17,11 @@ if ! xcodebuild -project "$ROOT/Apps/Margin.xcodeproj" -scheme "Margin (Release)
   tail -n 80 "$DATA.log"
   exit 1
 fi
-pkill -x Margin || true
+# Only the app: AI apps' bridges (`Margin --mcp`) and their cores are also called Margin, and
+# killing them leaves Codex or Claude with a closed connection until they're restarted.
+for pid in $(pgrep -x Margin || true); do
+  ps -o args= -p $pid | grep -q -- '--mcp' || kill $pid 2>/dev/null || true
+done
 sleep 1
 rm -rf /Applications/Margin.app
 ditto "$DATA/Build/Products/Release/Margin.app" /Applications/Margin.app

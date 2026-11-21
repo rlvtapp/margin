@@ -469,10 +469,10 @@ public actor GraphMailProvider: MailProvider {
             "ccRecipients": draft.cc.map(GraphMailRecipient.json),
             "bccRecipients": draft.bcc.map(GraphMailRecipient.json),
         ]
-        // Sending as another address (an alias, or on behalf): Graph needs to be told.
-        if draft.from.address.lowercased() != account.address.address.lowercased() {
-            message["from"] = GraphMailRecipient.json(draft.from)
-        }
+        // Always say who it's from. Without it Microsoft uses the mailbox's primary address,
+        // which on Outlook.com can be another alias than the one this mailbox was added with
+        // (added as you@outlook.com, sent as you@hotmail.com).
+        message["from"] = GraphMailRecipient.json(draft.from)
         return message
     }
 

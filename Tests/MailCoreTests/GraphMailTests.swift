@@ -281,7 +281,10 @@ private struct FixedToken: CredentialSource {
         let to = try #require((message["toRecipients"] as? [[String: Any]])?.first?["emailAddress"] as? [String: String])
         #expect(to == ["name": "Noor Haddad", "address": "noor@work.example"])
         #expect((message["bccRecipients"] as? [Any])?.count == 1)
-        #expect(message["from"] == nil)
+        // Even from the mailbox's own address: Microsoft would otherwise pick its primary
+        // alias, which can be a different address.
+        let from = try #require((message["from"] as? [String: Any])?["emailAddress"] as? [String: String])
+        #expect(from["address"] == Self.me.address.address)
         let file = try #require((message["attachments"] as? [[String: Any]])?.first)
         #expect(file["@odata.type"] as? String == "#microsoft.graph.fileAttachment")
         #expect(file["contentBytes"] as? String == Data("a,b\n".utf8).base64EncodedString())

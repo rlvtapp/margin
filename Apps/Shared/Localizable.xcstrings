@@ -97791,6 +97791,218 @@
         }
       }
     },
+    "Margin quit unexpectedly" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin wurde unerwartet beendet"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin se ha cerrado inesperadamente"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin a quitté de manière imprévue"
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin a quitté de manière imprévue"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin अचानक बंद हो गया"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Margin váratlanul kilépett"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin si è chiuso inaspettatamente"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin が予期しない理由で終了しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin이 예기치 않게 종료되었습니다"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin is onverwacht gestopt"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Program Margin nieoczekiwanie zakończył działanie"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Margin encerrou inesperadamente"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Программа Margin неожиданно завершила работу"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin avslutades oväntat"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin beklenmedik bir şekilde sonlandı"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“Margin”意外退出"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「Margin」意外結束"
+          }
+        }
+      }
+    },
+    "Margin quit unexpectedly. What were you doing just before?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin wurde unerwartet beendet. Was hast du kurz davor gemacht?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin se ha cerrado inesperadamente. ¿Qué estabas haciendo justo antes?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin a quitté de manière imprévue. Que faisiez-vous juste avant ?"
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin a quitté de manière imprévue. Que faisiez-vous juste avant ?"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin अचानक बंद हो गया। ठीक पहले आप क्या कर रहे थे?"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Margin váratlanul kilépett. Mit csináltál közvetlenül előtte?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin si è chiuso inaspettatamente. Cosa stavi facendo poco prima?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin が予期しない理由で終了しました。直前に何をしていましたか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin이 예기치 않게 종료되었습니다. 바로 전에 무엇을 하고 있었나요?"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin is onverwacht gestopt. Wat deed je vlak daarvoor?"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Program Margin nieoczekiwanie zakończył działanie. Co działo się tuż przedtem?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Margin encerrou inesperadamente. O que você estava fazendo logo antes?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Программа Margin неожиданно завершила работу. Что вы делали перед этим?"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin avslutades oväntat. Vad gjorde du precis innan?"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin beklenmedik bir şekilde sonlandı. Hemen öncesinde ne yapıyordunuz?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“Margin”意外退出。在此之前你正在做什么？"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「Margin」意外結束。在此之前你正在做什麼？"
+          }
+        }
+      }
+    },
     "Margin shows meetings from invitations in your mail. Connect a mailbox to see its whole calendar." : {
       "localizations" : {
         "de" : {
@@ -151434,6 +151646,112 @@
         }
       }
     },
+    "Send Report…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bericht senden …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar informe…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer le rapport…"
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer le rapport…"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "रिपोर्ट भेजें…"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jelentés küldése…"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Invia segnalazione…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "レポートを送信…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보고서 보내기…"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stuur rapport…"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wyślij raport…"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar relatório…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отправить отчёт…"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skicka rapport…"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rapor Gönder…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送报告…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "傳送報告…"
+          }
+        }
+      }
+    },
     "Send anyway" : {
       "localizations" : {
         "de" : {
@@ -152702,6 +153020,112 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "För att skicka krävs ett lösenord eller en inloggning."
+          }
+        }
+      }
+    },
+    "Sending the crash report helps fix it. It opens as a message from your mailbox, so you can see what's in it, or remove it, before it goes." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Absturzbericht hilft, den Fehler zu beheben. Er öffnet sich als E-Mail aus deinem Postfach, sodass du vor dem Senden sehen kannst, was drinsteht, oder ihn entfernen kannst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar el informe de fallo ayuda a solucionarlo. Se abre como un mensaje desde tu buzón, así que puedes ver lo que contiene, o quitarlo, antes de enviarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer le rapport de plantage aide à corriger le problème. Il s’ouvre sous forme de message depuis votre boîte aux lettres : vous pouvez voir ce qu’il contient, ou le retirer, avant l’envoi."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyer le rapport de plantage aide à corriger le problème. Il s’ouvre sous forme de message depuis votre boîte aux lettres : vous pouvez voir ce qu’il contient, ou le retirer, avant l’envoi."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "क्रैश रिपोर्ट भेजने से इसे ठीक करने में मदद मिलती है। यह आपके मेलबॉक्स से एक संदेश के रूप में खुलती है, ताकि भेजने से पहले आप देख सकें कि इसमें क्या है, या इसे हटा सकें।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az összeomlási jelentés elküldése segít kijavítani a hibát. Üzenetként nyílik meg a postafiókodból, így küldés előtt megnézheted, mi van benne, vagy eltávolíthatod."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inviare il resoconto dell’arresto anomalo aiuta a risolvere il problema. Si apre come messaggio dalla tua casella, così puoi vedere cosa contiene, o rimuoverlo, prima dell’invio."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クラッシュレポートを送ると修正に役立ちます。レポートはあなたのメールボックスからのメッセージとして開くので、送信前に内容を確認したり削除したりできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "충돌 보고서를 보내면 문제를 고치는 데 도움이 돼요. 보고서는 내 메일함에서 보내는 메시지로 열리므로, 보내기 전에 내용을 확인하거나 삭제할 수 있어요."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Het crashrapport versturen helpt om het op te lossen. Het opent als bericht vanuit je mailbox, zodat je kunt zien wat erin staat, of het kunt weghalen, voordat het verstuurd wordt."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wysłanie raportu o awarii pomaga ją naprawić. Otworzy się jako wiadomość z Twojej skrzynki, więc przed wysłaniem zobaczysz, co zawiera, albo go usuniesz."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar o relatório de falha ajuda a corrigir o problema. Ele abre como uma mensagem da sua caixa de correio, para você ver o que contém, ou removê-lo, antes de enviar."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отчёт о сбое поможет всё исправить. Он откроется как письмо из вашего почтового ящика, так что перед отправкой можно посмотреть, что в нём, или удалить его."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Att skicka kraschrapporten hjälper oss att åtgärda felet. Den öppnas som ett mejl från din brevlåda, så att du kan se vad den innehåller, eller ta bort den, innan den skickas."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Çökme raporunu göndermek sorunun düzeltilmesine yardımcı olur. Rapor, posta kutunuzdan bir ileti olarak açılır; böylece gönderilmeden önce içinde ne olduğunu görebilir veya onu kaldırabilirsiniz."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "发送崩溃报告有助于修复问题。报告会以你邮箱中的邮件形式打开，发送前你可以查看其中的内容，或将其删除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "傳送當機報告有助於修正問題。報告會以你信箱中的郵件形式打開，傳送前你可以查看其中的內容，或將其移除。"
           }
         }
       }

@@ -46,6 +46,7 @@ extension View {
 /// The sidebar's top line when no single mailbox is open: the workspace in view (or All
 /// inboxes) with what it holds, opening the workspace menu.
 struct WorkspaceHeader: View {
+    @Environment(\.mailAccent) private var accent
     let model: MailModel
     @State private var editing = false
 
@@ -73,7 +74,7 @@ struct WorkspaceHeader: View {
                 Spacer(minLength: 0)
                 // Mail waiting in the other workspaces.
                 if model.workspaces.contains(where: { $0.id != model.currentWorkspaceID && model.unreadCount(in: $0) > 0 }) && model.currentWorkspaceID != nil {
-                    Circle().fill(Palette.accent).frame(width: 6, height: 6).accessibilityLabel("Unread mail in other workspaces")
+                    Circle().fill(accent).frame(width: 6, height: 6).accessibilityLabel("Unread mail in other workspaces")
                 }
             }
             .contentShape(Rectangle())

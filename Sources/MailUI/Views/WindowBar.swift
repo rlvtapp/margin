@@ -195,6 +195,7 @@ struct TitleBarArea: NSViewRepresentable {
 
 /// Search, with the quick filters at its end.
 struct MailSearchField: View {
+    @Environment(\.mailAccent) private var accent
     @Bindable var model: MailModel
     var focus: FocusState<Bool>.Binding
 
@@ -244,7 +245,7 @@ struct MailSearchField: View {
                     model.searchText = ""
                 } label: {
                     HStack(spacing: Space.s) {
-                        Image(systemName: "sparkles").font(.system(size: Look.size(12))).foregroundStyle(Palette.accent)
+                        Image(systemName: "sparkles").font(.system(size: Look.size(12))).foregroundStyle(accent)
                         Text("Ask: \(model.searchText.trimmingCharacters(in: .whitespaces))")
                             .font(TypeScale.row).foregroundStyle(Ink.primary).lineLimit(1)
                         Spacer(minLength: Space.s)

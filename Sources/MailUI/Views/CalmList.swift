@@ -87,6 +87,7 @@ extension MailModel {
 
 /// The top of the Tabs layout: the date line, today's events, and tabs with unread counts.
 struct SparkHeader: View {
+    @Environment(\.mailAccent) private var accent
     let model: MailModel
 
     var body: some View {
@@ -111,7 +112,7 @@ struct SparkHeader: View {
                         model.quickFilters.remove(.unread)
                         model.go(to: .allInboxes)
                     }
-                    GroupTab(title: String(localized: "Unread"), symbol: "circle.inset.filled", color: Palette.accent, count: nil,
+                    GroupTab(title: String(localized: "Unread"), symbol: "circle.inset.filled", color: accent, count: nil,
                              isOn: isInbox && model.quickFilters.contains(.unread)) {
                         model.go(to: .allInboxes)
                         model.quickFilters.insert(.unread)

@@ -24,6 +24,7 @@ struct ReaderAssistantActions: View {
 
 /// A short read of the conversation, with who wrote it.
 struct SummaryBlock: View {
+    @Environment(\.mailAccent) private var accent
     let summary: ThreadSummary
     let attribution: String
     let onClose: () -> Void
@@ -54,7 +55,7 @@ struct SummaryBlock: View {
             }
             if let action = summary.action {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("To do").font(TypeScale.label.weight(.medium)).foregroundStyle(Palette.accent)
+                    Text("To do").font(TypeScale.label.weight(.medium)).foregroundStyle(accent)
                     Text(action).font(TypeScale.row).foregroundStyle(Ink.primary).fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.top, 2)

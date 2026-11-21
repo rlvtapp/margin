@@ -161,6 +161,8 @@ struct AskView: View {
         .fixedSize()
         .help(Text("Which assistant and model answers"))
         .task(id: model.assistantSettings) { choices = await model.askChoices() }
+        // Leaving Ask while dictating must turn the microphone off, not leave it listening.
+        .onDisappear { dictation.stop() }
     }
 
     /// An assistant's icon in the menu: its app's own where it's installed.
@@ -427,6 +429,7 @@ private struct QuestionBubble: View {
 /// The events an answer was written from, by day, the way the Calendar's agenda lists them:
 /// each calendar's colour, the time, the place. A tap opens the invitation or the Calendar.
 private struct AskEventList: View {
+    @Environment(\.mailAccent) private var accent
     let model: MailModel
     let events: [AskEvent]
     @State private var showsAll = false
@@ -441,7 +444,7 @@ private struct AskEventList: View {
                 Text("On your calendar").font(TypeScale.label.weight(.medium)).foregroundStyle(Ink.tertiary)
                 Spacer()
                 Button { model.isAsking = false; model.go(to: .calendar) } label: {
-                    Text("Open Calendar").font(TypeScale.label.weight(.medium)).foregroundStyle(Palette.accent)
+                    Text("Open Calendar").font(TypeScale.label.weight(.medium)).foregroundStyle(accent)
                 }
                 .buttonStyle(.plain)
             }
@@ -459,7 +462,7 @@ private struct AskEventList: View {
             if Self.shortened(events).count < events.count {
                 Button { withAnimation(Motion.quick) { showsAll.toggle() } } label: {
                     Text(showsAll ? String(localized: "Show fewer") : String(localized: "Show all \(events.count)"))
-                        .font(TypeScale.label.weight(.medium)).foregroundStyle(Palette.accent)
+                        .font(TypeScale.label.weight(.medium)).foregroundStyle(accent)
                 }
                 .buttonStyle(.plain)
             }

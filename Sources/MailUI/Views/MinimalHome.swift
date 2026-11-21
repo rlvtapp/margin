@@ -10,6 +10,7 @@ extension MailModel {
 /// The top of Minimal's Home: the date and how many conversations need you, what not to
 /// forget, and a round tab per group.
 struct MinimalHomeHeader: View {
+    @Environment(\.mailAccent) private var accent
     let model: MailModel
 
     var body: some View {
@@ -40,7 +41,7 @@ struct MinimalHomeHeader: View {
         }
         let waiting = model.waitingCount
         if waiting > 0 {
-            list.append(Reminder(id: "waiting", symbol: "hourglass", color: Palette.accent,
+            list.append(Reminder(id: "waiting", symbol: "hourglass", color: accent,
                                  text: waiting == 1 ? String(localized: "1 email you sent is still waiting for a reply")
                                      : String(localized: "\(waiting) emails you sent are still waiting for a reply"), threadID: nil))
         }

@@ -5,8 +5,10 @@ import MailUI
 
 /// `Margin --mcp`: what MCP apps launch (stdio transport). Reads JSON-RPC messages from stdin,
 /// one per line, hands each to the running app's server on 127.0.0.1, and writes the replies
-/// to stdout. Opens Margin in the background when it isn't running. Logs go to stderr only,
-/// because stdout belongs to the protocol.
+/// to stdout. It never opens Margin: a person who quit Margin keeps it quit. While Margin is
+/// closed it answers the AI app itself, with no tools and a tool call saying Margin isn't open,
+/// and when Margin is opened it tells the app its tools changed so it asks again. Logs go to
+/// stderr only, because stdout belongs to the protocol.
 enum MCPBridge {
     /// The settings as they are now: read again for every message, so turning things on in
     /// Margin applies without restarting the AI app.
@@ -21,6 +23,7 @@ enum MCPBridge {
     static func run() -> Never {
         let keychain = Keychain(service: SampleMode.isOn ? SampleMode.service : Bundle.main.bundleIdentifier ?? "app.relevate.margin")
         watchPermissions()
+        watchForMargin(keychain: keychain)
 
         while let line = readLine(strippingNewline: true) {
             guard !line.trimmingCharacters(in: .whitespaces).isEmpty else { continue }
@@ -35,11 +38,15 @@ enum MCPBridge {
                 reply(error: "Margin couldn't read its connection token from the Keychain.", id: id)
                 continue
             }
-            switch post(Data(line.utf8), to: url, token: token, launchingIfNeeded: true) {
+            switch post(Data(line.utf8), to: url, token: token) {
             case .success(let body?):
+                setClosed(false)
                 write(body)
             case .success(nil):
-                break // a notification: nothing to send back
+                setClosed(false) // a notification: nothing to send back
+            case .closed:
+                setClosed(true)
+                if let body = closedAnswer(to: Data(line.utf8)) { write(body) }
             case .failure(let message):
                 reply(error: message, id: id)
             }
@@ -54,9 +61,71 @@ enum MCPBridge {
         return (try? keychain.save(token, key: "mcp.token")) != nil ? token : nil
     }
 
-    enum Outcome { case success(Data?), failure(String) }
+    enum Outcome { case success(Data?), closed, failure(String) }
 
-    private static func post(_ body: Data, to url: URL, token: String, launchingIfNeeded: Bool) -> Outcome {
+    // MARK: While Margin is closed
+
+    nonisolated(unsafe) private static var isClosed = false
+    private static let closedLock = NSLock()
+
+    private static func setClosed(_ closed: Bool) {
+        closedLock.lock()
+        isClosed = closed
+        closedLock.unlock()
+    }
+
+    private static var marginIsClosed: Bool {
+        closedLock.lock()
+        defer { closedLock.unlock() }
+        return isClosed
+    }
+
+    /// No tools while Margin is closed; a call says so, for the AI app to pass on.
+    struct ClosedToolbox: MCPToolbox {
+        func tools() async -> [MCPTool] { [] }
+        func call(_ name: String, arguments: [String: MCPValue]) async throws -> String {
+            throw MCPToolError("Margin isn't open. Ask the person to open Margin, then try again; its tools come back once it's open.")
+        }
+        func content(_ name: String, arguments: [String: MCPValue]) async throws -> [MCPContent] {
+            [.text(try await call(name, arguments: arguments))]
+        }
+    }
+
+    /// The answer to a message while Margin is closed, from a server with no tools: the
+    /// handshake still works, so the AI app keeps the connection for when Margin opens.
+    private static func closedAnswer(to body: Data) -> Data? {
+        let server = MCPServer(toolbox: ClosedToolbox(), name: "Margin",
+                               version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")
+        let done = DispatchSemaphore(value: 0)
+        nonisolated(unsafe) var answer: Data?
+        Task.detached {
+            answer = await server.handle(body)
+            done.signal()
+        }
+        done.wait()
+        return answer
+    }
+
+    /// While Margin is closed, a quiet look every few seconds; when it's open again, the AI app
+    /// is told its tools changed, so it asks for them.
+    private static func watchForMargin(keychain: Keychain) {
+        Thread.detachNewThread { @Sendable in
+            while true {
+                Thread.sleep(forTimeInterval: 3)
+                guard marginIsClosed else { continue }
+                let settings = settings
+                guard settings.enabled, let url = URL(string: "http://127.0.0.1:\(settings.port)/mcp"),
+                      let token = keychain.read(key: "mcp.token") else { continue }
+                let ping = Data(#"{"jsonrpc":"2.0","id":"margin-open","method":"ping"}"#.utf8)
+                if case .success = post(ping, to: url, token: token) {
+                    setClosed(false)
+                    write(Data(#"{"jsonrpc":"2.0","method":"notifications/tools/list_changed"}"#.utf8))
+                }
+            }
+        }
+    }
+
+    private static func post(_ body: Data, to url: URL, token: String) -> Outcome {
         var request = URLRequest(url: url, timeoutInterval: 120)
         request.httpMethod = "POST"
         request.httpBody = body
@@ -66,11 +135,10 @@ enum MCPBridge {
 
         let done = DispatchSemaphore(value: 0)
         nonisolated(unsafe) var outcome = Outcome.failure("Margin didn't answer.")
-        nonisolated(unsafe) var refused = false
         URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error as NSError? {
-                refused = error.code == NSURLErrorCannotConnectToHost
-                outcome = .failure("Couldn't reach Margin: \(error.localizedDescription)")
+                outcome = error.code == NSURLErrorCannotConnectToHost ? .closed
+                    : .failure("Couldn't reach Margin: \(error.localizedDescription)")
             } else if let status = (response as? HTTPURLResponse)?.statusCode {
                 switch status {
                 case 200: outcome = .success(data)
@@ -83,23 +151,6 @@ enum MCPBridge {
         }.resume()
         done.wait()
 
-        // Not running: open Margin quietly and try again for a few seconds.
-        if refused && launchingIfNeeded {
-            let configuration = NSWorkspace.OpenConfiguration()
-            configuration.activates = false
-            if SampleMode.isOn {
-                // Its own copy beside the real Margin, never the real one.
-                configuration.arguments = ["-sample-mail"]
-                configuration.createsNewApplicationInstance = true
-            }
-            NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration)
-            for _ in 0..<30 {
-                Thread.sleep(forTimeInterval: 0.5)
-                let retry = post(body, to: url, token: token, launchingIfNeeded: false)
-                if case .failure(let message) = retry, message.hasPrefix("Couldn't reach") { continue }
-                return retry
-            }
-        }
         return outcome
     }
 

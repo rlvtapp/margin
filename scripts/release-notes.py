@@ -4,7 +4,8 @@
 Reads that version's entry in Sources/MailUI/Model/Changelog.swift (the same notes as the
 What's New sheet) and the translations in Apps/Shared/Localizable.xcstrings, and prints one
 Sparkle <description> per language. Sparkle shows the one matching the Mac's language in its
-update window. Prints nothing when the version has no notes.
+update window. A version without its own entry (a fix the same day, 2026.11.26.1) gets the
+newest notes before it, as the What's New sheet does. Prints nothing when there are none.
 
     scripts/release-notes.py 2026.11.26
 """
@@ -15,9 +16,11 @@ version = sys.argv[1]
 source = (root / "Sources/MailUI/Model/Changelog.swift").read_text()
 catalog = json.loads((root / "Apps/Shared/Localizable.xcstrings").read_text())
 
-# This version's block: from its ChangelogRelease(version: "…") to the next one.
+# The newest block at or before this version: from its ChangelogRelease(version: "…") to the next.
+def number(v):
+    return [int(part) for part in v.split(".")]
 blocks = re.split(r'ChangelogRelease\(version:\s*"', source)[1:]
-block = next((b for b in blocks if b.startswith(version + '"')), None)
+block = next((b for b in blocks if number(b.split('"', 1)[0]) <= number(version)), None)
 if block is None:
     sys.exit(0)
 string = r'String\(localized:\s*"((?:[^"\\]|\\.)*)"\)'

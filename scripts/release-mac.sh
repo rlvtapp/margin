@@ -141,7 +141,7 @@ fi
 MINIMUM=$(/usr/libexec/PlistBuddy -c "Print :LSMinimumSystemVersion" "$APP/Contents/Info.plist")
 # What's New for this version, in each language, shown in the update window (docs/changelog.md).
 NOTES=$("$ROOT/scripts/release-notes.py" "$MARGIN_VERSION")
-[[ -n $NOTES ]] || print "No What's New notes for $MARGIN_VERSION; the update window shows none."
+[[ -n $NOTES ]] || print "No What's New notes up to $MARGIN_VERSION; the update window shows none."
 cat > "$OUT/appcast.xml" <<XML
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">

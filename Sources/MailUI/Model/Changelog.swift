@@ -26,19 +26,31 @@ public enum Changelog {
     /// Newest first. Add a release at the top when tagging a new version.
     public static var releases: [ChangelogRelease] {
         [
-            ChangelogRelease(version: "2026.11.21", changes: [
-                .init(symbol: "power", hue: 0,
-                      title: String(localized: "Stays closed when you quit"),
-                      detail: String(localized: "Margin no longer opens again by itself after you quit it, and quitting is quicker.")),
-                .init(symbol: "sparkles", hue: 1,
+            ChangelogRelease(version: "2026.11.21.1", changes: [
+                .init(symbol: "textformat.size", hue: 0,
+                      title: String(localized: "All of Margin, bigger or smaller"),
+                      detail: String(localized: "Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−.")),
+                .init(symbol: "at", hue: 1,
+                      title: String(localized: "Sends from the address you pick"),
+                      detail: String(localized: "Mail from an Outlook address goes out from that address, not another one on the same account.")),
+                .init(symbol: "sparkles", hue: 2,
                       title: String(localized: "AI apps while Margin is closed"),
                       detail: String(localized: "AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask.")),
-                .init(symbol: "envelope", hue: 2,
+                .init(symbol: "envelope", hue: 3,
                       title: String(localized: "Feedback and crash reports"),
                       detail: String(localized: "Send feedback from Help or Settings, and after a crash, review a report before it's sent.")),
-                .init(symbol: "paintpalette", hue: 3,
+                .init(symbol: "clock", hue: 4,
+                      title: String(localized: "Meeting times from Outlook"),
+                      detail: String(localized: "Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from.")),
+                .init(symbol: "checkmark.shield", hue: 5,
+                      title: String(localized: "Never sent twice"),
+                      detail: String(localized: "If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive.")),
+                .init(symbol: "paintpalette", hue: 6,
                       title: String(localized: "Readable on every accent colour"),
                       detail: String(localized: "Text on buttons and events in your accent colour stays easy to read, whichever colour you pick.")),
+                .init(symbol: "power", hue: 7,
+                      title: String(localized: "Stays closed when you quit"),
+                      detail: String(localized: "Margin no longer opens again by itself after you quit it, and quitting is quicker.")),
             ]),
             ChangelogRelease(version: "2026.11.19", changes: [
                 .init(symbol: "calendar", hue: 0,

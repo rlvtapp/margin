@@ -29,7 +29,7 @@ Margin keeps a short list of what changed in each version, inside the app.
 4. Tag and release as in [updates.md](updates.md). The release script puts the same notes in the
    update feed (`scripts/release-notes.py`): one Sparkle `<description>` per language from the
    string catalog, so the update window shows what's new in the Mac's language before people
-   install. A version without its own entry gets no notes there. The GitHub release notes can be
+   install. A version without its own entry (a fix the same day, `2026.11.26.1`) gets the newest notes before it, like the sheet. The GitHub release notes can be
    copied from the same lines.
 
 `ChangelogTests` checks the list stays newest first and that the sheet opens only after an update.

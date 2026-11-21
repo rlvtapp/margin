@@ -15,6 +15,10 @@ public struct ConnectionSettings: Codable, Equatable, Sendable {
     public var port: UInt16 = 47_901
     /// Mailboxes AI apps can't see at all.
     public var hiddenAccounts: [UUID] = []
+    /// While Margin is closed, AI apps are still answered by Margin's core: a background helper
+    /// that starts when they ask and quits after a few quiet minutes. Off, they're told to open
+    /// Margin, and a core that's running stops.
+    public var answersWhileClosed = true
 
     public init() {}
 
@@ -26,6 +30,7 @@ public struct ConnectionSettings: Codable, Equatable, Sendable {
         allowSettings = try values.decodeIfPresent(Bool.self, forKey: .allowSettings) ?? false
         port = try values.decodeIfPresent(UInt16.self, forKey: .port) ?? 47_901
         hiddenAccounts = try values.decodeIfPresent([UUID].self, forKey: .hiddenAccounts) ?? []
+        answersWhileClosed = try values.decodeIfPresent(Bool.self, forKey: .answersWhileClosed) ?? true
     }
 }
 

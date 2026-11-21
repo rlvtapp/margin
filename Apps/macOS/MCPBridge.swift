@@ -24,14 +24,12 @@ enum MCPBridge {
             .flatMap { try? JSONDecoder().decode(ConnectionSettings.self, from: $0) } ?? ConnectionSettings()
     }
 
-    /// Neither the bridge nor the core is an app on screen: without this, macOS counts the
-    /// process as Margin launching (a Dock icon that bounces and never finishes).
-    @MainActor private static func stayInBackground() {
-        NSApplication.shared.setActivationPolicy(.prohibited)
-    }
+    // Neither the bridge nor the core touches NSApplication: making it registers the process
+    // with macOS as a running copy of Margin (same bundle id), and then opening Margin from the
+    // Dock or Finder fails while an AI app is connected ("Margin is not open", error -600).
+    // Without it they're plain processes: no Dock icon, and Margin opens normally.
 
     static func run() -> Never {
-        MainActor.assumeIsolated { stayInBackground() }
         let lines = AsyncStream<String> { continuation in
             Thread.detachNewThread {
                 while let line = readLine(strippingNewline: true) { continuation.yield(line) }
@@ -58,7 +56,6 @@ enum MCPBridge {
     /// closed. One answer line for each message line (`noReply` for notifications); it exits
     /// after `Core.quiet` without a message, or when the bridge goes.
     static func runCore() -> Never {
-        MainActor.assumeIsolated { stayInBackground() }
         let lines = AsyncStream<String> { continuation in
             Thread.detachNewThread {
                 while let line = readLine(strippingNewline: true) { continuation.yield(line) }
@@ -101,6 +98,12 @@ enum MCPBridge {
             switchSource(toCore: false)
             if let answer { write(answer) } // nil: a notification, nothing to send back
         case .closed:
+            // Not open, and answering without Margin is turned off: open Margin instead.
+            guard settings.answersWhileClosed else {
+                CoreProcess.shared.stop()
+                reply(error: String(localized: "Margin is closed. Open Margin, or turn on Settings → AI Apps → Answer while Margin is closed."), id: id)
+                return
+            }
             // Not open: Margin's core answers, started for this if it isn't running.
             switchSource(toCore: true)
             if let answer = await CoreProcess.shared.send(line) { write(answer) }
@@ -165,6 +168,7 @@ enum MCPBridge {
         func answer(_ body: Data) async -> Data? {
             unloading?.cancel()
             if model == nil {
+                MailModel.hasNoWindow = true
                 let model = MailModel(environment: SampleMode.isOn ? SampleMode.environment() : .standard)
                 self.model = model
                 server = model.coreServer(version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")
@@ -249,6 +253,10 @@ enum MCPBridge {
     private static func listenForSettingsChanges() {
         CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), nil, { _, _, _, _, _ in
             MCPBridge.notifyToolsChanged()
+            // Answering while Margin is closed was turned off: a core that's running stops now.
+            Task { @MainActor in
+                if !MCPBridge.settings.answersWhileClosed { CoreProcess.shared.stop() }
+            }
         }, MailModel.connectionSettingsChanged as CFString, nil, .deliverImmediately)
     }
 
@@ -272,3 +280,4 @@ enum MCPBridge {
         FileHandle.standardOutput.write(Data("\n".utf8))
     }
 }
+

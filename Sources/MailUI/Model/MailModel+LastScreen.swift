@@ -75,7 +75,10 @@ extension MailModel {
         }
         // The open mail's pages, started now so they're drawn by the time the window is.
         let pages = screen.bodies.values.filter { $0.html != nil }.count
-        if pages > 0 { MailWebViewPool.warmUp(count: pages, background: HTMLMessageView.lightGround) }
+        // Web views only for a window: making one registers the process with macOS as a running
+        // Margin, so the core AI apps start (no window) would show in the Dock and keep Margin
+        // from opening.
+        if pages > 0, !Self.hasNoWindow { MailWebViewPool.warmUp(count: pages, background: HTMLMessageView.lightGround) }
     }
 
     /// Saves the screen as it is, a second after the last change asked for it, on the side.

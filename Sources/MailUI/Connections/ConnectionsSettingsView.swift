@@ -21,6 +21,14 @@ struct ConnectionsSettingsView: View {
                 }
                 .disabled(!model.usesAI)
                 if model.usesAI && settings.enabled { status }
+                #if os(macOS)
+                if settings.enabled {
+                    Toggle(isOn: binding(\.answersWhileClosed)) {
+                        SettingLabel("Answer while Margin is closed",
+                                     detail: "AI apps can read your mail and calendar without Margin open: a small helper starts when they ask and quits after 5 quiet minutes. Off, they ask you to open Margin.")
+                    }
+                }
+                #endif
             }
             if settings.enabled { Group {
                 Section {

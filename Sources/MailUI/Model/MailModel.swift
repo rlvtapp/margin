@@ -715,6 +715,12 @@ public final class MailModel {
     @ObservationIgnored var committingChanges: [UUID: Int] = [:]
     let credentials: KeychainCredentials
 
+    /// Set before the model is made in a process with no window (the core AI apps start while
+    /// Margin is closed). Nothing app-only is set up then: no last screen, no What's New, no
+    /// crash check, and nothing from AppKit's application object, which would register the
+    /// process with macOS as a running Margin (a Dock icon, and Margin then won't open).
+    nonisolated(unsafe) public static var hasNoWindow = false
+
     public init(environment: MailEnvironment) {
         if !environment.isPreview { Self.noteLaunch("model made") }
         // The steps of each check (connecting, signing in, syncing) go to the system log too.
@@ -783,7 +789,7 @@ public final class MailModel {
         SafeHTMLCache.blocksTrackers = environment.defaults.object(forKey: "blocksTrackers") as? Bool ?? true
         if layout == .minimal { place = .home(group: nil) }
         restoreLastScreen()
-        if !environment.isPreview {
+        if !environment.isPreview && !Self.hasNoWindow {
             Self.noteLaunch("last screen restored")
             saveLastScreenWhenLeaving()
         }
@@ -847,10 +853,10 @@ public final class MailModel {
             environment.defaults.set(true, forKey: "pictureNotesReset")
             pictureStore.forgetMissing()
         }
-        if !hasOnboarded && !environment.isPreview { isShowingOnboarding = true }
-        if !environment.isPreview { showChangelogIfUpdated() }
+        if !hasOnboarded && !environment.isPreview && !Self.hasNoWindow { isShowingOnboarding = true }
+        if !environment.isPreview && !Self.hasNoWindow { showChangelogIfUpdated() }
         #if os(macOS)
-        if !environment.isPreview { checkForCrash() }
+        if !environment.isPreview && !Self.hasNoWindow { checkForCrash() }
         #endif
         Self.noteLaunch("start")
         await forgetRemovedAccounts()
@@ -1557,3 +1563,4 @@ extension MailModel {
         appScaleOverride = AppScale.clamp(current + Double(direction) * AppScale.step)
     }
 }
+

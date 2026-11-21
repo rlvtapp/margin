@@ -6,6 +6,13 @@ Margin keeps a small calendar of the events in invitations it has seen. It stays
 - **Finding them:** an invitation is remembered whenever its message is opened. Every few minutes,
   mail in the inbox that looks like an invitation is read too (from the offline cache when it can
   be), so events are known before they're opened.
+- **Time zones:** an invitation's times show at the same hour as in other calendars, whatever its
+  `TZID` is called: an IANA name (`Europe/Amsterdam`, also behind a prefix like
+  `/mozilla.org/…/Europe/Berlin`), a Windows name from Outlook and Exchange (`W. Europe Standard
+  Time`, mapped with CLDR's table), or anything else, read from the invitation's own `VTIMEZONE`
+  rules. Only a time with none of these is taken as this device's time. Microsoft Graph dates
+  with a Windows zone go through the same table (`CalendarTimeZones` in
+  `Sources/MailCore/MIME/CalendarTimeZones.swift`; `InviteTimeZoneTests`).
 - **Next meeting:** above the mail list on Mac, iPhone and iPad, the next meeting in the coming
   hours, with **Join** when it has a meeting link and starts within ten minutes.
 - **Reminders:** a notification before each event, 5–30 minutes ahead (Settings → Notifications → Meeting reminders, on the Mac and

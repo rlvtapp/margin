@@ -41,8 +41,9 @@ public struct CalendarInvite: Codable, Hashable, Sendable {
             properties.first { $0.name == name }.map { ($0.params, $0.value) }
         }
         guard let uid = first("UID")?.value else { return nil }
-        let start = first("DTSTART").map { parseDate($0.value, params: $0.params) }
-        let end = first("DTEND").map { parseDate($0.value, params: $0.params) }
+        let zones = CalendarTimeZones.definitions(in: lines)
+        let start = first("DTSTART").map { parseDate($0.value, params: $0.params, zones: zones) }
+        let end = first("DTEND").map { parseDate($0.value, params: $0.params, zones: zones) }
         let organizer = first("ORGANIZER").flatMap { entry -> EmailAddress? in
             let address = entry.value.replacingOccurrences(of: "mailto:", with: "", options: .caseInsensitive)
             return EmailAddress.isValid(address) ? EmailAddress(name: entry.params["CN"], address: address) : nil
@@ -133,7 +134,9 @@ public struct CalendarInvite: Codable, Hashable, Sendable {
     }
 
     /// `20261112T090000Z` (UTC), `20261112T100000` with TZID or floating, `20261112` (all day).
-    static func parseDate(_ value: String, params: [String: String]) -> (date: Date?, allDay: Bool) {
+    /// A TZID is read as an IANA or Windows name first, then by the invite's own `VTIMEZONE`
+    /// rules; only a time with neither is taken as local.
+    static func parseDate(_ value: String, params: [String: String], zones: [String: ZoneRules] = [:]) -> (date: Date?, allDay: Bool) {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         if params["VALUE"] == "DATE" || value.count == 8 {
@@ -146,7 +149,11 @@ public struct CalendarInvite: Codable, Hashable, Sendable {
             formatter.timeZone = TimeZone(identifier: "UTC")
         } else {
             formatter.dateFormat = "yyyyMMdd'T'HHmmss"
-            formatter.timeZone = params["TZID"].flatMap(TimeZone.init(identifier:)) ?? .current
+            let tzid = params["TZID"]
+            if let tzid, CalendarTimeZones.zone(named: tzid) == nil, let rules = zones[tzid] {
+                return (ZoneRules.wallTime(value).map(rules.date(fromWallTime:)), false)
+            }
+            formatter.timeZone = tzid.flatMap(CalendarTimeZones.zone(named:)) ?? .current
         }
         return (formatter.date(from: value), false)
     }

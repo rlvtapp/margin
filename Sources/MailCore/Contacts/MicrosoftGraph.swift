@@ -242,7 +242,7 @@ public struct MicrosoftGraphClient: Sendable {
     /// don't fit a date format, so the fraction is cut off before parsing.
     static func parseGraphDate(_ value: GraphDateTime?) -> Date? {
         guard var text = value?.dateTime else { return nil }
-        var zone = value?.timeZone.flatMap(TimeZone.init(identifier:)) ?? TimeZone(identifier: "UTC")!
+        var zone = value?.timeZone.flatMap(CalendarTimeZones.zone(named:)) ?? TimeZone(identifier: "UTC")!
         if text.hasSuffix("Z") {
             text.removeLast()
             zone = TimeZone(identifier: "UTC")!

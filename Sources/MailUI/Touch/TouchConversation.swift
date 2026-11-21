@@ -310,7 +310,7 @@ private struct TouchMessageCard: View {
             VStack(alignment: .leading, spacing: Space.l) {
                 let folded = foldsQuote ? QuotedHistory.textWithoutQuote(content.text) : nil
                 Text(verbatim: (showsQuote ? content.text : folded ?? content.text).trimmingCharacters(in: .whitespacesAndNewlines))
-                    .font(.system(size: 17 * model.textScale))
+                    .font(.system(size: 17 * Look.scale * model.textScale))
                     .foregroundStyle(Ink.primary)
                     .lineSpacing(7)
                     .textSelection(.enabled)

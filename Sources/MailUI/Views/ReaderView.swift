@@ -17,6 +17,18 @@ struct ReaderView: View {
     /// The height of the conversation's scroll area: a bigger reply fills it.
     @State private var visibleHeight: CGFloat = 0
 
+    /// A conversation opens at its newest message; one with a single message opens at the top,
+    /// so its subject isn't scrolled away when the email is taller than the pane.
+    static func scrollToStart(of thread: MailThread, _ proxy: ScrollViewProxy) {
+        if thread.messages.count > 1 {
+            proxy.scrollTo(thread.latest.id, anchor: .top)
+        } else {
+            proxy.scrollTo(readerTopID, anchor: .top)
+        }
+    }
+
+    static let readerTopID = "reader-top"
+
     var body: some View {
         Group {
             if model.selection.count > 1 {
@@ -31,6 +43,7 @@ struct ReaderView: View {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 0) {
                                 header(thread)
+                                    .id(Self.readerTopID)
                                 if model.showsAsChat {
                                     ChatConversationView(model: model, thread: model.conversation(thread))
                                 } else {
@@ -95,8 +108,8 @@ struct ReaderView: View {
                             // Dragging a selection past the top or bottom scrolls the mail.
                             .scrollsWhileSelecting()
                         }
-                        .onAppear { proxy.scrollTo(thread.latest.id, anchor: .top) }
-                        .onChange(of: thread.id) { _, _ in proxy.scrollTo(thread.latest.id, anchor: .top) }
+                        .onAppear { Self.scrollToStart(of: thread, proxy) }
+                        .onChange(of: thread.id) { _, _ in Self.scrollToStart(of: thread, proxy) }
                         // Outlook's own reactions, when they're turned on for this account.
                         .task(id: thread.id) { await model.loadOutlookReactions(for: thread) }
                         .onChange(of: model.isWritingReply) { _, open in

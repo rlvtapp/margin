@@ -166,6 +166,17 @@ struct AppearanceSettings: View {
     var body: some View {
         Form {
             SettingsHeader(.appearance)
+            // First on the page, so changing it (the page is drawn again) never scrolls away.
+            Section {
+                AppSizeRow(model: model)
+                ChoiceTiles(options: Density.allCases, selection: $model.density,
+                            title: { $0 == .roomy ? String(localized: "Roomy") : String(localized: "Compact") },
+                            caption: { $0 == .roomy ? String(localized: "Bigger text and more room.") : String(localized: "Fits more on screen.") }) {
+                    DensityPreview(density: $0)
+                }
+            } header: {
+                Text("Size")
+            }
             Section {
                 ChoiceTiles(options: AppAppearance.allCases, selection: $model.appearance,
                             title: \.title, caption: Self.caption) { ThemePreview(appearance: $0) }
@@ -183,15 +194,6 @@ struct AppearanceSettings: View {
                 } label: { SettingLabel("Accent", detail: "Unread dots, selections and badges.") }
             } header: {
                 Text("Theme")
-            }
-            Section {
-                ChoiceTiles(options: Density.allCases, selection: $model.density,
-                            title: { $0 == .roomy ? String(localized: "Roomy") : String(localized: "Compact") },
-                            caption: { $0 == .roomy ? String(localized: "Bigger text and more room.") : String(localized: "Fits more on screen.") }) {
-                    DensityPreview(density: $0)
-                }
-            } header: {
-                Text("Size")
             }
             Section {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 64), spacing: Space.s)], spacing: Space.m) {
@@ -1002,5 +1004,43 @@ extension View {
         #else
         self
         #endif
+    }
+}
+
+
+/// How big all of Margin is: following the system's text size, or a size picked by hand that
+/// overrides it. Steps rather than a slider: each change draws the window again.
+struct AppSizeRow: View {
+    @Bindable var model: MailModel
+
+    private var percent: Int { Int((Double(Look.scale) * 100).rounded()) }
+
+    var body: some View {
+        Toggle(isOn: Binding(get: { model.appScaleOverride == nil },
+                             set: { model.appScaleOverride = $0 ? nil : Double(Look.scale) })) {
+            #if os(macOS)
+            SettingLabel("Follow the system's text size", detail: "System Settings → Accessibility → Display → Text size.")
+            #else
+            SettingLabel("Follow the system's text size", detail: "Settings → Display & Brightness → Text Size.")
+            #endif
+        }
+        LabeledContent {
+            HStack(spacing: Space.s) {
+                Button { model.zoomApp(-1) } label: { Image(systemName: "textformat.size.smaller") }
+                    .disabled(Double(Look.scale) <= AppScale.range.lowerBound)
+                    .accessibilityLabel(Text("Smaller"))
+                Text(verbatim: "\(percent)%").monospacedDigit().foregroundStyle(.secondary)
+                    .frame(width: Look.scaled(48), alignment: .center)
+                Button { model.zoomApp(1) } label: { Image(systemName: "textformat.size.larger") }
+                    .disabled(Double(Look.scale) >= AppScale.range.upperBound)
+                    .accessibilityLabel(Text("Bigger"))
+            }
+        } label: {
+            #if os(macOS)
+            SettingLabel("App size", detail: "All of Margin. ⌘+ and ⌘− change it anywhere; ⌘0 follows the system again.")
+            #else
+            SettingLabel("App size", detail: "All of Margin. A size picked here is kept until you follow the system again.")
+            #endif
+        }
     }
 }

@@ -279,7 +279,7 @@ private struct EventEditorView: View {
                 Circle().fill(Palette.account(destination.map(model.colorIndex(of:)) ?? 0)).frame(width: 9, height: 9)
                 Text(verbatim: destination.map(model.title(of:)) ?? "")
                     .lineLimit(1)
-                Image(systemName: "chevron.up.chevron.down").font(.system(size: 8, weight: .bold)).foregroundStyle(Ink.tertiary)
+                Image(systemName: "chevron.up.chevron.down").font(.system(size: Look.scaled(8), weight: .bold)).foregroundStyle(Ink.tertiary)
             }
             .font(TypeScale.row)
             .foregroundStyle(Ink.primary)
@@ -428,7 +428,7 @@ private struct EventEditorView: View {
                     HStack(spacing: 5) {
                         Text("Suggest a time").font(TypeScale.row).foregroundStyle(Ink.primary)
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 8.5, weight: .bold))
+                            .font(.system(size: Look.scaled(8.5), weight: .bold))
                             .foregroundStyle(Ink.quaternary)
                             .rotationEffect(.degrees(showsTimes ? 90 : 0))
                     }
@@ -547,7 +547,7 @@ private struct InviteeChip: View {
             Avatar(person, size: 18)
             Text(verbatim: person.name ?? person.address).font(TypeScale.label).foregroundStyle(Ink.primary).lineLimit(1)
             Button(action: remove) {
-                Image(systemName: "xmark").font(.system(size: 8, weight: .bold)).foregroundStyle(Ink.tertiary)
+                Image(systemName: "xmark").font(.system(size: Look.scaled(8), weight: .bold)).foregroundStyle(Ink.tertiary)
             }
             .buttonStyle(.plain)
             .opacity(isHovered ? 1 : 0.45)
@@ -589,7 +589,7 @@ private struct InviteeSuggestions: View {
                         if suggestion.seesCalendar {
                             Label("Calendar", systemImage: "calendar")
                                 .labelStyle(.iconOnly)
-                                .font(.system(size: 11))
+                                .font(.system(size: Look.scaled(11)))
                                 .foregroundStyle(Status.done)
                                 .help(Text("Their busy times can be seen"))
                         }
@@ -663,7 +663,7 @@ private struct DayPeek: View {
                     .buttonStyle(.plain).foregroundStyle(Ink.tertiary).frame(width: 20, height: 20)
                 Spacer()
             }
-            .font(.system(size: 10, weight: .semibold))
+            .font(.system(size: Look.scaled(10), weight: .semibold))
             .padding(.horizontal, 12)
             .frame(height: 40)
             status(clashes)
@@ -676,7 +676,7 @@ private struct DayPeek: View {
                         ForEach(0..<24, id: \.self) { h in
                             HStack(alignment: .top, spacing: 4) {
                                 Text(verbatim: h == 0 ? "" : CalendarTimeline.hourLabel(h))
-                                    .font(.system(size: 9.5, weight: .medium).monospacedDigit())
+                                    .font(.system(size: Look.scaled(9.5), weight: .medium).monospacedDigit())
                                     .foregroundStyle(Ink.quaternary)
                                     .frame(width: gutter - 6, alignment: .trailing)
                                     .offset(y: -5)
@@ -775,10 +775,10 @@ private struct DayPeek: View {
 
     private func block(_ title: String, from: Date, to: Date, tint: Color, strong: Bool) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(verbatim: title).font(.system(size: 11, weight: .semibold)).lineLimit(1)
+            Text(verbatim: title).font(.system(size: Look.scaled(11), weight: .semibold)).lineLimit(1)
             Text(verbatim: strong ? from.formatted(date: .omitted, time: .shortened) + " – " + to.formatted(date: .omitted, time: .shortened)
                                   : from.formatted(date: .omitted, time: .shortened))
-                .font(.system(size: 10).monospacedDigit()).opacity(0.75)
+                .font(.system(size: Look.scaled(10)).monospacedDigit()).opacity(0.75)
         }
         .foregroundStyle(strong ? Color.white : Ink.primary)
         .padding(.horizontal, 6)

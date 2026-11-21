@@ -11,6 +11,7 @@ public struct MailRootView: View {
     @Environment(\.colorSchemeContrast) private var systemContrast
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.accessibilityReduceTransparency) private var systemReduceTransparency
+    @Environment(\.dynamicTypeSize) private var systemTypeSize
 
     public init(model: MailModel) {
         self.model = model
@@ -25,7 +26,7 @@ public struct MailRootView: View {
 
     private func applyLook() -> String {
         Look.apply(model, systemContrast: systemContrast, systemReduceMotion: systemReduceMotion,
-                   systemReduceTransparency: systemReduceTransparency)
+                   systemReduceTransparency: systemReduceTransparency, systemTypeSize: systemTypeSize)
     }
 
     public var body: some View {
@@ -118,6 +119,7 @@ public struct MailRootView: View {
         .signsInAgain(model: model, account: $model.signingInAgain)
         // Colours are read from the tokens, so redraw everything when the look changes.
         .id(lookKey)
+        .appTypeSize(model, system: systemTypeSize)
         .background(Paper.sidebar)
         .environment(\.mailAccent, Palette.account(model.accentIndex))
         .environment(\.mailAccentInk, Palette.onAccount(model.accentIndex))
@@ -257,7 +259,8 @@ extension Look {
     /// Returns a key that changes whenever the look does, to redraw the whole window.
     @MainActor
     static func apply(_ model: MailModel, systemContrast: ColorSchemeContrast, systemReduceMotion: Bool,
-                      systemReduceTransparency: Bool = false) -> String {
+                      systemReduceTransparency: Bool = false, systemTypeSize: DynamicTypeSize = .large) -> String {
+        applyScale(model, systemTypeSize: systemTypeSize)
         colorBlindSafe = model.colorBlindSafe
         highContrast = model.increaseContrast || systemContrast == .increased
         reduceMotion = model.reduceMotion || systemReduceMotion
@@ -268,11 +271,33 @@ extension Look {
         LabelColors.chosen = model.labelColors
         LabelColors.server = model.serverLabelColorIndexes
         reduceTransparency = systemReduceTransparency || ProcessInfo.processInfo.arguments.contains("-reduce-transparency")
+        // The window is drawn again from scratch: mail already on screen keeps its page.
+        if let last = lastKey, last != key { MailWebViewPool.redrawing() }
+        lastKey = key
         return key
+    }
+
+    @MainActor private static var lastKey: String?
+}
+
+extension Look {
+    /// The app's size alone, for windows that only need that (Settings, the menu bar panel).
+    /// Reading the model here makes the caller redraw when it changes.
+    @MainActor
+    @discardableResult
+    static func applyScale(_ model: MailModel, systemTypeSize: DynamicTypeSize) -> CGFloat {
+        scale = CGFloat(model.appScaleOverride ?? AppScale.system(systemTypeSize))
+        return scale
     }
 }
 
 extension View {
+    /// The system's own controls (and text styles) at the size picked by hand, when there is
+    /// one; otherwise they follow the system as before.
+    func appTypeSize(_ model: MailModel, system: DynamicTypeSize) -> some View {
+        dynamicTypeSize(model.appScaleOverride.map(AppScale.typeSize(for:)) ?? system)
+    }
+
     /// Floating bars: Liquid Glass on iPhone and iPad, a solid capsule on the Mac.
     @ViewBuilder
     func noticeSurface() -> some View {
@@ -313,7 +338,7 @@ private struct SendRing: View {
                     .stroke(Ink.primary, style: StrokeStyle(lineWidth: 2, lineCap: .round))
                     .rotationEffect(.degrees(-90))
                 Image(systemName: "checkmark")
-                    .font(.system(size: 7, weight: .bold))
+                    .font(.system(size: Look.scaled(7), weight: .bold))
                     .foregroundStyle(Ink.primary)
                     .opacity(isSent ? 1 : 0)
                     .scaleEffect(isSent || Look.reduceMotion ? 1 : 0.5)

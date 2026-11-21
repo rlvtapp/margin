@@ -239,10 +239,10 @@ private struct SignatureOwnerSection: View {
         HStack(spacing: Space.s) {
             switch owner {
             case .all:
-                Image(systemName: "tray.2.fill").font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
+                Image(systemName: "tray.2.fill").font(.system(size: Look.scaled(11), weight: .semibold)).foregroundStyle(.white)
                     .frame(width: 20, height: 20).background(SettingsPage.mailboxes.tint, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
             case .workspace(let id):
-                Image(systemName: "square.stack.fill").font(.system(size: 11, weight: .semibold)).foregroundStyle(.white)
+                Image(systemName: "square.stack.fill").font(.system(size: Look.scaled(11), weight: .semibold)).foregroundStyle(.white)
                     .frame(width: 20, height: 20)
                     .background(Palette.account(model.workspaces.first { $0.id == id }?.colorIndex ?? 0), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
             case .account(let id):
@@ -549,7 +549,7 @@ struct AliasSignatureButton: View {
                 .labelsHidden()
                 if pick.wrappedValue == .own {
                     TextEditor(text: $signature)
-                        .font(.system(size: 13))
+                        .font(.system(size: Look.scaled(13)))
                         .frame(width: 320, height: 120)
                         .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Line.edge))
                 }

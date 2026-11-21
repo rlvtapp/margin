@@ -734,7 +734,13 @@ struct ReadingSettings: View {
                         Text("\(Int((model.textScale * 100).rounded()))%").monospacedDigit().foregroundStyle(.secondary)
                             .frame(width: 44, alignment: .trailing)
                     }
-                } label: { SettingLabel("Text size", detail: "For the mail you read; the rest of Margin stays the same.") }
+                } label: {
+                    #if os(macOS)
+                    SettingLabel("Email text size", detail: "For the mail you read, on top of the app size (Appearance). ⌥⌘+ and ⌥⌘− change it.")
+                    #else
+                    SettingLabel("Email text size", detail: "For the mail you read, on top of the app size (Appearance).")
+                    #endif
+                }
                 // A line of mail at the chosen size.
                 Text("Hi Alex, the flat by the river is free in May. Shall I book it?")
                     .font(.system(size: Look.size(15) * model.textScale))

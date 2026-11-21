@@ -155,13 +155,22 @@ struct MarginCommands: Commands {
                 Button("Actual Size") { model.zoomCalendar(0) }
                     .keyboardShortcut("0")
             } else {
-                Button("Bigger Text") { model.textScale = min(model.textScale + 0.1, 2) }
+                // All of Margin; a size picked here overrides the system's until Actual Size.
+                Button("Zoom In") { model.zoomApp(1) }
                     .keyboardShortcut("+")
-                Button("Smaller Text") { model.textScale = max(model.textScale - 0.1, 0.8) }
+                Button("Zoom Out") { model.zoomApp(-1) }
                     .keyboardShortcut("-")
-                Button("Actual Size") { model.textScale = 1 }
+                Button("Actual Size") { model.zoomApp(0) }
                     .keyboardShortcut("0")
             }
+            Divider()
+            // The mail being read, on top of the app's size.
+            Button("Bigger Email Text") { model.textScale = min(model.textScale + 0.1, 2) }
+                .keyboardShortcut("+", modifiers: [.command, .option])
+            Button("Smaller Email Text") { model.textScale = max(model.textScale - 0.1, 0.8) }
+                .keyboardShortcut("-", modifiers: [.command, .option])
+            Button("Email Text at Actual Size") { model.textScale = 1 }
+                .keyboardShortcut("0", modifiers: [.command, .option])
         }
         CommandGroup(before: .toolbar) {
             Button((model.place == .calendar ? model.calendarSidebarHidden : model.isSidebarHidden) ? "Show Sidebar" : "Hide Sidebar") { model.toggleSidebar() }

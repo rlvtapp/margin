@@ -11,7 +11,7 @@ struct WindowBar: View {
     @Bindable var model: MailModel
     var searchFocus: FocusState<Bool>.Binding
 
-    static let height: CGFloat = 44
+    static var height: CGFloat { Look.scaled(44) }
 
     var body: some View {
         HStack(spacing: Space.s) {

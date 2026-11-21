@@ -12,6 +12,7 @@ public struct MailSettingsView: View {
     @State private var mailbox: UUID?
     /// Pages visited, for Back and Forward in the toolbar, as in a browser.
     @State private var history = SettingsHistory()
+    @Environment(\.dynamicTypeSize) private var systemTypeSize
 
     public init(model: MailModel) { self.model = model }
 
@@ -36,6 +37,8 @@ public struct MailSettingsView: View {
     }
 
     public var body: some View {
+        // The app's size: the page is drawn again when it changes, staying on the same page.
+        let scale = Look.applyScale(model, systemTypeSize: systemTypeSize)
         NavigationSplitView {
             SettingsSidebar(model: model, page: $page, mailbox: $mailbox, search: $search,
                             canGoBack: history.canGoBack, canGoForward: history.canGoForward,
@@ -64,7 +67,7 @@ public struct MailSettingsView: View {
             .navigationSplitViewColumnWidth(Look.pick(230, roomy: 264))
         } detail: {
             detail
-                .id(mailbox?.uuidString ?? page.rawValue)
+                .id("\(mailbox?.uuidString ?? page.rawValue) \(scale)")
                 #if os(macOS)
                 // Up under the bar that only holds Back and Forward, so no room is lost above the page.
                 .ignoresSafeArea(.container, edges: .top)
@@ -84,7 +87,8 @@ public struct MailSettingsView: View {
                 .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
                 #endif
         }
-        .frame(width: Look.pick(900, roomy: 980), height: Look.pick(700, roomy: 780))
+        .frame(width: Look.window(900, roomy: 980), height: Look.window(700, roomy: 780))
+        .appTypeSize(model, system: systemTypeSize)
         .sheet(isPresented: $model.isAddingAccount) { AccountSetupView(model: model) }
         .sheet(item: Binding(get: { editingAccount.map(IdentifiedID.init) }, set: { editingAccount = $0?.id })) { item in
             SignatureEditor(model: model, accountID: item.id)

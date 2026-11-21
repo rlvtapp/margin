@@ -11,6 +11,7 @@ public struct TouchMailView: View {
     @Environment(\.colorSchemeContrast) private var systemContrast
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.accessibilityReduceTransparency) private var systemReduceTransparency
+    @Environment(\.dynamicTypeSize) private var systemTypeSize
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var barsOnSide = false
     /// The window's width. Under `twoColumnWidth` (an unfolded iPhone Duo, iPad in a narrow
@@ -35,7 +36,7 @@ public struct TouchMailView: View {
 
     public var body: some View {
         let lookKey = Look.apply(model, systemContrast: systemContrast, systemReduceMotion: systemReduceMotion,
-                                 systemReduceTransparency: systemReduceTransparency)
+                                 systemReduceTransparency: systemReduceTransparency, systemTypeSize: systemTypeSize)
         let narrow = width < Self.twoColumnWidth
         NavigationSplitView(columnVisibility: $visibility, preferredCompactColumn: $column) {
             TouchMailboxes(model: model, isShowingSettings: $isShowingSettings, isStacked: sizeClass == .compact)
@@ -75,6 +76,7 @@ public struct TouchMailView: View {
         }
         // Colours are read from the tokens, so redraw everything when the look changes.
         .id(lookKey)
+        .appTypeSize(model, system: systemTypeSize)
         .environment(\.mailAccent, Palette.account(model.accentIndex))
         .environment(\.mailAccentInk, Palette.onAccount(model.accentIndex))
         .preferredColorScheme(model.appearance.colorScheme)

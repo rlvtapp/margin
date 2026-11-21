@@ -92,37 +92,57 @@ public enum Look {
     nonisolated(unsafe) public static var theme: AppAppearance = .system
     /// Roomy unless the person chose Compact.
     nonisolated(unsafe) public static var density: Density = .roomy
+    /// How big all of Margin is drawn: the system's text size, or the person's own choice
+    /// (`MailModel.appScaleOverride`, ⌘+ and ⌘−). Type, gaps and fixed sizes all follow it.
+    nonisolated(unsafe) public static var scale: CGFloat = 1
 
     /// A type size for the chosen density. `base` is the compact size on the Mac and the
     /// roomy size on touch screens, which were already a step up.
     public static func size(_ base: CGFloat) -> CGFloat {
         #if os(iOS)
-        density == .compact ? base - 1 : base
+        (density == .compact ? base - 1 : base) * scale
         #else
-        density == .compact ? base : base + (base >= 16 ? 2 : 1)
+        (density == .compact ? base : base + (base >= 16 ? 2 : 1)) * scale
         #endif
+    }
+
+    /// A fixed size (a glyph, a badge, a bar's height) at the app's size, density aside.
+    public static func scaled(_ base: CGFloat) -> CGFloat {
+        scale == 1 ? base : (base * scale).rounded()
     }
 
     /// One of two hand-picked Mac sizes; touch screens keep the first.
     public static func pick(_ compact: CGFloat, roomy: CGFloat) -> CGFloat {
         #if os(iOS)
-        compact
+        scaled(compact)
         #else
-        density == .compact ? compact : roomy
+        scaled(density == .compact ? compact : roomy)
         #endif
+    }
+
+    /// A window's size for the density: it grows with the app's size, but only to 140%, so a
+    /// large size still fits on a laptop screen.
+    public static func window(_ compact: CGFloat, roomy: CGFloat) -> CGFloat {
+        let base: CGFloat
+        #if os(iOS)
+        base = compact
+        #else
+        base = density == .compact ? compact : roomy
+        #endif
+        return (base * min(scale, 1.4)).rounded()
     }
 
     /// A gap, padding or control size for the chosen density.
     public static func gap(_ base: CGFloat) -> CGFloat {
         #if os(iOS)
-        base
+        scaled(base)
         #else
-        density == .compact ? base : (base * 1.25).rounded()
+        scaled(density == .compact ? base : (base * 1.25).rounded())
         #endif
     }
 
     /// Changes whenever any option changes, so the window can redraw everything once.
-    public static var key: String { "\(colorBlindSafe)\(highContrast)\(reduceMotion)\(underlineLinks)\(darkensMail)\(reduceTransparency)\(theme.rawValue)\(density.rawValue)\(LabelColors.signature)" }
+    public static var key: String { "\(colorBlindSafe)\(highContrast)\(reduceMotion)\(underlineLinks)\(darkensMail)\(reduceTransparency)\(theme.rawValue)\(density.rawValue)\(scale)\(LabelColors.signature)" }
 }
 
 public enum Ink {
@@ -368,5 +388,39 @@ enum Contrast {
             }
         }
         return target
+    }
+}
+
+/// The app's size: the system's text size as a factor, and the steps ⌘+ and ⌘− take.
+public enum AppScale {
+    public static let range: ClosedRange<Double> = 0.8...2
+    public static let step = 0.1
+
+    /// The system's text size (Dynamic Type) as a factor of the standard size: body text at
+    /// that size over body text at Large (17 pt), the way Apple's own apps grow.
+    public static func system(_ size: DynamicTypeSize) -> Double {
+        let body: Double = switch size {
+        case .xSmall: 14
+        case .small: 15
+        case .medium: 16
+        case .large: 17
+        case .xLarge: 19
+        case .xxLarge: 21
+        case .xxxLarge: 23
+        case .accessibility1: 28
+        case .accessibility2: 33
+        default: 40
+        }
+        return clamp(body / 17)
+    }
+
+    /// The Dynamic Type size closest to a factor, so the system's own controls follow a size
+    /// the person picked by hand.
+    public static func typeSize(for scale: Double) -> DynamicTypeSize {
+        DynamicTypeSize.allCases.min { abs(system($0) - scale) < abs(system($1) - scale) } ?? .large
+    }
+
+    public static func clamp(_ value: Double) -> Double {
+        min(max((value * 10).rounded() / 10, range.lowerBound), range.upperBound)
     }
 }

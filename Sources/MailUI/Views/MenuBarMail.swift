@@ -30,10 +30,16 @@ public struct MenuBarMail: View {
     @State private var replyingTo: MailThread.ID?
     @State private var text = ""
     @Environment(\.openURL) private var openURL
+    @Environment(\.dynamicTypeSize) private var systemTypeSize
 
     public init(model: MailModel) { self.model = model }
 
     public var body: some View {
+        let scale = Look.applyScale(model, systemTypeSize: systemTypeSize)
+        panel.id(scale).appTypeSize(model, system: systemTypeSize)
+    }
+
+    private var panel: some View {
         VStack(alignment: .leading, spacing: Space.s) {
             let signIns = model.recentSignIns
             if !signIns.isEmpty {

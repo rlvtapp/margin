@@ -323,7 +323,7 @@ struct AssistantRow: View {
         HStack(spacing: Space.m) {
             ProviderIcon(provider: provider, size: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: provider.shortName).font(.system(size: 13, weight: .semibold))
+                Text(verbatim: provider.shortName).font(.system(size: Look.scaled(13), weight: .semibold))
                 Text(verbatim: Self.subtitle(settings)).font(TypeScale.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer(minLength: Space.s)

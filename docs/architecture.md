@@ -481,6 +481,36 @@ redraws the window once. Mail's own HTML is left at the sender's size; plain-tex
 
 `-snapshot-density-compact` captures the Compact look in snapshot mode.
 
+### App size
+
+On top of the density, all of Margin has one size, `Look.scale` (80% to 200%). `Look.size`,
+`Look.gap`, `Look.pick` and `Look.scaled(_:)` (for a fixed glyph, badge or bar height) all
+multiply by it, so type, padding, rows and columns grow together; windows (`Look.window`, used by
+Settings) grow only to 140% so they still fit a laptop screen. Mail follows too: HTML mail is
+zoomed by the app size times the email text size, and plain-text mail is drawn with `Look.size`.
+
+- **Following the system** is the default (`MailModel.appScaleOverride == nil`). The root views
+  read SwiftUI's `dynamicTypeSize` and turn it into a factor (`AppScale.system`: body text at
+  that size over 17 pt, capped at 200%). On iPhone and iPad that's Settings → Display &
+  Brightness → Text Size. On the Mac it's System Settings → Accessibility → Display → Text size,
+  but only if macOS passes that setting to apps as Dynamic Type; this hasn't been confirmed (a
+  probe on macOS 27 read `.large` at the default setting). If it doesn't, the Mac stays at 100%
+  until a size is picked.
+- **A size picked by hand overrides it**: ⌘+ and ⌘− on the Mac (View menu) or Settings →
+  Appearance → Size (`AppSizeRow`), in steps of 10%, saved as `appScale` and kept in backups.
+  The first step starts from the size on screen. ⌘0 (Actual Size), or switching "Follow the
+  system's text size" back on, clears it. While it's set, the system's own controls and text
+  styles get the nearest Dynamic Type size (`appTypeSize`), so they match.
+- **Email text** keeps its own size on top (Settings → Reading, ⌥⌘+, ⌥⌘− and ⌥⌘0 on the Mac).
+  In the Calendar's Day and Week, ⌘+ and ⌘− still make the hours taller or shorter.
+- The scale is part of `Look.key`, so the main window redraws once per change; Settings and the
+  menu bar panel redraw themselves (`Look.applyScale`), staying on the same page. Size is the
+  first section of Appearance, so changing it there never scrolls the page away.
+
+`-snapshot-app-scale 1.6` captures the window at that size. Use `-snapshot-glass` to check it:
+the plain snapshot draws the list's tab strip as a black band at sizes above 100%, which the real
+window doesn't show. Tests: `AppScaleTests`.
+
 ## Checking the UI without screen recording
 
 `-snapshot <file.png>` launches the app with the sample mailboxes, renders the window to a PNG and quits. Add `-appearance light|dark`, `-snapshot-palette`, `-snapshot-compose`, `-snapshot-mailbox 0`, `-snapshot-combined sent`, `-snapshot-select "Issue 212"` or `-snapshot-size 1520x940` (the window at that size in points, drawn two pixels a point). `-snapshot-cc "maya@example.com, no"` (with `-snapshot-compose`) opens Cc and Bcc with that in Cc. Put flags that take no value last: AppKit reads `-flag value` pairs, so a bare flag swallows the next one and a stray word after that is taken for a file to open, and no window comes up. Add `-snapshot-glass` to save the system's own picture of the real window instead, with Liquid Glass and scrolling parts in it; the window shows on a Retina screen for a moment. The website's pictures are made that way. Web content is drawn in another process, so snapshot mode paints each web view's own snapshot over its frame. A sandboxed build can only write inside its container, so build without the sandbox entitlement for snapshots:

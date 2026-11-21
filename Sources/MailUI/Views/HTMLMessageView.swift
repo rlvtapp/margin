@@ -23,12 +23,30 @@ struct HTMLMessageView: View {
     init(html: SafeHTML, allowsRemote: Bool, zoom: Double = 1, fillsCard: Bool = false, onMailto: @escaping (URL) -> Void = { _ in }) {
         self.html = html
         self.allowsRemote = allowsRemote
-        self.zoom = zoom
+        // The app's size and the email text size together.
+        self.zoom = zoom * Double(Look.scale)
         self.fillsCard = fillsCard
         self.onMailto = onMailto
         // Back on a message you've read: it opens at the height it had, instead of a small
         // box that grows once the page has measured itself.
-        _height = State(initialValue: Self.heights[Self.heightKey(html.html, zoom: zoom, card: fillsCard)] ?? 120)
+        // Drawn again by a zoom step: it starts at the height it had a moment ago and eases to
+        // its new one from there, instead of jumping to a guess first.
+        let onScreen = MailWebViewPool.isRedrawing ? Self.onScreen[Self.heightKey(html.html, zoom: -1, card: fillsCard)] : nil
+        startHeight = onScreen ?? Self.height(of: html.html, zoom: self.zoom, card: fillsCard) ?? 120
+        _height = State(initialValue: startHeight)
+    }
+
+    /// The height it's first drawn at.
+    let startHeight: CGFloat
+
+    /// The height each mail on screen has right now, for its first frame after a redraw.
+    @MainActor static var onScreen: [String: CGFloat] = [:]
+
+    /// The height this mail had at this zoom; otherwise its height at another zoom, scaled, so
+    /// a zoom step starts near the right size instead of a small box.
+    @MainActor static func height(of html: String, zoom: Double, card: Bool) -> CGFloat? {
+        heights[heightKey(html, zoom: zoom, card: card)]
+            ?? heights[heightKey(html, zoom: 0, card: card)].map { $0 * zoom }
     }
 
     /// Measured heights of mail, so going back to one doesn't jump. Kept between launches too
@@ -85,9 +103,14 @@ struct HTMLMessageView: View {
             onMailto: onMailto
         )
         .frame(height: height)
+        .onAppear { Self.onScreen[Self.heightKey(html.html, zoom: -1, card: fillsCard)] = height }
         .onChange(of: height) { _, measured in
+            if Self.onScreen.count > 50 { Self.onScreen.removeAll() }
+            Self.onScreen[Self.heightKey(html.html, zoom: -1, card: fillsCard)] = measured
             if Self.heights.count > 500 { Self.heights.removeAll() }
             Self.heights[Self.heightKey(html.html, zoom: zoom, card: fillsCard)] = measured
+            // Per unit of zoom, for the first look at another zoom.
+            Self.heights[Self.heightKey(html.html, zoom: 0, card: fillsCard)] = measured / max(zoom, 0.1)
             Self.saveHeights()
         }
         .padding(fillsCard ? 0 : (onSheet ? 16 : 0))
@@ -184,7 +207,15 @@ final class HTMLWebCoordinator: NSObject, WKNavigationDelegate {
     @MainActor
     func load(_ document: String, allowsRemote: Bool, in webView: WKWebView) {
         guard loaded?.document != document || loaded?.allowsRemote != allowsRemote else { return }
+        // Kept across a redraw of the window (a zoom step): the page is already there.
+        if loaded == nil, let kept = webView as? MailWebView, kept.shown?.document == document,
+           kept.shown?.allowsRemote == allowsRemote {
+            loaded = (document, allowsRemote)
+            measure(kept, afterLayout: true)
+            return
+        }
         loaded = (document, allowsRemote)
+        (webView as? MailWebView)?.shown = (document, allowsRemote)
         if !countsAsLoading {
             countsAsLoading = true
             MailPages.started()
@@ -226,17 +257,37 @@ final class HTMLWebCoordinator: NSObject, WKNavigationDelegate {
     })()
     """
 
+    /// A page height in the page's own pixels, as points on screen.
+    static func points(css: Double, pageZoom: CGFloat) -> CGFloat {
+        (CGFloat(css) * max(pageZoom, 0.1)).rounded(.up)
+    }
+
     @MainActor
-    func measure(_ webView: WKWebView) {
+    func measure(_ webView: WKWebView, afterLayout: Bool = false) {
         // Runs in the app's own script world; the mail's scripts stay off.
-        webView.evaluateJavaScript(Self.fitScript, in: nil, in: .defaultClient) { [weak self] result in
-            guard let self, case .success(let value) = result, let number = value as? Double, number > 0 else { return }
+        let apply: (Result<Any, Error>) -> Void = { [weak self, weak webView] result in
+            guard let self, let webView, case .success(let value) = result, let css = value as? Double, css > 0 else { return }
+            // The page measures itself in its own pixels; zoomed, each is `pageZoom` points on screen.
+            let number = Self.points(css: css, pageZoom: webView.pageZoom)
             MailBenchmark.onPageMeasured?()
             guard abs(self.height.wrappedValue - number) > 1 else { return }
             // A short ease instead of a jump when the mail reflows to a new width.
             withAnimation(Look.reduceMotion ? nil : .easeOut(duration: 0.15)) { self.height.wrappedValue = number }
         }
+        if afterLayout {
+            // Just after a zoom change the page still has its old layout and answers with a
+            // height that's far off (413 for a 66-point mail): wait until it has drawn again.
+            webView.callAsyncJavaScript(Self.afterLayoutScript, arguments: [:], in: nil, in: .defaultClient) { apply($0) }
+        } else {
+            webView.evaluateJavaScript(Self.fitScript, in: nil, in: .defaultClient) { apply($0) }
+        }
     }
+
+    /// `fitScript` once the page has laid itself out again (two animation frames).
+    static let afterLayoutScript = """
+    await new Promise(function (done) { requestAnimationFrame(function () { requestAnimationFrame(done); }); });
+    return \(fitScript);
+    """
 
     /// What a navigation inside a mail may do.
     enum LinkDecision: Equatable { case load, openInBrowser, compose, ignore }
@@ -329,6 +380,10 @@ final class HTMLWebCoordinator: NSObject, WKNavigationDelegate {
 #if os(macOS)
 /// Hands scrolling to the reader around it, and re-measures when its width changes.
 final class MailWebView: WKWebView {
+    /// The page it shows, so a redrawn window can keep it instead of loading it again.
+    var shown: (document: String, allowsRemote: Bool)?
+    /// The page view that holds it now; another one may have taken it over in a redraw.
+    weak var owner: HTMLWebCoordinator?
     var onWidthChange: (() -> Void)?
     /// Pending re-measure: while a window is being resized the width changes every frame, and
     /// measuring each time re-lays out the whole reader. It waits until the width settles.
@@ -372,7 +427,8 @@ struct HTMLWebView: NSViewRepresentable {
     func makeCoordinator() -> HTMLWebCoordinator { HTMLWebCoordinator(height: $height, onMailto: onMailto) }
 
     func makeNSView(context: Context) -> MailWebView {
-        let webView = MailWebViewPool.take(background: background)
+        let webView = MailWebViewPool.take(background: background, showing: document, allowsRemote: allowsRemote,
+                                           for: context.coordinator)
         webView.navigationDelegate = context.coordinator
         webView.onWidthChange = { [weak webView, coordinator = context.coordinator] in
             guard let webView else { return }
@@ -382,8 +438,7 @@ struct HTMLWebView: NSViewRepresentable {
     }
 
     static func dismantleNSView(_ webView: MailWebView, coordinator: HTMLWebCoordinator) {
-        webView.onWidthChange = nil
-        MailWebViewPool.give(webView)
+        MailWebViewPool.release(webView, by: coordinator)
     }
 
     func updateNSView(_ webView: MailWebView, context: Context) {
@@ -392,13 +447,16 @@ struct HTMLWebView: NSViewRepresentable {
         webView.underPageBackgroundColor = NSColor(hex: background, alpha: 1)
         if abs(webView.pageZoom - zoom) > 0.01 {
             webView.pageZoom = zoom
-            context.coordinator.measure(webView)
+            context.coordinator.measure(webView, afterLayout: true)
         }
         context.coordinator.load(document, allowsRemote: allowsRemote, in: webView)
     }
 }
 #else
-final class MailWebView: WKWebView {}
+final class MailWebView: WKWebView {
+    var shown: (document: String, allowsRemote: Bool)?
+    weak var owner: HTMLWebCoordinator?
+}
 
 struct HTMLWebView: UIViewRepresentable {
     let document: String
@@ -411,13 +469,14 @@ struct HTMLWebView: UIViewRepresentable {
     func makeCoordinator() -> HTMLWebCoordinator { HTMLWebCoordinator(height: $height, onMailto: onMailto) }
 
     func makeUIView(context: Context) -> MailWebView {
-        let webView = MailWebViewPool.take(background: background)
+        let webView = MailWebViewPool.take(background: background, showing: document, allowsRemote: allowsRemote,
+                                           for: context.coordinator)
         webView.navigationDelegate = context.coordinator
         return webView
     }
 
     static func dismantleUIView(_ webView: MailWebView, coordinator: HTMLWebCoordinator) {
-        MailWebViewPool.give(webView)
+        MailWebViewPool.release(webView, by: coordinator)
     }
 
     func updateUIView(_ webView: MailWebView, context: Context) {
@@ -439,6 +498,73 @@ struct HTMLWebView: UIViewRepresentable {
 @MainActor
 enum MailWebViewPool {
     private static var ready: [MailWebView] = []
+
+    // MARK: Kept across a redraw
+
+    /// Views showing a page now, so a redrawn window can take one over.
+    private static var shown: [Weak] = []
+    /// Views let go during a redraw, kept a moment for the new window to take.
+    private static var parked: [MailWebView] = []
+    /// A look change (a zoom step, a theme) is redrawing the window right now.
+    private(set) static var isRedrawing = false
+
+    private struct Weak { weak var view: MailWebView? }
+
+    /// The window is about to be drawn again from scratch: for a moment, a page view that
+    /// shows the same mail takes over the old one's web view (already loaded, only its zoom
+    /// changes) instead of loading the mail again in a new, white one.
+    static func redrawing() {
+        guard !isRedrawing else { return }
+        isRedrawing = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            isRedrawing = false
+            let left = parked
+            parked = []
+            left.forEach(give)
+        }
+    }
+
+    /// A view for a page: during a redraw, one that already shows it; otherwise a fresh one.
+    static func take(background: UInt32, showing document: String, allowsRemote: Bool,
+                     for coordinator: HTMLWebCoordinator) -> MailWebView {
+        func same(_ view: MailWebView) -> Bool {
+            view.shown?.document == document && view.shown?.allowsRemote == allowsRemote
+        }
+        shown.removeAll { $0.view == nil }
+        var view: MailWebView?
+        if isRedrawing {
+            if let index = parked.firstIndex(where: same) {
+                view = parked.remove(at: index)
+            } else {
+                // The old window may still be up while the new one is made.
+                view = shown.lazy.compactMap(\.view).first { same($0) && $0.owner !== coordinator }
+            }
+        }
+        let chosen = view ?? take(background: background)
+        #if os(macOS)
+        chosen.underPageBackgroundColor = NSColor(hex: background, alpha: 1)
+        chosen.onWidthChange = nil
+        #endif
+        chosen.owner = coordinator
+        if !shown.contains(where: { $0.view === chosen }) { shown.append(Weak(view: chosen)) }
+        return chosen
+    }
+
+    /// A page view goes away. Its web view goes back to the pool, unless a redrawn window has
+    /// taken it over, or may still want it.
+    static func release(_ view: MailWebView, by coordinator: HTMLWebCoordinator) {
+        guard view.owner === coordinator else { return }
+        view.owner = nil
+        #if os(macOS)
+        view.onWidthChange = nil
+        #endif
+        shown.removeAll { $0.view == nil || $0.view === view }
+        if isRedrawing, view.shown != nil {
+            parked.append(view)
+        } else {
+            give(view)
+        }
+    }
     static let capacity = 3
     /// How many views were handed out again instead of made new (for tests).
     private(set) static var reused = 0
@@ -458,6 +584,7 @@ enum MailWebViewPool {
 
     static func give(_ view: MailWebView) {
         view.navigationDelegate = nil
+        view.shown = nil
         view.stopLoading()
         guard ready.count < capacity else { return }
         view.loadHTMLString("", baseURL: nil)
@@ -471,7 +598,7 @@ enum MailWebViewPool {
     }
 
     /// For tests.
-    static func empty() { ready = []; reused = 0 }
+    static func empty() { ready = []; reused = 0; parked = []; shown = []; isRedrawing = false }
 
     /// Makes `count` views ahead of time, each with its page process started, and gets the
     /// remote-content rules ready. Called at launch for the mail open on the last screen:

@@ -1182,7 +1182,7 @@ private struct ColleagueList: View {
                             focused = isAdding
                         } label: {
                             Image(systemName: "plus")
-                                .font(.system(size: 10, weight: .semibold))
+                                .font(.system(size: Look.scaled(10), weight: .semibold))
                                 .rotationEffect(.degrees(isAdding ? 45 : 0))
                                 .frame(width: 20, height: 20)
                                 .contentShape(Rectangle())

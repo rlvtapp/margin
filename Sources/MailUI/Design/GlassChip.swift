@@ -33,19 +33,19 @@ public struct GlassChip: View {
     /// One size per platform, so every chip lines up with every other: a thumb-sized chip on
     /// iPhone and iPad, a compact one on the Mac. (`size` is kept for callers; it no longer differs.)
     #if os(iOS)
-    private static let height: CGFloat = 36
-    private static let iconSize: CGFloat = 13
+    private static var height: CGFloat { Look.scaled(36) }
+    private static var iconSize: CGFloat { Look.scaled(13) }
     private static var titleFont: Font { Font.system(size: Look.size(15), weight: .medium) }
     private static var countFont: Font { Font.system(size: Look.size(13), weight: .semibold).monospacedDigit() }
-    private static let sidePadding: CGFloat = 13
-    private static let gap: CGFloat = 6
+    private static var sidePadding: CGFloat { Look.scaled(13) }
+    private static var gap: CGFloat { Look.scaled(6) }
     #else
-    private static let height: CGFloat = 26
-    private static let iconSize: CGFloat = 10.5
+    private static var height: CGFloat { Look.scaled(26) }
+    private static var iconSize: CGFloat { Look.scaled(10.5) }
     private static var titleFont: Font { TypeScale.label.weight(.medium) }
     private static var countFont: Font { TypeScale.label.monospacedDigit() }
-    private static let sidePadding: CGFloat = 10
-    private static let gap: CGFloat = 4
+    private static var sidePadding: CGFloat { Look.scaled(10) }
+    private static var gap: CGFloat { Look.scaled(4) }
     #endif
 
     public var body: some View {

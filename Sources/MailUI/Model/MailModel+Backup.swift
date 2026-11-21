@@ -55,7 +55,7 @@ public enum BackupSchedule: String, CaseIterable, Identifiable, Sendable {
 extension MailModel {
     /// Settings that travel with a backup.
     static let backedUpSettings = [
-        "assistantSettings", "connectionSettings", "prefersPlainText", "textScale", "newMailAlerts", "undoSendDelay",
+        "assistantSettings", "connectionSettings", "prefersPlainText", "textScale", "appScale", "newMailAlerts", "undoSendDelay",
         "followUpDays", "appearance", "accentIndex", "appIcon", "appIconDark", "compactRows", "density", "layout", "singleKeyShortcuts", "keyOverrides",
         "insetPanel", "showsNextUp", "labelColors", "colorBlindSafe", "increaseContrast", "underlineLinks", "darkensMail", "reduceMotion",
         "learnsWriting", "suggestsReplies", "swipeLeading", "swipeTrailing", "backupSchedule",
@@ -123,6 +123,7 @@ extension MailModel {
         }
         prefersPlainText = defaults.bool(forKey: "prefersPlainText")
         textScale = defaults.double(forKey: "textScale") == 0 ? 1 : defaults.double(forKey: "textScale")
+        appScaleOverride = defaults.double(forKey: "appScale") == 0 ? nil : AppScale.clamp(defaults.double(forKey: "appScale"))
         newMailAlerts = NewMailAlerts(rawValue: defaults.string(forKey: "newMailAlerts") ?? "") ?? .people
         undoSendDelay = defaults.object(forKey: "undoSendDelay") as? Int ?? 5
         followUpDays = defaults.object(forKey: "followUpDays") as? Int ?? 3

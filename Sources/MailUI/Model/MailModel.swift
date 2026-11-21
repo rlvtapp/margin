@@ -623,6 +623,10 @@ public final class MailModel {
     /// Changed keys: command id → key.
     public var keyOverrides: [String: String] { didSet { environment.defaults.set(keyOverrides, forKey: "keyOverrides") } }
 
+    /// How big all of Margin is, chosen by hand (⌘+ and ⌘−, Settings → Appearance); nil
+    /// follows the system's text size. Overrides the system while set; ⌘0 goes back to it.
+    public var appScaleOverride: Double? { didSet { environment.defaults.set(appScaleOverride ?? 0, forKey: "appScale") } }
+
     // Reading and alerts
     public var textScale: Double { didSet { environment.defaults.set(textScale, forKey: "textScale") } }
     public var newMailAlerts: NewMailAlerts { didSet { environment.defaults.set(newMailAlerts.rawValue, forKey: "newMailAlerts") } }
@@ -756,6 +760,8 @@ public final class MailModel {
         keyOverrides = environment.defaults.dictionary(forKey: "keyOverrides") as? [String: String] ?? [:]
         let scale = environment.defaults.double(forKey: "textScale")
         textScale = scale == 0 ? 1 : scale
+        let appScale = environment.defaults.double(forKey: "appScale")
+        appScaleOverride = appScale == 0 ? nil : AppScale.clamp(appScale)
         newMailAlerts = NewMailAlerts(rawValue: environment.defaults.string(forKey: "newMailAlerts") ?? "") ?? .people
         let delay = environment.defaults.object(forKey: "undoSendDelay") as? Int
         undoSendDelay = delay ?? 5
@@ -1529,4 +1535,15 @@ struct MailingListsKey: Equatable {
     let homeSummary = Derived<String>()
     var newsletterSave: Task<Void, Never>?
     nonisolated init() {}
+}
+
+extension MailModel {
+    /// ⌘+ (1), ⌘− (-1) and ⌘0 (0) for the whole app. A step starts from the size on screen,
+    /// so the first press from the system's size goes one step from there; ⌘0 follows the
+    /// system again.
+    public func zoomApp(_ direction: Int) {
+        guard direction != 0 else { appScaleOverride = nil; return }
+        let current = appScaleOverride ?? Double(Look.scale)
+        appScaleOverride = AppScale.clamp(current + Double(direction) * AppScale.step)
+    }
 }

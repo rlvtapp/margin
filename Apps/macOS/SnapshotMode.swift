@@ -58,6 +58,12 @@ struct SnapshotMode {
                 main.setFrame(NSRect(x: screen.minX + 20, y: screen.maxY - size.height - 20, width: size.width, height: size.height), display: true)
             }
             if ProcessInfo.processInfo.arguments.contains("-snapshot-density-compact") { model.density = .compact }
+            // -snapshot-app-scale 1.6: all of Margin at that size, to check the layout holds.
+            if let index = ProcessInfo.processInfo.arguments.firstIndex(of: "-snapshot-app-scale"),
+               ProcessInfo.processInfo.arguments.indices.contains(index + 1),
+               let scale = Double(ProcessInfo.processInfo.arguments[index + 1]) {
+                model.appScaleOverride = AppScale.clamp(scale)
+            }
             // -snapshot-ai-off: AI switched off, to see what the AI pages say then.
             if ProcessInfo.processInfo.arguments.contains("-snapshot-ai-off") { model.usesAI = false }
             if ProcessInfo.processInfo.arguments.contains("-snapshot-contrast") { model.increaseContrast = true }

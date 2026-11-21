@@ -7,7 +7,7 @@ import WebKit
 
 /// Lists worked out from the mail are kept until the mail changes, and views that showed the old
 /// list are told when it does.
-@MainActor @Suite struct DerivedTests {
+@MainActor @Suite(.serialized) struct DerivedTests {
     private final class Flag: @unchecked Sendable { var fired = false }
 
     @Test func aListIsWorkedOutOnceUntilTheMailChanges() async throws {
@@ -86,6 +86,75 @@ import WebKit
         }
         #expect(MailWebViewPool.reused == 1)
         MailWebViewPool.empty()
+    }
+
+    private func coordinator() -> HTMLWebCoordinator { HTMLWebCoordinator(height: .constant(0), onMailto: { _ in }) }
+
+    /// A zoom step draws the window again. The mail on screen keeps its web view, already
+    /// loaded, instead of a new white one loading it again, whichever comes first: the new
+    /// page view, or the old one going away.
+    @Test func aRedrawKeepsTheLoadedMail() {
+        MailWebViewPool.empty()
+        defer { MailWebViewPool.empty() }
+        let old = coordinator(), new = coordinator(), later = coordinator()
+        let view = MailWebViewPool.take(background: 0xFFFFFF, showing: "<p>Hi</p>", allowsRemote: false, for: old)
+        view.shown = ("<p>Hi</p>", false)
+        let window = NSView()
+        window.addSubview(view)
+
+        // The new window is made while the old one is still up.
+        MailWebViewPool.redrawing()
+        let taken = MailWebViewPool.take(background: 0xFFFFFF, showing: "<p>Hi</p>", allowsRemote: false, for: new)
+        #expect(taken === view)
+        // The old page view going away doesn't take it back.
+        MailWebViewPool.release(view, by: old)
+        #expect(view.owner === new)
+        #expect(view.shown?.document == "<p>Hi</p>")
+
+        // The other order: the old one goes first, the new one finds it parked.
+        MailWebViewPool.release(view, by: new)
+        let again = MailWebViewPool.take(background: 0xFFFFFF, showing: "<p>Hi</p>", allowsRemote: false, for: later)
+        #expect(again === view)
+    }
+
+    @Test func outsideARedrawEveryPageGetsItsOwnView() {
+        MailWebViewPool.empty()
+        defer { MailWebViewPool.empty() }
+        let first = MailWebViewPool.take(background: 0xFFFFFF, showing: "<p>Hi</p>", allowsRemote: false, for: coordinator())
+        first.shown = ("<p>Hi</p>", false)
+        NSView().addSubview(first)
+        let second = MailWebViewPool.take(background: 0xFFFFFF, showing: "<p>Hi</p>", allowsRemote: false, for: coordinator())
+        #expect(second !== first)
+        // Another mail, or the same mail with pictures allowed, is never taken over.
+        MailWebViewPool.redrawing()
+        let other = MailWebViewPool.take(background: 0xFFFFFF, showing: "<p>Hi</p>", allowsRemote: true, for: coordinator())
+        #expect(other !== first)
+    }
+
+    /// During a redraw a mail starts at the height it had on screen, not a guess.
+    @Test func aRedrawStartsAtTheHeightOnScreen() {
+        MailWebViewPool.empty()
+        defer { MailWebViewPool.empty(); HTMLMessageView.onScreen = [:] }
+        let html = HTMLSanitizer.sanitize("<p>Hi</p>")
+        HTMLMessageView.onScreen[HTMLMessageView.heightKey(html.html, zoom: -1, card: false)] = 417
+        MailWebViewPool.redrawing()
+        let view = HTMLMessageView(html: html, allowsRemote: false, zoom: 1.3)
+        #expect(view.startHeight == 417)
+    }
+
+    /// Zoomed to 150%, a page that measures 640 of its own pixels is 960 points tall.
+    @Test func aZoomedPageIsMeasuredInPoints() {
+        #expect(HTMLWebCoordinator.points(css: 640, pageZoom: 1.5) == 960)
+        #expect(HTMLWebCoordinator.points(css: 408, pageZoom: 1) == 408)
+    }
+
+    @Test func aZoomStepStartsNearTheRightHeight() {
+        let saved = HTMLMessageView.heights
+        defer { HTMLMessageView.heights = saved }
+        HTMLMessageView.heights[HTMLMessageView.heightKey("<p>Hi</p>", zoom: 0, card: false)] = 300
+        #expect(HTMLMessageView.height(of: "<p>Hi</p>", zoom: 1.2, card: false) == 360)
+        HTMLMessageView.heights[HTMLMessageView.heightKey("<p>Hi</p>", zoom: 1.2, card: false)] = 350
+        #expect(HTMLMessageView.height(of: "<p>Hi</p>", zoom: 1.2, card: false) == 350)
     }
 
     @Test func aBigTextKeyIsStableAndTellsTextsApart() {

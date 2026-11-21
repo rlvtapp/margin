@@ -139,6 +139,9 @@ fi
 [[ $ENCLOSURE == *edSignature=* ]] || { print "sign_update gave no signature: $ENCLOSURE"; exit 1; }
 
 MINIMUM=$(/usr/libexec/PlistBuddy -c "Print :LSMinimumSystemVersion" "$APP/Contents/Info.plist")
+# What's New for this version, in each language, shown in the update window (docs/changelog.md).
+NOTES=$("$ROOT/scripts/release-notes.py" "$MARGIN_VERSION")
+[[ -n $NOTES ]] || print "No What's New notes for $MARGIN_VERSION; the update window shows none."
 cat > "$OUT/appcast.xml" <<XML
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
@@ -150,6 +153,7 @@ cat > "$OUT/appcast.xml" <<XML
       <sparkle:version>$BUILD</sparkle:version>
       <sparkle:shortVersionString>$MARGIN_VERSION</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>$MINIMUM</sparkle:minimumSystemVersion>
+$NOTES
       <sparkle:fullReleaseNotesLink>https://github.com/$REPO/releases/tag/v$MARGIN_VERSION</sparkle:fullReleaseNotesLink>
       <enclosure url="$DOWNLOADS/Margin.zip" type="application/octet-stream" $ENCLOSURE/>
     </item>

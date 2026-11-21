@@ -26,6 +26,20 @@ public enum Changelog {
     /// Newest first. Add a release at the top when tagging a new version.
     public static var releases: [ChangelogRelease] {
         [
+            ChangelogRelease(version: "2026.11.21", changes: [
+                .init(symbol: "power", hue: 0,
+                      title: String(localized: "Stays closed when you quit"),
+                      detail: String(localized: "Margin no longer opens again by itself after you quit it, and quitting is quicker.")),
+                .init(symbol: "sparkles", hue: 1,
+                      title: String(localized: "AI apps while Margin is closed"),
+                      detail: String(localized: "AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask.")),
+                .init(symbol: "envelope", hue: 2,
+                      title: String(localized: "Feedback and crash reports"),
+                      detail: String(localized: "Send feedback from Help or Settings, and after a crash, review a report before it's sent.")),
+                .init(symbol: "paintpalette", hue: 3,
+                      title: String(localized: "Readable on every accent colour"),
+                      detail: String(localized: "Text on buttons and events in your accent colour stays easy to read, whichever colour you pick.")),
+            ]),
             ChangelogRelease(version: "2026.11.19", changes: [
                 .init(symbol: "calendar", hue: 0,
                       title: String(localized: "A full calendar"),

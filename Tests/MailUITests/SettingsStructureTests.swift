@@ -70,7 +70,8 @@ import Testing
         #expect(SettingsPage.groups(matching: "no such setting anywhere").isEmpty)
         // Words are found from their start, so "ai" doesn't find every "mail" and "email".
         #expect(!SettingsPage.mailboxes.matches("ai") && !SettingsPage.general.matches("ai") && !SettingsPage.notifications.matches("ai"))
-        #expect(SettingsPage.groups(matching: "ai").flatMap(\.pages) == SettingsPage.groups.first { $0.id == "ai" }?.pages)
+        // What's New lists its notes too, so a release about AI apps is found as well.
+        #expect(SettingsPage.groups(matching: "ai").flatMap(\.pages).filter { $0 != .changelog } == SettingsPage.groups.first { $0.id == "ai" }?.pages)
         #expect(SettingsPage.holds("收件箱整理", "整理"))
         #expect(SettingsPage.groups(matching: "").flatMap(\.pages) == SettingsPage.groups.flatMap(\.pages))
     }

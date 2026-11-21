@@ -26,8 +26,11 @@ Margin keeps a short list of what changed in each version, inside the app.
    works. One SF Symbol and an account colour (`hue`) each.
 3. Every title and sentence is `String(localized:)`, so translate them like any other string
    ([localization.md](localization.md)). Notes that aren't translated show in English.
-4. Tag and release as in [updates.md](updates.md). The GitHub release notes can be copied from
-   the same lines.
+4. Tag and release as in [updates.md](updates.md). The release script puts the same notes in the
+   update feed (`scripts/release-notes.py`): one Sparkle `<description>` per language from the
+   string catalog, so the update window shows what's new in the Mac's language before people
+   install. A version without its own entry gets no notes there. The GitHub release notes can be
+   copied from the same lines.
 
 `ChangelogTests` checks the list stays newest first and that the sheet opens only after an update.
 

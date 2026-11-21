@@ -116,7 +116,7 @@ extension MailModel {
                 noteSent(draft, account: account)
                 notice = Notice(text: String(localized: "Reacted \(emoji) to \(message.from.displayName)"))
             } catch {
-                show(error)
+                show(error, account: account.id)
             }
         }
     }

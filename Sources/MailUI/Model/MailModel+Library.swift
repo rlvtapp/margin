@@ -129,7 +129,7 @@ extension MailModel {
                 mailboxes[accountID] = boxes
                 await environment.cache.saveMailboxes(boxes, account: accountID)
             } catch {
-                show(error)
+                show(error, account: accountID)
             }
         }
     }

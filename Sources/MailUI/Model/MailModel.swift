@@ -1094,7 +1094,9 @@ public final class MailModel {
         return copy
     }
 
-    public func go(to place: Place) {
+    /// `selecting`: that conversation is opened in the new place instead of its first one
+    /// (Next up opens a snoozed or waiting conversation this way).
+    public func go(to place: Place, selecting thread: MailThread.ID? = nil) {
         // Older mail that was scrolled to in the list being left isn't kept: every list starts
         // from its newest page, so memory and the work per refresh follow where you are.
         forgetOlderMail()
@@ -1105,14 +1107,14 @@ public final class MailModel {
         reply = nil
         if place.isFolder {
             folder = folderMemory[place] ?? []
-            selectedThreadID = nil
+            selectedThreadID = thread
             Task {
                 await loadFolder(for: place)
-                selectedThreadID = firstConversation
+                selectedThreadID = thread ?? firstConversation
                 await loadBodies()
             }
         } else {
-            selectedThreadID = firstConversation
+            selectedThreadID = thread ?? firstConversation
             Task { await loadBodies() }
         }
         focusRequest += 1
@@ -1197,8 +1199,9 @@ public final class MailModel {
                 await environment.cache.saveThreads(fetched.map { Self.untagged($0) }, account: accountID, mailbox: mailbox.id, limit: limit)
             }
         }
-        if case .failure(let error) = results.first(where: { if case .failure = $0 { true } else { false } }) {
-            show(error)
+        if let (accountID, error) = answers.lazy.compactMap({ answer -> (UUID, Error)? in
+            if case .failure(let error) = answer.1 { (answer.0, error) } else { nil } }).first {
+            show(error, account: accountID)
         }
     }
 
@@ -1419,6 +1422,13 @@ public final class MailModel {
 
     public func show(_ error: Error) {
         notice = Notice(text: error.localizedDescription, isError: true)
+    }
+
+    /// An error from one mailbox: with more than one, it says which ("Work: Sign-in was refused").
+    public func show(_ error: Error, account id: UUID?) {
+        guard accounts.count > 1, let account = id.flatMap(account) else { return show(error) }
+        let name = account.label.isEmpty ? account.address.address : account.label
+        notice = Notice(text: String(localized: "\(name): \(error.localizedDescription)"), isError: true)
     }
 }
 

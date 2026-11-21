@@ -292,7 +292,7 @@ extension MailModel {
     /// Sends from the draft's account; on failure the draft stays open with the error.
     public func send(_ state: ComposeState) async -> Bool {
         if let error = await attemptSend(state) {
-            show(error)
+            show(error, account: state.accountID)
             return false
         }
         return true

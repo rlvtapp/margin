@@ -220,7 +220,7 @@ extension MailModel {
                 busy.merge(found) { $1 }
             } catch {
                 Self.calendarLog.error("colleagues: free/busy failed: \(error.localizedDescription, privacy: .public)")
-                if force { show(error) }
+                if force { show(error, account: accountID) }
             }
         }
         colleagueBusy = busy

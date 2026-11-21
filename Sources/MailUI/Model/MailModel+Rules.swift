@@ -309,7 +309,7 @@ extension MailModel {
             do {
                 try await provider.send(withSenderName(draft, account: account))
             } catch {
-                show(error)
+                show(error, account: account.id)
             }
         }
     }

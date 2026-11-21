@@ -104,7 +104,7 @@ extension MailModel {
                 if let old = state.editedDraft { await apply(.trash, to: [old], announce: false) }
                 notice = Notice(text: String(localized: "No connection. It'll send as soon as you're back online."))
             } else {
-                show(error)
+                show(error, account: state.accountID)
                 reopen(pending)
             }
         } else if let old = state.editedDraft {

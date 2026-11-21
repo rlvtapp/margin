@@ -76,6 +76,7 @@ public struct TouchMailView: View {
         // Colours are read from the tokens, so redraw everything when the look changes.
         .id(lookKey)
         .environment(\.mailAccent, Palette.account(model.accentIndex))
+        .environment(\.mailAccentInk, Palette.onAccount(model.accentIndex))
         .preferredColorScheme(model.appearance.colorScheme)
         // A message put away while looking at other mail waits at the top.
         .safeAreaInset(edge: .top, spacing: 0) {

@@ -120,6 +120,7 @@ public struct MailRootView: View {
         .id(lookKey)
         .background(Paper.sidebar)
         .environment(\.mailAccent, Palette.account(model.accentIndex))
+        .environment(\.mailAccentInk, Palette.onAccount(model.accentIndex))
         .preferredColorScheme(model.appearance.colorScheme)
         .onChange(of: model.dropDownAlert?.id) { _, id in
             #if os(macOS)

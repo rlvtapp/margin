@@ -55,6 +55,7 @@ struct PlacedMeeting: Identifiable {
 /// reminders in a strip above, and a line for now.
 struct CalendarTimeline: View {
     @Environment(\.mailAccent) private var accent
+    @Environment(\.mailAccentInk) private var accentInk
     let model: MailModel
     let visibleDays: [Date]
     /// Clicking a day's heading in a week opens that day.
@@ -213,7 +214,7 @@ struct CalendarTimeline: View {
                             .foregroundStyle(isToday ? accent : Ink.tertiary)
                         Text(verbatim: "\(Calendar.current.component(.day, from: day))")
                             .font(.system(size: Look.size(13), weight: .semibold).monospacedDigit())
-                            .foregroundStyle(isToday ? Ink.inverse : Ink.primary)
+                            .foregroundStyle(isToday ? accentInk : Ink.primary)
                             .frame(minWidth: 24, minHeight: 24)
                             .background { if isToday { Circle().fill(accent) } }
                     }
@@ -356,7 +357,7 @@ struct CalendarTimeline: View {
                             .allowsHitTesting(false)
                         Text(verbatim: now.formatted(date: .omitted, time: .shortened))
                             .font(.system(size: Look.size(10), weight: .semibold).monospacedDigit())
-                            .foregroundStyle(.white)
+                            .foregroundStyle(accentInk)
                             .padding(.horizontal, 5)
                             .frame(height: 16)
                             .background(accent, in: Capsule())
@@ -644,6 +645,7 @@ private struct MeetingBlock: View {
 /// double-click for an hour from there. Snaps to the quarter hour.
 private struct NewEventSurface: View {
     @Environment(\.mailAccent) private var accent
+    @Environment(\.mailAccentInk) private var accentInk
     let day: Date
     let hourHeight: CGFloat
     let width: CGFloat
@@ -990,6 +992,7 @@ private struct MonthWeekRow: View {
 
 private struct MonthDayBox: View {
     @Environment(\.mailAccent) private var accent
+    @Environment(\.mailAccentInk) private var accentInk
     @Environment(CalendarEditor.self) private var editor: CalendarEditor?
     let model: MailModel
     let day: Date
@@ -1013,7 +1016,7 @@ private struct MonthDayBox: View {
                 Text(verbatim: first && !isToday ? day.formatted(.dateTime.day().month(.abbreviated))
                                                  : "\(Calendar.current.component(.day, from: day))")
                     .font(.system(size: Look.size(12), weight: isToday || first ? .bold : .medium).monospacedDigit())
-                    .foregroundStyle(isToday ? Ink.inverse : inMonth ? Ink.primary : Ink.quaternary)
+                    .foregroundStyle(isToday ? accentInk : inMonth ? Ink.primary : Ink.quaternary)
                     .padding(.horizontal, first && !isToday ? 4 : 0)
                     .frame(minWidth: 22, minHeight: 22)
                     .background { if isToday { Circle().fill(accent) } }

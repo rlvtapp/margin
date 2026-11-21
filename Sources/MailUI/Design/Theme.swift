@@ -207,10 +207,21 @@ public struct MailAccentKey: EnvironmentKey {
     public static var defaultValue: Color { Palette.accent }
 }
 
+/// Text and symbols drawn on the accent (a badge, today's date, a filled button): dark or
+/// light, whichever reads better on the accent picked, in light and in dark.
+public struct MailAccentInkKey: EnvironmentKey {
+    public static var defaultValue: Color { .white }
+}
+
 extension EnvironmentValues {
     public var mailAccent: Color {
         get { self[MailAccentKey.self] }
         set { self[MailAccentKey.self] = newValue }
+    }
+
+    public var mailAccentInk: Color {
+        get { self[MailAccentInkKey.self] }
+        set { self[MailAccentInkKey.self] = newValue }
     }
 }
 
@@ -266,6 +277,19 @@ public enum Palette {
     public static func account(_ index: Int) -> Color {
         let hue = hues[((index % hues.count) + hues.count) % hues.count]
         return Color.adaptive(hue.0, hue.1)
+    }
+
+    /// Text on an account colour filled in (the accent behind a badge or today's date): white
+    /// or near-black, whichever has more contrast on that colour, in light and in dark.
+    public static func onAccount(_ index: Int) -> Color {
+        let hue = hues[((index % hues.count) + hues.count) % hues.count]
+        func ink(on hex: UInt32) -> UInt32 {
+            let colour = Contrast.components(hex)
+            let white = Contrast.ratio(colour, (255, 255, 255)), dark = Contrast.ratio(colour, (17, 17, 17))
+            // White when it reads well enough: it's the calmer look on a strong colour.
+            return white >= 3.2 || white >= dark ? 0xFFFFFF : 0x111111
+        }
+        return Color.adaptive(ink(on: hue.0), ink(on: hue.1))
     }
 
     /// Text in a label's colour, on that colour's light tint: the hue darkened (light) or

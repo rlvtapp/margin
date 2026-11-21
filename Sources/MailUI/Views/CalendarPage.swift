@@ -66,6 +66,11 @@ struct CalendarPage: View {
                     }
                     .frame(width: 236 + side)
                     .scrollIndicators(.never)
+                    // The hairline at its edge sits on top, so the calendar's own background
+                    // beside it can't cover it.
+                    .overlay(alignment: .trailing) {
+                        Rectangle().fill(Line.hairline).frame(width: 1).ignoresSafeArea().allowsHitTesting(false)
+                    }
                 }
                 VStack(alignment: .leading, spacing: 0) {
                     toolbar(mode: mode, modes: modes, hasSidebar: hasSidebar)
@@ -88,12 +93,11 @@ struct CalendarPage: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            // The sidebar on the mailbox list's grey, the whole height, with a hairline beside it.
+            // The sidebar on the mailbox list's grey, the whole height.
             .background {
                 HStack(spacing: 0) {
                     if hasSidebar {
                         Paper.sidebar.frame(width: 236 + side)
-                        Rectangle().fill(Line.hairline).frame(width: 1)
                     }
                     Paper.panel
                 }
@@ -284,6 +288,7 @@ struct CalendarPage: View {
 /// have something on. Today is in the accent colour; the chosen day sits on a soft circle.
 struct MonthGrid: View {
     @Environment(\.mailAccent) private var accent
+    @Environment(\.mailAccentInk) private var accentInk
     @Binding var month: Date
     @Binding var day: Date
     let marked: Set<Date>
@@ -355,6 +360,7 @@ struct MonthGrid: View {
 
 private struct DayCell: View {
     @Environment(\.mailAccent) private var accent
+    @Environment(\.mailAccentInk) private var accentInk
     let date: Date
     let inMonth: Bool
     let isChosen: Bool
@@ -389,6 +395,7 @@ private struct DayCell: View {
 /// gaps of half an hour or more say so, and a meeting that clashes with the one before says it.
 private struct AgendaList: View {
     @Environment(\.mailAccent) private var accent
+    @Environment(\.mailAccentInk) private var accentInk
     let model: MailModel
     let items: [AgendaItem]
     let from: Date
@@ -563,6 +570,7 @@ enum Countdown {
 /// Where now is in today's meetings: a dot, the time and a thin line in the accent colour.
 private struct NowLine: View {
     @Environment(\.mailAccent) private var accent
+    @Environment(\.mailAccentInk) private var accentInk
     let time: Date
 
     var body: some View {
@@ -585,6 +593,7 @@ private struct NowLine: View {
 /// email its invitation came in.
 struct AgendaRow: View {
     @Environment(\.mailAccent) private var accent
+    @Environment(\.mailAccentInk) private var accentInk
     let model: MailModel
     @Environment(CalendarEditor.self) private var editor: CalendarEditor?
     let item: AgendaItem
@@ -680,6 +689,7 @@ struct AgendaRow: View {
 /// Yes, Maybe and No; your answer is filled in the accent colour.
 struct GoingPicker: View {
     @Environment(\.mailAccent) private var accent
+    @Environment(\.mailAccentInk) private var accentInk
     let response: CalendarInvite.Response?
     /// An answer is on its way: the picker waits, so it can't be sent twice.
     var isSending = false
@@ -692,7 +702,7 @@ struct GoingPicker: View {
                 Button { choose(option) } label: {
                     Text(verbatim: option.shortTitle)
                         .font(.system(size: Look.size(12), weight: .semibold))
-                        .foregroundStyle(isOn ? Ink.inverse : Ink.secondary)
+                        .foregroundStyle(isOn ? accentInk : Ink.secondary)
                         .padding(.horizontal, 11)
                         .frame(height: Look.gap(24))
                         .background(isOn ? accent : Fill.one, in: Capsule())
@@ -713,12 +723,13 @@ struct GoingPicker: View {
 /// tint of it before that.
 struct JoinButtonStyle: ButtonStyle {
     @Environment(\.mailAccent) private var accent
+    @Environment(\.mailAccentInk) private var accentInk
     let prominent: Bool
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: Look.size(12), weight: .semibold))
-            .foregroundStyle(prominent ? Ink.inverse : accent)
+            .foregroundStyle(prominent ? accentInk : accent)
             .padding(.horizontal, 16)
             .frame(height: Look.gap(28))
             .background(prominent ? accent : accent.opacity(0.12), in: Capsule())
@@ -731,6 +742,7 @@ struct JoinButtonStyle: ButtonStyle {
 /// Each in its own colour, as on the page. Connecting and showing more happens here too.
 struct CalendarSources: View {
     @Environment(\.mailAccent) private var accent
+    @Environment(\.mailAccentInk) private var accentInk
     let model: MailModel
     let month: Date
     @Environment(\.webAuthenticationSession) private var webAuthentication
@@ -1010,6 +1022,7 @@ private struct FoldButton: View {
 /// whatever goes on the right.
 private struct CalendarCheckRow<Trailing: View>: View {
     @Environment(\.mailAccent) private var accent
+    @Environment(\.mailAccentInk) private var accentInk
     let title: String
     /// Nil for the app's accent colour.
     let colorIndex: Int?
@@ -1094,6 +1107,7 @@ struct ReminderRow: View {
 /// The circle that ticks a reminder done, here and in the Reminders app.
 struct ReminderCheck: View {
     @Environment(\.mailAccent) private var accent
+    @Environment(\.mailAccentInk) private var accentInk
     let model: MailModel
     let reminder: DueReminder
     var size: CGFloat = 16

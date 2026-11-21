@@ -227,6 +227,7 @@ private struct RailButton<Face: View>: View {
     @ViewBuilder let face: Face
     let action: () -> Void
     @Environment(\.mailAccent) private var accent
+    @Environment(\.mailAccentInk) private var accentInk
     @State private var isHovered = false
 
     init(help: Text, badge: Int, isSelected: Bool, hasError: Bool = false, isAvatar: Bool = false,
@@ -290,7 +291,7 @@ private struct RailButton<Face: View>: View {
         } else if badge > 0 {
             Text(verbatim: "\(badge)")
                 .font(.system(size: Look.size(9), weight: .semibold).monospacedDigit())
-                .foregroundStyle(.white)
+                .foregroundStyle(accentInk)
                 .padding(.horizontal, 4)
                 .frame(minWidth: 15, minHeight: 15)
                 .background(accent, in: Capsule())

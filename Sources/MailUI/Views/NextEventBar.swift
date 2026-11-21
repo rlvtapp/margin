@@ -36,6 +36,8 @@ struct NextEventBar: View {
 /// The next meeting as a small chip at the top right of the Mac window: what, when, and Join.
 struct NextEventChip: View {
     let model: MailModel
+    @Environment(\.mailAccent) private var accent
+    @Environment(\.mailAccentInk) private var accentInk
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -58,10 +60,10 @@ struct NextEventChip: View {
                     Button("Join") { openURL(join) }
                         .buttonStyle(.plain)
                         .font(TypeScale.label.weight(.semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(accentInk)
                         .padding(.horizontal, 10)
                         .frame(height: Look.gap(22))
-                        .background(Palette.accent, in: Capsule())
+                        .background(accent, in: Capsule())
                 }
             }
             .padding(.leading, 10)

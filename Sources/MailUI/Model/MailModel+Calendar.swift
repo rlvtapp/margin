@@ -22,6 +22,10 @@ public struct CalendarEntry: Codable, Hashable, Identifiable, Sendable {
     public var accountID: UUID?
     /// Sent from here, so answers come back to this person.
     public var isMine = false
+    /// Seen on its mailbox's calendar: once it's gone from there (declined or removed, maybe in
+    /// another app), the invitation no longer brings it back. Never seen there, it stays, since
+    /// not every calendar adds invitations before they're answered.
+    public var wasOnCalendar: Bool?
 
     public var finish: Date { end ?? start.addingTimeInterval(isAllDay ? 86_400 : 3600) }
 }
@@ -68,6 +72,7 @@ extension MailModel {
         var entries = calendarEntries
         // A reply: someone answered a meeting; it changes their answer, not the meeting.
         if invite.method == "REPLY" {
+            noteOwnReply(invite, sentAt: found.message.date)
             guard let index = entries.firstIndex(where: { $0.id == invite.uid }) else { return }
             let updated = entries[index].attendees.updating(with: invite.attendees)
             guard updated != entries[index].attendees else { return }
@@ -86,6 +91,7 @@ extension MailModel {
         if let index = entries.firstIndex(where: { $0.id == entry.id }) {
             // Answers already known stay; the invitation's own list may be older.
             entry.attendees = invite.attendees.updating(with: entries[index].attendees.filter { $0.response != nil })
+            entry.wasOnCalendar = entries[index].wasOnCalendar
             guard entries[index] != entry else { return }
             entries[index] = entry
         } else {
@@ -97,6 +103,18 @@ extension MailModel {
         calendarStore = entries
         if !environment.isPreview { calendarFile.save(entries) }
         scheduleEventReminders()
+    }
+
+    /// Your own answer, sent from any app (an Outlook decline sitting in Sent): it's your answer
+    /// now, in place of an older one given in Margin, unless Margin's is newer.
+    func noteOwnReply(_ reply: CalendarInvite, sentAt date: Date) {
+        let mine = Set(accounts.flatMap(\.sendAddresses).map { $0.address.lowercased() })
+        guard let response = reply.attendees.first(where: { mine.contains($0.id) })?.response else { return }
+        if let known = sentAnswers[reply.uid], known.at.map({ $0 >= date }) ?? false { return }
+        guard sentAnswers[reply.uid]?.response != response || rsvps[reply.uid] != response else { return }
+        sentAnswers[reply.uid] = SentAnswer(response: response, sequence: reply.sequence, at: date)
+        rsvps[reply.uid] = response
+        if !environment.isPreview { saveSentAnswers() }
     }
 
     /// Keeps the calendar and its reminders up to date.

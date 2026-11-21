@@ -225,7 +225,7 @@ extension MailModel {
             }
             let device = DeviceCalendar.shared, showsEvents = showsDeviceCalendar
             let events = await Task.detached { showsEvents ? device.events(from: start, to: end) : [] }.value
-            items = agenda(from: start, to: end, accountEvents: accountEvents, deviceEvents: events)
+            items = agenda(from: start, to: end, accountEvents: accountEvents, deviceEvents: events, accountsRead: start...end)
             if forAIApps { lastToolEvents[ObjectIdentifier(self)] = items }
         }
         guard forAIApps else { return (items, unreadable) }

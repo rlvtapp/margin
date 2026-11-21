@@ -31,6 +31,46 @@ import Testing
             .contains(Calendar.current.startOfDay(for: start)))
     }
 
+    /// A meeting declined in another app leaves its mailbox's calendar but its invitation stays in
+    /// the mail: once it was seen on that calendar and is gone from it, the old invitation doesn't
+    /// bring it back. One never seen there (not answered yet) still shows.
+    @Test func aMeetingDeclinedElsewhereGoes() async throws {
+        let model = MailModel(environment: .preview())
+        await model.reload()
+        let account = try #require(model.accounts.first)
+        let start = Date().addingTimeInterval(3 * 86_400)
+        var declined = CalendarEntry(id: "declined-uid", title: "Vendor call", start: start, end: start.addingTimeInterval(1800),
+                                     isAllDay: false, threadID: "t1", cancelled: false)
+        declined.accountID = account.id
+        model.saveCalendar([declined])
+        let range = { model.agenda(from: Date(), to: Date().addingTimeInterval(7 * 86_400)).map(\.title) }
+        #expect(range() == ["Vendor call"])
+
+        model.calendarEventsRange = Date().addingTimeInterval(-86_400)...Date().addingTimeInterval(30 * 86_400)
+        model.calendarEvents[account.id] = []
+        model.noteInvitationsOnCalendars()
+        #expect(range() == ["Vendor call"], "not on the calendar yet: still an invitation to answer")
+
+        model.calendarEvents[account.id] = [CalendarEvent(id: "e1", uid: "declined-uid", title: "Vendor call",
+                                                          start: start, end: start.addingTimeInterval(1800))]
+        model.noteInvitationsOnCalendars()
+        model.calendarEvents[account.id] = []
+        #expect(range().isEmpty)
+        #expect(model.upcomingEvents.isEmpty)
+
+        model.calendarEvents[account.id] = nil
+        #expect(range() == ["Vendor call"], "a calendar that wasn't read says nothing")
+
+        // Declined here or elsewhere (the answer is in the mail): off the Calendar page, still known.
+        model.calendarEvents[account.id] = nil
+        var answered = declined
+        answered.attendees = [MeetingAttendee(address: account.address, response: .declined)]
+        model.saveCalendar([answered])
+        let week = (Date(), Date().addingTimeInterval(7 * 86_400))
+        #expect(model.calendarItems(from: week.0, to: week.1).isEmpty)
+        #expect(model.agenda(from: week.0, to: week.1).map(\.response) == [.declined])
+    }
+
     /// Microsoft gives a meeting from elsewhere its own id, carrying the invitation's UID, and
     /// a different id per occurrence: the invitation and the calendar's event are still one item,
     /// which opens the invitation's mail.
@@ -192,5 +232,53 @@ import Testing
         ]
         let clashes = model.clashes(start: start, end: start.addingTimeInterval(1800), uid: "INVITE-UID", title: "Kickoff")
         #expect(clashes.map(\.title) == ["Dentist"])
+    }
+}
+
+@MainActor @Suite struct AnswerElsewhereTests {
+    static func reply(_ response: String, from address: String) -> CalendarInvite {
+        CalendarInvite.parse("""
+        BEGIN:VCALENDAR
+        METHOD:REPLY
+        BEGIN:VEVENT
+        UID:meeting-uid
+        SEQUENCE:0
+        DTSTART:20301107T090000Z
+        SUMMARY:Vendor call
+        ATTENDEE;PARTSTAT=\(response):mailto:\(address)
+        END:VEVENT
+        END:VCALENDAR
+        """)!
+    }
+
+    /// Accepted in Margin, declined later in another app (its reply is in Sent): declined wins.
+    /// The older acceptance read again afterwards doesn't bring it back.
+    @Test func aNewerAnswerFromAnotherAppWins() async throws {
+        let model = MailModel(environment: .preview())
+        await model.reload()
+        let me = try #require(model.accounts.first).address.address
+        let accepted = Date().addingTimeInterval(-3600)
+        model.sentAnswers["meeting-uid"] = SentAnswer(response: .accepted, sequence: 0, at: accepted)
+        model.rsvps["meeting-uid"] = .accepted
+        model.noteOwnReply(Self.reply("DECLINED", from: me), sentAt: Date())
+        #expect(model.rsvps["meeting-uid"] == .declined)
+        model.noteOwnReply(Self.reply("ACCEPTED", from: me), sentAt: accepted.addingTimeInterval(-60))
+        #expect(model.rsvps["meeting-uid"] == .declined)
+        // Someone else's answer isn't yours.
+        model.noteOwnReply(Self.reply("ACCEPTED", from: "someone@example.com"), sentAt: Date().addingTimeInterval(60))
+        #expect(model.rsvps["meeting-uid"] == .declined)
+    }
+
+    /// Someone else's meeting can be deleted (which declines it); a device event you only read can't.
+    @Test func othersMeetingsCanBeDeletedByDeclining() async throws {
+        let model = MailModel(environment: .preview())
+        await model.reload()
+        let account = try #require(model.accounts.first)
+        var invite = CalendarEntry(id: "x-uid", title: "Vendor call", start: Date().addingTimeInterval(86_400), end: nil,
+                                   isAllDay: false, organizer: "Sam", threadID: "t1", cancelled: false)
+        invite.accountID = account.id
+        model.saveCalendar([invite])
+        let item = try #require(model.agenda(from: Date(), to: Date().addingTimeInterval(2 * 86_400)).first { $0.title == "Vendor call" })
+        #expect(!model.canChange(item) && model.canDelete(item))
     }
 }

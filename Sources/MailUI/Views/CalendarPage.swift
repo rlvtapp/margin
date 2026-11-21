@@ -203,7 +203,7 @@ struct CalendarPage: View {
 
     private var agendaView: some View {
         let end = Calendar.current.date(byAdding: .day, value: 14, to: day) ?? day
-        return AgendaList(model: model, items: model.agenda(from: day, to: end), from: day, to: end)
+        return AgendaList(model: model, items: model.calendarItems(from: day, to: end), from: day, to: end)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
@@ -1135,9 +1135,9 @@ struct EventMenu: View {
     @Environment(CalendarEditor.self) private var editor: CalendarEditor?
 
     var body: some View {
-        if model.canChange(item), let editor {
-            Button("Edit…") { editor.edit(item) }
-            Button("Delete", role: .destructive) { editor.delete(item) }
+        if let editor, model.canDelete(item) {
+            if model.canChange(item) { Button("Edit…") { editor.edit(item) } }
+            Button(model.canChange(item) ? "Delete" : "Decline and Delete", role: .destructive) { editor.delete(item) }
             Divider()
         }
         if item.invitationThreadID != nil {

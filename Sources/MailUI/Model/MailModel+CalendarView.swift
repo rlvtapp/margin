@@ -126,12 +126,13 @@ extension MailModel {
     /// Everything on the calendar between two moments, soonest first: account calendars, and
     /// invitations from mail that aren't already there. Cancelled events are left out.
     public func agenda(from start: Date, to end: Date) -> [AgendaItem] {
-        agenda(from: start, to: end, accountEvents: calendarEvents, deviceEvents: deviceEvents)
+        agenda(from: start, to: end, accountEvents: calendarEvents, deviceEvents: deviceEvents, accountsRead: calendarEventsRange)
     }
 
     /// The same, from events read for another range (AI apps asking about other months), so the
-    /// page's own months stay as they are.
-    func agenda(from start: Date, to end: Date, accountEvents: [UUID: [CalendarEvent]], deviceEvents: [CalendarEvent]) -> [AgendaItem] {
+    /// page's own months stay as they are. `accountsRead` is the time `accountEvents` covers.
+    func agenda(from start: Date, to end: Date, accountEvents: [UUID: [CalendarEvent]], deviceEvents: [CalendarEvent],
+                accountsRead: ClosedRange<Date>? = nil) -> [AgendaItem] {
         var items: [AgendaItem] = []
         var seen = Set<String>()
         // An invitation in the mail and the same meeting in a calendar are one item. They're
@@ -164,6 +165,11 @@ extension MailModel {
         for entry in calendarEntries where !entry.cancelled && entry.finish > start && entry.start < end {
             guard !seen.contains(Self.meetingUID(entry.id)), !shownAt.contains(Self.sameMeetingKey(entry.title, entry.start)),
                   entry.accountID.map(current.contains) ?? true else { continue }
+            // It was on its mailbox's calendar, which has been read for that day, and it's gone:
+            // declined or removed there (in another app too), so the old invitation doesn't
+            // bring it back.
+            if entry.wasOnCalendar == true, let account = entry.accountID, accountEvents[account] != nil,
+               accountsRead?.contains(entry.start) == true { continue }
             items.append(AgendaItem(
                 id: entry.id, title: entry.title, start: entry.start, end: entry.finish, isAllDay: entry.isAllDay,
                 location: entry.location, joinURL: entry.joinURL, organizer: entry.organizer,
@@ -269,10 +275,17 @@ extension MailModel {
     }
 
     /// The days in a range with something on them, for the dots in the month.
+    /// What the Calendar page draws: the agenda without meetings you declined, which leave your
+    /// calendar as they do in other calendar apps. Their invitation still has the answer, to
+    /// change it later.
+    public func calendarItems(from start: Date, to end: Date) -> [AgendaItem] {
+        agenda(from: start, to: end).filter { $0.response != .declined }
+    }
+
     public func daysWithEvents(from start: Date, to end: Date) -> Set<Date> {
         let calendar = Calendar.current
         var days = Set<Date>()
-        for item in agenda(from: start, to: end) {
+        for item in calendarItems(from: start, to: end) {
             var day = calendar.startOfDay(for: max(item.start, start))
             let last = item.isAllDay ? item.end.addingTimeInterval(-1) : item.end
             while day <= last && day < end {
@@ -307,7 +320,7 @@ extension MailModel {
                 }
             } catch {
                 Self.calendarLog.error("calendar \(account.id.uuidString.prefix(8), privacy: .public): sign-in failed: \(error.localizedDescription, privacy: .public)")
-                if force { show(error) }
+                if force { show(error, account: account.id) }
             }
         }
         Self.calendarLog.info("calendar refresh: \(readers.count, privacy: .public) of \(self.accounts.count, privacy: .public) mailboxes connected")
@@ -330,10 +343,33 @@ extension MailModel {
                 Self.calendarLog.info("calendar \(id.uuidString.prefix(8), privacy: .public): \(events.count, privacy: .public) events")
             case .failure(let error):
                 Self.calendarLog.error("calendar \(id.uuidString.prefix(8), privacy: .public): reading failed: \(String(describing: error), privacy: .public)")
-                if force { show(error) }
+                if force { show(error, account: id) }
             }
         }
         calendarEventsRange = start...end
+        noteInvitationsOnCalendars()
+        // What the calendars say now decides the reminders (a meeting declined elsewhere goes).
+        scheduleEventReminders()
+    }
+
+    /// Marks the invitations now on their mailbox's calendar (`CalendarEntry.wasOnCalendar`).
+    func noteInvitationsOnCalendars() {
+        var onCalendar = Set<String>()
+        for events in calendarEvents.values {
+            for event in events {
+                onCalendar.insert(Self.meetingUID(event.uid ?? event.id))
+                onCalendar.insert(Self.sameMeetingKey(event.title, event.start))
+            }
+        }
+        var entries = calendarEntries
+        var changed = false
+        for index in entries.indices where entries[index].wasOnCalendar != true {
+            let entry = entries[index]
+            guard onCalendar.contains(Self.meetingUID(entry.id)) || onCalendar.contains(Self.sameMeetingKey(entry.title, entry.start)) else { continue }
+            entries[index].wasOnCalendar = true
+            changed = true
+        }
+        if changed { saveCalendar(entries) }
     }
 
     /// Every calendar of a mailbox, each event marked with its calendar. A calendar that can't be

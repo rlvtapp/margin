@@ -99,7 +99,7 @@ struct CalendarTimeline: View {
         let calendar = Calendar.current
         let first = days.first ?? calendar.startOfDay(for: Date())
         let end = calendar.date(byAdding: .day, value: days.count, to: first) ?? first
-        let items = model.agenda(from: first, to: end)
+        let items = model.calendarItems(from: first, to: end)
         GeometryReader { geometry in
             let width = geometry.size.width
             let column = (width - gutter - trailing) / CGFloat(max(visibleDays.count, 1))
@@ -797,7 +797,7 @@ struct EventDetail: View {
         .frame(width: 300, alignment: .leading)
         // Backspace (or Delete) deletes the event that's open, as in the grid's own selection.
         .background {
-            if model.canChange(item), let editor {
+            if model.canDelete(item), let editor {
                 Button("Delete") {
                     dismiss()
                     editor.delete(item)
@@ -848,7 +848,7 @@ struct MonthBoard: View {
     var body: some View {
         // Everything on in the months around the one shown (what's been read), worked out once
         // and shared out by day; scrolling itself never redoes it.
-        let byDay = Self.byDay(model.agenda(from: calendar.date(byAdding: .month, value: -2, to: month) ?? month,
+        let byDay = Self.byDay(model.calendarItems(from: calendar.date(byAdding: .month, value: -2, to: month) ?? month,
                                             to: calendar.date(byAdding: .month, value: 3, to: month) ?? month))
         VStack(spacing: 0) {
             HStack(spacing: 0) {

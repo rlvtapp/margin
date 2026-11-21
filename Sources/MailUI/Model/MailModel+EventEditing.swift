@@ -115,6 +115,12 @@ extension MailModel {
         return item.canChange
     }
 
+    /// Whether it can be deleted: your own events, and someone else's meeting, which is
+    /// declined (the organizer is told) and so leaves your calendar.
+    public func canDelete(_ item: AgendaItem) -> Bool {
+        canChange(item) || (item.canAnswer && item.organizer != nil)
+    }
+
     /// Changes an event: moved, resized or edited. The page shows the change at once.
     @discardableResult
     public func updateEvent(_ item: AgendaItem, with draft: EventDraft, scope: EventScope = .thisEvent, offersUndo: Bool = true) async -> Bool {
@@ -154,6 +160,11 @@ extension MailModel {
 
     @discardableResult
     public func deleteEvent(_ item: AgendaItem, scope: EventScope = .thisEvent, offersUndo: Bool = true) async -> Bool {
+        if !canChange(item), canDelete(item) {
+            // Someone else's meeting: deleting it is declining it.
+            await respond(to: item, with: .declined)?.value
+            return true
+        }
         guard canChange(item) else { return false }
         let before = draft(of: item)
         let destination = destination(of: item)

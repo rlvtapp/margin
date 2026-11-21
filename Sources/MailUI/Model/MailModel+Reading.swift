@@ -54,7 +54,7 @@ extension MailModel {
                     try await provider(for: account).send(Draft(from: account.address, to: [address], subject: subject, text: "unsubscribe"))
                     notice = Notice(text: String(localized: "Unsubscribe request sent to \(sender)"))
                 } catch {
-                    show(error)
+                    show(error, account: account.id)
                 }
             }
         case .web(let url):
@@ -320,7 +320,7 @@ extension MailModel {
                 try await provider(for: account).send(withSenderName(draft, account: account))
                 rsvps[invite.uid] = response
                 rsvps[key] = response
-                sentAnswers[invite.uid] = SentAnswer(response: response, sequence: invite.sequence)
+                sentAnswers[invite.uid] = SentAnswer(response: response, sequence: invite.sequence, at: Date())
                 saveSentAnswers()
                 noteOwnAnswer(response, as: me, to: invite.uid)
                 notice = Notice(text: String(localized: "\(response.verb) · \(organizer.displayName) has been told"), isSent: true)
@@ -460,4 +460,6 @@ extension MailModel {
 struct SentAnswer: Codable, Equatable, Sendable {
     var response: CalendarInvite.Response
     var sequence: Int
+    /// When it was given, so an older answer read later (a reply in Sent) doesn't undo a newer one.
+    var at: Date?
 }

@@ -24,7 +24,14 @@ enum MCPBridge {
             .flatMap { try? JSONDecoder().decode(ConnectionSettings.self, from: $0) } ?? ConnectionSettings()
     }
 
+    /// Neither the bridge nor the core is an app on screen: without this, macOS counts the
+    /// process as Margin launching (a Dock icon that bounces and never finishes).
+    @MainActor private static func stayInBackground() {
+        NSApplication.shared.setActivationPolicy(.prohibited)
+    }
+
     static func run() -> Never {
+        MainActor.assumeIsolated { stayInBackground() }
         let lines = AsyncStream<String> { continuation in
             Thread.detachNewThread {
                 while let line = readLine(strippingNewline: true) { continuation.yield(line) }
@@ -51,6 +58,7 @@ enum MCPBridge {
     /// closed. One answer line for each message line (`noReply` for notifications); it exits
     /// after `Core.quiet` without a message, or when the bridge goes.
     static func runCore() -> Never {
+        MainActor.assumeIsolated { stayInBackground() }
         let lines = AsyncStream<String> { continuation in
             Thread.detachNewThread {
                 while let line = readLine(strippingNewline: true) { continuation.yield(line) }

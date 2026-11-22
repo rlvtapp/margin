@@ -1,0 +1,17 @@
+/* Margin 2026.11.21.1 release titles and descriptions. */
+"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "Yapay zekâ uygulamaları Margin açık olmadan e-postanı ve takvimini okuyabilir, etkinlikleri değiştirebilir. Onlar sormadıkça hiçbir şey çalışmaz.";
+"AI apps while Margin is closed" = "Margin kapalıyken yapay zekâ uygulamaları";
+"All of Margin, bigger or smaller" = "Margin'in tamamı daha büyük ya da küçük";
+"Feedback and crash reports" = "Geri bildirim ve çökme raporları";
+"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "Bağlantı tam bir ileti giderken koparsa ileti yeniden gönderilmez: Ulaşmamış olma ihtimaline karşı bir kopyası Taslaklar'da bekler.";
+"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "Outlook ve Exchange davetleri, hangi saat diliminden gönderilmiş olursa olsun doğru saatte görünür.";
+"Mail from an Outlook address goes out from that address, not another one on the same account." = "Bir Outlook adresinden gönderilen posta, aynı hesaptaki başka bir adresten değil, o adresten çıkar.";
+"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "Margin, Mac'inizin metin boyutunu izler; ⌘+ ve ⌘− her şeyi büyütür ya da küçültür. E-posta metni için ⌥⌘+ ve ⌥⌘− var.";
+"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "Margin çıktıktan sonra artık kendiliğinden açılmıyor ve çıkış daha hızlı.";
+"Meeting times from Outlook" = "Outlook'tan toplantı saatleri";
+"Never sent twice" = "Asla iki kez gönderilmez";
+"Readable on every accent colour" = "Her vurgu renginde okunaklı";
+"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "Yardım'dan veya Ayarlar'dan geri bildirim gönder; bir çökmeden sonra raporu göndermeden önce incele.";
+"Sends from the address you pick" = "Seçtiğiniz adresten gönderir";
+"Stays closed when you quit" = "Çıkınca kapalı kalır";
+"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "Vurgu rengindeki düğme ve etkinliklerin üzerindeki yazılar, hangi rengi seçersen seç kolayca okunur.";

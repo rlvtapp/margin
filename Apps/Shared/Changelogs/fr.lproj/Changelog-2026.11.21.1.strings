@@ -1,0 +1,17 @@
+/* Margin 2026.11.21.1 release titles and descriptions. */
+"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "Les apps d'IA peuvent lire vos e-mails et votre calendrier et modifier des événements sans que Margin soit ouvert. Rien ne tourne tant qu'elles ne demandent rien.";
+"AI apps while Margin is closed" = "Apps d'IA quand Margin est fermé";
+"All of Margin, bigger or smaller" = "Tout Margin, plus grand ou plus petit";
+"Feedback and crash reports" = "Commentaires et rapports de plantage";
+"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "Si la connexion se coupe au moment où un message part, il n'est pas renvoyé : une copie attend dans les brouillons au cas où il ne serait pas arrivé.";
+"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "Les invitations d'Outlook et d'Exchange s'affichent à la bonne heure, quel que soit le fuseau horaire d'envoi.";
+"Mail from an Outlook address goes out from that address, not another one on the same account." = "Un e-mail envoyé depuis une adresse Outlook part de cette adresse, et non d'une autre du même compte.";
+"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "Margin suit la taille du texte de votre Mac, et ⌘+ et ⌘− agrandissent ou réduisent tout. Le texte des e-mails a ⌥⌘+ et ⌥⌘−.";
+"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "Margin ne se rouvre plus tout seul après avoir été quitté, et quitter est plus rapide.";
+"Meeting times from Outlook" = "Heures des réunions Outlook";
+"Never sent twice" = "Jamais envoyé deux fois";
+"Readable on every accent colour" = "Lisible avec toutes les couleurs d'accent";
+"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "Envoyez vos commentaires depuis l'Aide ou les Réglages et, après un plantage, relisez le rapport avant son envoi.";
+"Sends from the address you pick" = "Envoie depuis l'adresse que vous choisissez";
+"Stays closed when you quit" = "Reste fermé quand vous quittez";
+"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "Le texte des boutons et des événements dans votre couleur d'accent reste facile à lire, quelle que soit la couleur choisie.";

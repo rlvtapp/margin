@@ -1,0 +1,17 @@
+/* Margin 2026.11.21.1 release titles and descriptions. */
+"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "Le app di IA possono leggere la tua posta e il tuo calendario e modificare gli eventi senza che Margin sia aperto. Non gira nulla finché non lo chiedono.";
+"AI apps while Margin is closed" = "App di IA con Margin chiuso";
+"All of Margin, bigger or smaller" = "Tutto Margin, più grande o più piccolo";
+"Feedback and crash reports" = "Feedback e segnalazioni di arresti anomali";
+"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "Se la connessione cade proprio mentre parte un messaggio, non viene inviato di nuovo: una copia aspetta nelle Bozze nel caso non sia arrivato.";
+"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "Gli inviti da Outlook ed Exchange appaiono all'ora giusta, da qualunque fuso orario siano stati inviati.";
+"Mail from an Outlook address goes out from that address, not another one on the same account." = "La posta da un indirizzo Outlook parte da quell'indirizzo, non da un altro dello stesso account.";
+"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "Margin segue la dimensione del testo del Mac, e ⌘+ e ⌘− ingrandiscono o rimpiccioliscono tutto. Per il testo delle email ci sono ⌥⌘+ e ⌥⌘−.";
+"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "Margin non si riapre più da solo dopo che lo chiudi, e chiudere è più veloce.";
+"Meeting times from Outlook" = "Orari delle riunioni da Outlook";
+"Never sent twice" = "Mai inviato due volte";
+"Readable on every accent colour" = "Leggibile con ogni colore di accento";
+"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "Invia feedback da Aiuto o Impostazioni e, dopo un arresto anomalo, controlla la segnalazione prima di inviarla.";
+"Sends from the address you pick" = "Invia dall'indirizzo che scegli";
+"Stays closed when you quit" = "Resta chiuso quando esci";
+"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "Il testo su pulsanti ed eventi nel tuo colore di accento resta facile da leggere, qualunque colore scegli.";

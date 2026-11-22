@@ -1,0 +1,17 @@
+/* Margin 2026.11.21.1 release titles and descriptions. */
+"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "Az MI-appok a Margin megnyitása nélkül is olvashatják a leveleidet és a naptáradat, és módosíthatnak eseményeket. Amíg nem kérnek valamit, semmi sem fut.";
+"AI apps while Margin is closed" = "MI-appok, amikor a Margin zárva van";
+"All of Margin, bigger or smaller" = "Az egész Margin nagyobban vagy kisebben";
+"Feedback and crash reports" = "Visszajelzés és összeomlási jelentések";
+"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "Ha a kapcsolat épp küldés közben szakad meg, az üzenet nem megy el újra: egy másolat vár a Piszkozatokban arra az esetre, ha nem érkezett meg.";
+"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "Az Outlook és Exchange meghívói a helyes időpontban jelennek meg, bármelyik időzónából küldték őket.";
+"Mail from an Outlook address goes out from that address, not another one on the same account." = "Az Outlook-címről küldött levél erről a címről megy ki, nem ugyanannak a fióknak egy másik címéről.";
+"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "A Margin követi a Mac szövegméretét, a ⌘+ és ⌘− pedig mindent nagyobbá vagy kisebbé tesz. Az e-mailek szövegéhez ⌥⌘+ és ⌥⌘− való.";
+"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "A Margin kilépés után már nem nyílik meg magától, és a kilépés is gyorsabb.";
+"Meeting times from Outlook" = "Értekezletidőpontok az Outlookból";
+"Never sent twice" = "Soha nem megy el kétszer";
+"Readable on every accent colour" = "Minden kiemelőszínnel olvasható";
+"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "Küldj visszajelzést a Súgóból vagy a Beállításokból, összeomlás után pedig nézd át a jelentést, mielőtt elküldöd.";
+"Sends from the address you pick" = "A választott címről küld";
+"Stays closed when you quit" = "Kilépés után zárva marad";
+"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "A kiemelőszínű gombok és események szövege jól olvasható marad, bármilyen színt választasz.";

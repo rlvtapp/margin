@@ -1,0 +1,17 @@
+/* Margin 2026.11.21.1 release titles and descriptions. */
+"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "KI-Apps können deine E-Mails und deinen Kalender lesen und Termine ändern, ohne dass Margin offen ist. Bis sie fragen, läuft nichts.";
+"AI apps while Margin is closed" = "KI-Apps, während Margin geschlossen ist";
+"All of Margin, bigger or smaller" = "Ganz Margin größer oder kleiner";
+"Feedback and crash reports" = "Feedback und Absturzberichte";
+"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "Bricht die Verbindung genau beim Senden ab, wird die Nachricht nicht erneut gesendet: Eine Kopie wartet in den Entwürfen, falls sie nicht angekommen ist.";
+"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "Einladungen aus Outlook und Exchange erscheinen zur richtigen Uhrzeit, egal aus welcher Zeitzone sie kommen.";
+"Mail from an Outlook address goes out from that address, not another one on the same account." = "Mails von einer Outlook-Adresse gehen von genau dieser Adresse raus, nicht von einer anderen desselben Kontos.";
+"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "Margin folgt der Textgröße deines Mac, und mit ⌘+ und ⌘− wird alles größer oder kleiner. Für E-Mail-Text gibt es ⌥⌘+ und ⌥⌘−.";
+"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "Margin öffnet sich nach dem Beenden nicht mehr von selbst, und das Beenden geht schneller.";
+"Meeting times from Outlook" = "Besprechungszeiten aus Outlook";
+"Never sent twice" = "Nie doppelt gesendet";
+"Readable on every accent colour" = "Gut lesbar in jeder Akzentfarbe";
+"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "Sende Feedback über die Hilfe oder die Einstellungen, und prüfe nach einem Absturz den Bericht, bevor er gesendet wird.";
+"Sends from the address you pick" = "Sendet von der Adresse, die du wählst";
+"Stays closed when you quit" = "Bleibt geschlossen, wenn du es beendest";
+"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "Text auf Tasten und Terminen in deiner Akzentfarbe bleibt gut lesbar, egal welche Farbe du wählst.";

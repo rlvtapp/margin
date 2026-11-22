@@ -1,0 +1,7 @@
+/* Margin 2026.11.22 release titles and descriptions. */
+"Faster at the bottom of the list" = "列表底部加载更快";
+"Margin opens from the Dock as usual while Codex, Claude or another AI app uses it, with no extra icon bouncing in the Dock." = "在 Codex、Claude 或其他 AI 应用使用时，Margin 也能照常从程序坞打开，程序坞里不会多出一个跳动的图标。";
+"Older mail loads before you reach the end, straight from what's saved on your Mac." = "在你滑到底部之前，较早的邮件就已直接从 Mac 上保存的内容中载入。";
+"Opens while AI apps are connected" = "AI 应用连接时也能打开";
+"Settings → AI Apps → Answer while Margin is closed: turn it off and AI apps ask you to open Margin instead." = "设置 → AI 应用 → Margin 关闭时也响应：关闭后，AI 应用会改为请你打开 Margin。";
+"Your choice when Margin is closed" = "Margin 关闭时由你决定";

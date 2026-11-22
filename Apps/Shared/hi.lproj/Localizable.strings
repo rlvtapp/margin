@@ -111,7 +111,6 @@
 "3 months" = "3 महीने";
 "99+" = "99+";
 "A calm mail app that works directly with your provider." = "एक शांत मेल ऐप जो सीधे आपके प्रदाता से काम करता है।";
-"A full calendar" = "पूरा कैलेंडर";
 "A heads-up before meetings from your invitations." = "आपके निमंत्रणों वाली मीटिंग से पहले सूचना।";
 "A label, an answer and keeping quiet work only in Margin." = "लेबल, जवाब और चुप रखना सिर्फ़ Margin में काम करते हैं।";
 "A mailbox that's in no workspace shows in all of them." = "जो मेलबॉक्स किसी वर्कस्पेस में नहीं है, वह सभी में दिखता है।";
@@ -126,11 +125,9 @@
 "AI" = "AI";
 "AI Apps" = "AI ऐप";
 "AI apps" = "AI ऐप";
-"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "AI ऐप्स Margin खुला न होने पर भी आपका मेल और कैलेंडर पढ़ सकते हैं और इवेंट बदल सकते हैं। जब तक वे न पूछें, कुछ नहीं चलता।";
 "AI apps can read your mail and calendar without Margin open: a small helper starts when they ask and quits after 5 quiet minutes. Off, they ask you to open Margin." = "AI ऐप Margin खोले बिना आपका मेल और कैलेंडर पढ़ सकते हैं: उनके पूछने पर एक छोटा सहायक शुरू होता है और 5 शांत मिनट बाद बंद हो जाता है। बंद होने पर, वे आपसे Margin खोलने को कहते हैं।";
 "AI apps can't connect" = "AI ऐप कनेक्ट नहीं हो पा रहे";
 "AI apps on your Mac can search your mail, sort it, save drafts and make rules through Margin once you turn it on." = "इसे चालू करने पर आपके Mac के AI ऐप Margin के ज़रिए आपके मेल खोज, छाँट, ड्राफ़्ट सहेज और नियम बना सकते हैं।";
-"AI apps while Margin is closed" = "Margin बंद होने पर भी AI ऐप्स";
 "AI is off" = "AI बंद है";
 "AI is on" = "AI चालू है";
 "AI, or just mail" = "AI, या सिर्फ़ मेल";
@@ -194,7 +191,6 @@
 "All mail" = "सभी मेल";
 "All mailboxes" = "सभी मेलबॉक्स";
 "All new mail" = "सभी नए मेल";
-"All of Margin, bigger or smaller" = "पूरा Margin, बड़ा या छोटा";
 "All of Margin. A size picked here is kept until you follow the system again." = "पूरा Margin। यहाँ चुना गया आकार तब तक रहता है जब तक आप फिर से सिस्टम को नहीं अपनाते।";
 "All of Margin. ⌘+ and ⌘− change it anywhere; ⌘0 follows the system again." = "पूरा Margin। ⌘+ और ⌘− इसे कहीं से भी बदलते हैं; ⌘0 फिर से सिस्टम को अपनाता है।";
 "All your calendars" = "आपके सभी कैलेंडर";
@@ -286,7 +282,6 @@
 "Bad upload address." = "अपलोड पता गलत है।";
 "Balanced" = "संतुलित";
 "Bcc" = "Bcc";
-"Better search" = "बेहतर खोज";
 "Bills to Pay" = "चुकाने के बिल";
 "Block" = "ब्लॉक करें";
 "Block %@" = "%@ को ब्लॉक करें";
@@ -367,7 +362,6 @@
 "Colors" = "रंग";
 "Command copied. Paste it in Terminal." = "कमांड कॉपी हो गई। इसे टर्मिनल में पेस्ट करें।";
 "Command palette" = "कमांड पैलेट";
-"Compare calendars" = "कैलेंडर की तुलना";
 "Compare with a colleague" = "किसी सहकर्मी से तुलना करें";
 "Confirm" = "पुष्टि करें";
 "Confirm in the browser" = "ब्राउज़र में पुष्टि करें";
@@ -413,7 +407,6 @@
 "Dark mode for emails" = "ईमेल के लिए डार्क मोड";
 "Darker text and clearer lines." = "गहरा टेक्स्ट और साफ़ रेखाएँ।";
 "Day" = "दिन";
-"Day, Week and Month next to your invitations, with your Mac's calendars and reminders. Make, move and delete events right there." = "आपके आमंत्रणों के बगल में दिन, हफ़्ता और महीना, आपके Mac के कैलेंडर और रिमाइंडर के साथ। इवेंट वहीं बनाएँ, खिसकाएँ और मिटाएँ।";
 "Decline" = "अस्वीकार करें";
 "Decline and Delete" = "अस्वीकार करें और हटाएँ";
 "Declined" = "अस्वीकार किया";
@@ -476,9 +469,7 @@
 "Everything on this page works. The switch on the AI page turns all of it off." = "इस पृष्ठ पर सब कुछ काम करता है। AI पृष्ठ का स्विच यह सब बंद कर देता है।";
 "Everything's handled. Enjoy the quiet." = "सब कुछ निपट गया। शांति का आनंद लें।";
 "Expanded" = "फैलाया गया";
-"Faster at the bottom of the list" = "सूची के अंत में तेज़";
 "Fastest and cheapest" = "सबसे तेज़ और सस्ता";
-"Feedback and crash reports" = "फ़ीडबैक और क्रैश रिपोर्ट";
 "Fill in at least one condition." = "कम से कम एक शर्त भरें।";
 "Filter" = "फ़िल्टर";
 "Find a time and send it from your calendar" = "कैलेंडर में समय खोजें और वहीं से भेजें";
@@ -583,7 +574,6 @@
 "If no reply by tomorrow" = "अगर कल तक जवाब न आए";
 "If no reply in 3 days" = "अगर 3 दिन में जवाब न आए";
 "If no reply in a week" = "अगर एक हफ़्ते में जवाब न आए";
-"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "अगर संदेश भेजते समय कनेक्शन टूट जाए, तो वह दोबारा नहीं भेजा जाता: अगर वह न पहुँचा हो, तो उसकी एक कॉपी ड्राफ़्ट में रहती है।";
 "Important" = "महत्वपूर्ण";
 "In %@" = "%@ में";
 "In %@, the way you write in it." = "%@ में, जैसे आप उसमें लिखते हैं।";
@@ -602,7 +592,6 @@
 "Insert template: %@" = "टेम्पलेट डालें: %@";
 "Install Proton Mail Bridge on this Mac and sign in to it." = "इस Mac पर Proton Mail Bridge इंस्टॉल करें और उसमें साइन इन करें।";
 "Instant notifications" = "तुरंत सूचनाएँ";
-"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "Outlook और Exchange के निमंत्रण सही समय पर दिखते हैं, चाहे वे किसी भी समय क्षेत्र से भेजे गए हों।";
 "Invitations go out from %@." = "आमंत्रण %@ से भेजे जाते हैं।";
 "Invitations in your mail, and the calendars you connected." = "आपके ईमेल में आए आमंत्रण और आपके जोड़े गए कैलेंडर।";
 "Invitations in your mail. Connect a mailbox to see its whole calendar." = "आपके ईमेल में आए आमंत्रण। पूरा कैलेंडर देखने के लिए मेलबॉक्स कनेक्ट करें।";
@@ -636,7 +625,6 @@
 "Label “%@”" = "लेबल “%@”";
 "Label, archive, move, snooze, trash, folders, templates, newsletters and the outbox. Apps can undo their own last change." = "लेबल, आर्काइव, मूव, स्नूज़, ट्रैश, फ़ोल्डर, टेम्पलेट, न्यूज़लेटर और आउटबॉक्स। ऐप अपना आखिरी बदलाव पूर्ववत कर सकते हैं।";
 "Labels" = "लेबल";
-"Labels and rules" = "लेबल और नियम";
 "Labels and snoozes" = "लेबल और स्नूज़";
 "Label…" = "लेबल…";
 "Language" = "भाषा";
@@ -678,7 +666,6 @@
 /* A reaction to a message */
 "Love" = "प्यार";
 "Mail from Margin on your iPhone shows up here." = "आपके iPhone पर Margin से भेजा गया मेल यहाँ दिखता है।";
-"Mail from an Outlook address goes out from that address, not another one on the same account." = "Outlook पते से भेजा गया मेल उसी पते से जाता है, उसी खाते के किसी दूसरे पते से नहीं।";
 "Mail goes straight between this device and your provider. No account to make, nothing tracked." = "मेल सीधे इस डिवाइस और आपके प्रदाता के बीच जाती है। न कोई खाता बनाना, न कोई ट्रैकिंग।";
 "Mail goes straight between this device and your provider. Passwords and tokens stay in this device's Keychain." = "मेल सीधे इस डिवाइस और आपके प्रदाता के बीच जाता है। पासवर्ड और टोकन इस डिवाइस की कीचेन में रहते हैं।";
 "Mail in a language you don't read gets a Translate button. It's translated on this device." = "जिस भाषा को आप नहीं पढ़ते, उसमें आए मेल पर अनुवाद करें बटन दिखता है। अनुवाद इसी डिवाइस पर होता है।";
@@ -709,15 +696,12 @@
 "Margin adds itself to %@'s settings file. Click Save to allow it." = "Margin खुद को %@ की सेटिंग फ़ाइल में जोड़ता है। अनुमति देने के लिए सेव करें पर क्लिक करें।";
 "Margin doesn't have the email for that invitation." = "Margin के पास उस आमंत्रण का ईमेल नहीं है।";
 "Margin doesn't open apps or scripts from email. It's shown in Finder." = "Margin ईमेल से आए ऐप या स्क्रिप्ट नहीं खोलता। इसे Finder में दिखाया गया है।";
-"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "Margin आपके Mac के टेक्स्ट आकार का पालन करता है, और ⌘+ और ⌘− सब कुछ बड़ा या छोटा करते हैं। ईमेल टेक्स्ट के लिए ⌥⌘+ और ⌥⌘− हैं।";
 "Margin is closed. Open Margin, or turn on Settings → AI Apps → Answer while Margin is closed." = "Margin बंद है। Margin खोलें, या सेटिंग्स → AI ऐप → Margin बंद होने पर भी जवाब दें चालू करें।";
 "Margin isn't allowed to read Contacts. Turn it on in Settings → Apps → Margin." = "Margin को संपर्क पढ़ने की अनुमति नहीं है। सेटिंग्ज़ → ऐप्स → Margin में इसे चालू करें।";
 "Margin isn't allowed to read Contacts. Turn it on in System Settings → Privacy & Security → Contacts." = "Margin को संपर्क पढ़ने की अनुमति नहीं है। सिस्टम सेटिंग्ज़ → गोपनीयता और सुरक्षा → संपर्क में इसे चालू करें।";
 "Margin learns from the emails you send, on this device, and drafts replies the same way. Nothing is sent anywhere to learn it." = "Margin इस डिवाइस पर आपके भेजे ईमेल से सीखता है, और उसी तरह जवाब के ड्राफ़्ट बनाता है। सीखने के लिए कुछ भी कहीं नहीं भेजा जाता।";
 "Margin looks up the servers for your address. You can change them on the next step." = "Margin आपके पते के सर्वर ढूँढता है। अगले चरण में आप उन्हें बदल सकते हैं।";
-"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "बंद करने के बाद Margin अपने आप दोबारा नहीं खुलता, और बंद होना भी तेज़ है।";
 "Margin only interrupts you for what matters." = "Margin सिर्फ़ ज़रूरी बातों पर आपको टोकता है।";
-"Margin opens from the Dock as usual while Codex, Claude or another AI app uses it, with no extra icon bouncing in the Dock." = "Codex, Claude या कोई अन्य AI ऐप इस्तेमाल कर रहा हो, तब भी Margin Dock से सामान्य रूप से खुलता है, Dock में कोई अतिरिक्त उछलता आइकन नहीं।";
 "Margin quit unexpectedly" = "Margin अचानक बंद हो गया";
 "Margin quit unexpectedly. What were you doing just before?" = "Margin अचानक बंद हो गया। ठीक पहले आप क्या कर रहे थे?";
 "Margin shows meetings from invitations in your mail. To see your whole calendar, turn on Calendar for an account in Settings." = "Margin आपके ईमेल में आए आमंत्रणों की मीटिंग दिखाता है। पूरा कैलेंडर देखने के लिए सेटिंग्स में किसी खाते के लिए कैलेंडर चालू करें।";
@@ -742,7 +726,6 @@
 "Meeting" = "मीटिंग";
 "Meeting link copied" = "मीटिंग लिंक कॉपी हो गया";
 "Meeting reminders" = "मीटिंग रिमाइंडर";
-"Meeting times from Outlook" = "Outlook से मीटिंग समय";
 "Meetings" = "मीटिंग";
 "Meetings from invitations in your mail" = "आपके ईमेल में आए आमंत्रणों की मीटिंग";
 "Menu bar" = "मेनू बार";
@@ -789,7 +772,6 @@
 "Needs iOS 26 or later with Apple Intelligence." = "iOS 26 या बाद का संस्करण और Apple Intelligence चाहिए।";
 "Needs macOS 26 or later with Apple Intelligence." = "macOS 26 या बाद का संस्करण और Apple Intelligence चाहिए।";
 "Needs you" = "आपके लिए";
-"Never sent twice" = "कभी दो बार नहीं भेजा जाता";
 "New Event" = "नया इवेंट";
 "New Meeting" = "नई मीटिंग";
 "New Message" = "नया संदेश";
@@ -799,7 +781,6 @@
 "New mail alerts" = "नए मेल की सूचनाएँ";
 "New mail from an inbox starts with its default signature, and replies and forwards with the one picked for them. Pick another one while writing from the signature menu." = "किसी इनबॉक्स से नया मेल उसके डिफ़ॉल्ट हस्ताक्षर से शुरू होता है, और जवाब व फ़ॉरवर्ड उनके लिए चुने गए हस्ताक्षर से। लिखते समय हस्ताक्षर मेनू से कोई दूसरा चुनें।";
 "New meeting" = "नई मीटिंग";
-"New meetings get a call link, and Margin suggests times that work for everyone." = "नई मीटिंग में कॉल लिंक जुड़ जाता है, और Margin ऐसे समय सुझाता है जो सबके लिए ठीक हों।";
 "New message" = "नया संदेश";
 "New message  C" = "नया संदेश  C";
 "New message  ⌘N" = "नया संदेश  ⌘N";
@@ -894,7 +875,6 @@
 "Offer to translate" = "अनुवाद का विकल्प दिखाएं";
 "Offline · showing saved mail" = "ऑफ़लाइन · सहेजा गया मेल दिख रहा है";
 "Offline. Showing saved mail; it keeps trying." = "ऑफ़लाइन। सहेजे गए मेल दिख रहे हैं; कोशिश जारी है।";
-"Older mail loads before you reach the end, straight from what's saved on your Mac." = "पुराने मेल आपके अंत तक पहुँचने से पहले ही लोड हो जाते हैं, सीधे आपके Mac पर सहेजे गए मेल से।";
 "Older mail's senders, subjects and previews are downloaded in the background, so it can be searched and scrolled without a connection. The text of recent mail is saved too, without its files, so opening it doesn't wait; older texts and all files come when a mail is opened. On iPhone and iPad only on Wi-Fi, and while charging or above 20% battery." = "पुराने मेल के भेजने वाले, विषय और झलक बैकग्राउंड में डाउनलोड होते हैं, ताकि बिना कनेक्शन के उन्हें खोजा और स्क्रॉल किया जा सके। हाल के मेल का टेक्स्ट भी, फ़ाइलों के बिना, सहेजा जाता है ताकि खोलने में इंतज़ार न हो; पुराने टेक्स्ट और सभी फ़ाइलें मेल खोलने पर आती हैं। iPhone और iPad पर सिर्फ़ Wi-Fi पर, और चार्ज होते समय या 20% से ज़्यादा बैटरी पर।";
 "On" = "चालू";
 "On the server" = "सर्वर पर";
@@ -934,7 +914,6 @@
 "Open in browser" = "ब्राउज़र में खोलें";
 "Open recent mail instantly" = "हाल के मेल तुरंत खोलें";
 "Opens this message" = "यह संदेश खोलता है";
-"Opens while AI apps are connected" = "AI ऐप जुड़े होने पर भी खुलता है";
 "Optional" = "वैकल्पिक";
 "Opus: most capable, slowest" = "Opus: सबसे सक्षम, सबसे धीमा";
 "Or write to %@." = "या %@ पर लिखें।";
@@ -992,7 +971,6 @@
 "Providers you've set up and saved above stay available for actions after you switch to another." = "ऊपर सेट और सेव किए गए प्रदाता, किसी दूसरे पर जाने के बाद भी कामों के लिए उपलब्ध रहते हैं।";
 "Purple" = "बैंगनी";
 "Quick Look" = "क्विक लुक";
-"Quick Look and Save All, and a clear note when a file is too big to send." = "क्विक लुक और सभी सेव करें, और फ़ाइल भेजने के लिए बहुत बड़ी होने पर साफ़ संदेश।";
 "Quick replies keep the simple editor. Needs a Mac with Apple silicon." = "त्वरित जवाब सरल एडिटर में ही रहते हैं। Apple सिलिकॉन वाला Mac चाहिए।";
 "Quick reply" = "त्वरित उत्तर";
 "Quick suggestions" = "त्वरित सुझाव";
@@ -1004,13 +982,11 @@
 "Reactions" = "प्रतिक्रियाएँ";
 "Read" = "पढ़ा हुआ";
 "Read or unread" = "पढ़ा या अपठित";
-"Readable on every accent colour" = "हर एक्सेंट रंग पर पढ़ने में आसान";
 "Reading %lld conversations…" = "%lld बातचीत पढ़ रहे हैं…";
 "Reading 1 conversation…" = "1 बातचीत पढ़ रहे हैं…";
 "Reading your mail…" = "आपका मेल पढ़ा जा रहा है…";
 "Reading your sent mail…" = "आपका भेजा हुआ मेल पढ़ा जा रहा है…";
 "Ready to paste the moment the email lands." = "ईमेल आते ही पेस्ट के लिए तैयार।";
-"Real labels for Gmail, and rules that keep running on your mail server when your Mac is off." = "Gmail के लिए असली लेबल, और ऐसे नियम जो आपका Mac बंद होने पर भी आपके मेल सर्वर पर चलते रहते हैं।";
 "Receipts" = "रसीदें";
 "Recent activity" = "हाल की गतिविधि";
 "Recent chats" = "हाल की चैट";
@@ -1097,7 +1073,6 @@
 "Scheduled mail" = "शेड्यूल किया गया मेल";
 "Scheduled message sent" = "शेड्यूल किया गया संदेश भेज दिया गया";
 "Search" = "खोजें";
-"Search by sender, date or attachment, on the server too, and save searches you use often." = "भेजने वाले, तारीख या अटैचमेंट से खोजें, सर्वर पर भी, और अक्सर इस्तेमाल होने वाली खोजें सेव करें।";
 "Search help" = "सहायता खोजें";
 "Search looks through mail saved on this device first, then asks your mail servers." = "खोज पहले इस डिवाइस पर सहेजे गए मेल देखती है, फिर आपके मेल सर्वर से पूछती है।";
 "Search mail for “%@”" = "“%@” के लिए मेल खोजें";
@@ -1105,7 +1080,6 @@
 "Searches" = "खोजें";
 "Searching" = "खोजना";
 "Searching your mail…" = "आपके ईमेल में खोज रहे हैं…";
-"See when colleagues are busy or out of office, and when you're all free together." = "देखें कि सहकर्मी कब व्यस्त या कार्यालय से बाहर हैं, और आप सभी एक साथ कब खाली हैं।";
 "See when they're busy next to your own day. Only busy times are shared, never what." = "अपने दिन के बगल में देखें कि वे कब व्यस्त हैं। सिर्फ़ व्यस्त समय साझा होता है, यह कभी नहीं कि किसमें।";
 "Select all conversations" = "सभी वार्तालाप चुनें";
 "Select conversation" = "वार्तालाप चुनें";
@@ -1115,7 +1089,6 @@
 "Send Report…" = "रिपोर्ट भेजें…";
 "Send at" = "भेजने का समय";
 "Send feedback" = "प्रतिक्रिया भेजें";
-"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "सहायता या सेटिंग्स से फ़ीडबैक भेजें, और क्रैश के बाद रिपोर्ट भेजने से पहले उसे देख लें।";
 "Send later" = "बाद में भेजें";
 "Send later is in the menu next to Send. Undo Send gives you a few seconds after Send; set how long in Settings → Writing." = "बाद में भेजें, भेजें के बगल वाले मेनू में है। भेजना पूर्ववत करने से भेजने के बाद कुछ सेकंड मिलते हैं; अवधि सेटिंग्स → लिखना में तय करें।";
 "Send now" = "अभी भेजें";
@@ -1125,7 +1098,6 @@
 "Sending your answer to %@…" = "आपका जवाब %@ को भेजा जा रहा है…";
 "Sending…" = "भेजा जा रहा है…";
 "Sends %@ a short reply" = "%@ को एक छोटा जवाब भेजता है";
-"Sends from the address you pick" = "आपके चुने पते से भेजता है";
 "Sends mail by itself: each new email that matches is forwarded with its formatting, never back to its sender." = "अपने आप मेल भेजता है: मेल खाने वाला हर नया ईमेल उसकी फ़ॉर्मैटिंग के साथ अग्रेषित होता है, कभी उसके प्रेषक को वापस नहीं।";
 "Sends mail by itself: each sender gets the answer at most once every 4 days, and mailing lists and no-reply addresses never do." = "अपने आप मेल भेजता है: हर प्रेषक को उत्तर ज़्यादा से ज़्यादा 4 दिन में एक बार मिलता है, और मेलिंग लिस्ट व नो-रिप्लाई पतों को कभी नहीं।";
 "Sent" = "भेजा गया";
@@ -1142,7 +1114,6 @@
 "Set automatic replies on your provider's website." = "स्वचालित जवाब अपने प्रदाता की वेबसाइट पर सेट करें।";
 "Settings" = "सेटिंग्ज़";
 "Settings  ⌘," = "सेटिंग्ज़  ⌘,";
-"Settings → AI Apps → Answer while Margin is closed: turn it off and AI apps ask you to open Margin instead." = "सेटिंग्स → AI ऐप → Margin बंद होने पर भी जवाब दें: इसे बंद करें, तब AI ऐप आपसे Margin खोलने को कहेंगे।";
 "Settings → Display & Brightness → Text Size." = "सेटिंग्स → डिस्प्ले और ब्राइटनेस → टेक्स्ट का आकार।";
 "Shared mailboxes" = "साझा मेलबॉक्स";
 "Short back-and-forth reads as bubbles instead of a stack of emails." = "छोटी बातचीत ईमेल के ढेर के बजाय बुलबुलों में दिखती है।";
@@ -1249,7 +1220,6 @@
 "Start Using Margin" = "Margin इस्तेमाल करना शुरू करें";
 "Start from the keys of" = "इनकी कुंजियों से शुरू करें";
 "Starts at %@" = "%@ पर शुरू";
-"Stays closed when you quit" = "बंद करने पर बंद ही रहता है";
 "Stop" = "रोकें";
 "Stop (%lld of %lld)" = "रोकें (%lld/%lld)";
 "Stop comparing" = "तुलना बंद करें";
@@ -1295,7 +1265,6 @@
 "Tentatively accepted: %@" = "अस्थायी रूप से स्वीकार किया: %@";
 "Text" = "टेक्स्ट";
 "Text color" = "टेक्स्ट का रंग";
-"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "आपके एक्सेंट रंग वाले बटन और इवेंट पर लिखा टेक्स्ट पढ़ने में आसान रहता है, चाहे आप कोई भी रंग चुनें।";
 "Text size" = "टेक्स्ट का आकार";
 /* Name of a starter reply template */
 "Thanks" = "धन्यवाद";
@@ -1493,7 +1462,6 @@
 "Username" = "उपयोगकर्ता नाम";
 "VIPs" = "VIP";
 "Version %@" = "संस्करण %@";
-"Video calls and suggested times" = "वीडियो कॉल और सुझाए गए समय";
 "Violet" = "बैंगनी";
 "Waiting for a connection" = "कनेक्शन का इंतज़ार";
 "Waiting for a reply" = "जवाब का इंतज़ार";
@@ -1570,7 +1538,6 @@
 "You're not going" = "आप नहीं आ रहे हैं";
 "You're not going · %@ has been told" = "आप नहीं आ रहे हैं · %@ को बता दिया गया";
 "Your @icloud.com address" = "आपका @icloud.com पता";
-"Your choice when Margin is closed" = "Margin बंद होने पर आपकी पसंद";
 "Your mail" = "आपकी मेल";
 "Your mail and settings stay as they are. If your provider uses app passwords, enter one of those." = "आपकी मेल और सेटिंग्स जैसी हैं वैसी ही रहती हैं। अगर आपका प्रदाता ऐप पासवर्ड इस्तेमाल करता है, तो उनमें से एक दर्ज करें।";
 "Your mail goes straight to your provider." = "आपकी मेल सीधे आपके प्रदाता तक जाती है।";

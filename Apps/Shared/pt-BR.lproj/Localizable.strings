@@ -111,7 +111,6 @@
 "3 months" = "3 meses";
 "99+" = "99+";
 "A calm mail app that works directly with your provider." = "Um app de e-mail tranquilo que fala direto com o seu provedor.";
-"A full calendar" = "Um calendário completo";
 "A heads-up before meetings from your invitations." = "Um aviso antes das reuniões dos seus convites.";
 "A label, an answer and keeping quiet work only in Margin." = "Um marcador, uma resposta e o modo silencioso só funcionam no Margin.";
 "A mailbox that's in no workspace shows in all of them." = "Uma caixa de correio que não está em nenhum espaço de trabalho aparece em todos.";
@@ -126,11 +125,9 @@
 "AI" = "IA";
 "AI Apps" = "Apps de IA";
 "AI apps" = "Apps de IA";
-"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "Apps de IA podem ler seu e-mail e calendário e alterar eventos sem o Margin aberto. Nada roda até que eles peçam.";
 "AI apps can read your mail and calendar without Margin open: a small helper starts when they ask and quits after 5 quiet minutes. Off, they ask you to open Margin." = "Apps de IA podem ler seus e-mails e sua agenda sem o Margin aberto: um pequeno ajudante inicia quando pedem e fecha após 5 minutos sem uso. Desligado, eles pedem que você abra o Margin.";
 "AI apps can't connect" = "Apps de IA não conseguem se conectar";
 "AI apps on your Mac can search your mail, sort it, save drafts and make rules through Margin once you turn it on." = "Ao ativar, apps de IA no seu Mac podem buscar seus e-mails, organizá-los, salvar rascunhos e criar regras pelo Margin.";
-"AI apps while Margin is closed" = "Apps de IA com o Margin fechado";
 "AI is off" = "A IA está desativada";
 "AI is on" = "A IA está ativada";
 "AI, or just mail" = "IA, ou só e-mail";
@@ -194,7 +191,6 @@
 "All mail" = "Todos os e-mails";
 "All mailboxes" = "Todas as caixas de correio";
 "All new mail" = "Todos os novos e-mails";
-"All of Margin, bigger or smaller" = "Todo o Margin, maior ou menor";
 "All of Margin. A size picked here is kept until you follow the system again." = "Todo o Margin. O tamanho escolhido aqui fica até você voltar a seguir o sistema.";
 "All of Margin. ⌘+ and ⌘− change it anywhere; ⌘0 follows the system again." = "Todo o Margin. ⌘+ e ⌘− mudam em qualquer lugar; ⌘0 volta a seguir o sistema.";
 "All your calendars" = "Todos os seus calendários";
@@ -286,7 +282,6 @@
 "Bad upload address." = "Endereço de envio inválido.";
 "Balanced" = "Equilibrado";
 "Bcc" = "Cco";
-"Better search" = "Busca melhor";
 "Bills to Pay" = "Contas a pagar";
 "Block" = "Bloquear";
 "Block %@" = "Bloquear %@";
@@ -367,7 +362,6 @@
 "Colors" = "Cores";
 "Command copied. Paste it in Terminal." = "Comando copiado. Cole-o no Terminal.";
 "Command palette" = "Paleta de comandos";
-"Compare calendars" = "Comparar calendários";
 "Compare with a colleague" = "Comparar com um colega";
 "Confirm" = "Confirmar";
 "Confirm in the browser" = "Confirmar no navegador";
@@ -413,7 +407,6 @@
 "Dark mode for emails" = "Modo escuro para e-mails";
 "Darker text and clearer lines." = "Texto mais escuro e linhas mais nítidas.";
 "Day" = "Dia";
-"Day, Week and Month next to your invitations, with your Mac's calendars and reminders. Make, move and delete events right there." = "Dia, Semana e Mês ao lado dos seus convites, com os calendários e lembretes do seu Mac. Crie, mova e apague eventos ali mesmo.";
 "Decline" = "Recusar";
 "Decline and Delete" = "Recusar e apagar";
 "Declined" = "Recusado";
@@ -476,9 +469,7 @@
 "Everything on this page works. The switch on the AI page turns all of it off." = "Tudo nesta página funciona. O interruptor da página IA desativa tudo.";
 "Everything's handled. Enjoy the quiet." = "Tudo resolvido. Aproveite o silêncio.";
 "Expanded" = "Expandido";
-"Faster at the bottom of the list" = "Mais rápido no fim da lista";
 "Fastest and cheapest" = "O mais rápido e barato";
-"Feedback and crash reports" = "Feedback e relatórios de falhas";
 "Fill in at least one condition." = "Preencha pelo menos uma condição.";
 "Filter" = "Filtrar";
 "Find a time and send it from your calendar" = "Encontre um horário e envie pelo seu calendário";
@@ -583,7 +574,6 @@
 "If no reply by tomorrow" = "Se não houver resposta até amanhã";
 "If no reply in 3 days" = "Se não houver resposta em 3 dias";
 "If no reply in a week" = "Se não houver resposta em uma semana";
-"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "Se a conexão cair bem na hora em que uma mensagem sai, ela não é enviada de novo: uma cópia fica nos Rascunhos caso não tenha chegado.";
 "Important" = "Importante";
 "In %@" = "Em %@";
 "In %@, the way you write in it." = "Em %@, do jeito que você escreve nesse idioma.";
@@ -602,7 +592,6 @@
 "Insert template: %@" = "Inserir modelo: %@";
 "Install Proton Mail Bridge on this Mac and sign in to it." = "Instale o Proton Mail Bridge neste Mac e entre nele.";
 "Instant notifications" = "Notificações instantâneas";
-"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "Convites do Outlook e do Exchange aparecem no horário certo, seja qual for o fuso horário de onde vieram.";
 "Invitations go out from %@." = "Os convites são enviados de %@.";
 "Invitations in your mail, and the calendars you connected." = "Convites nos seus e-mails e os calendários que você conectou.";
 "Invitations in your mail. Connect a mailbox to see its whole calendar." = "Convites nos seus e-mails. Conecte uma caixa de correio para ver todo o calendário dela.";
@@ -636,7 +625,6 @@
 "Label “%@”" = "Etiqueta “%@”";
 "Label, archive, move, snooze, trash, folders, templates, newsletters and the outbox. Apps can undo their own last change." = "Etiquetar, arquivar, mover, adiar, apagar, pastas, modelos, newsletters e a caixa de saída. Os apps podem desfazer a própria última alteração.";
 "Labels" = "Etiquetas";
-"Labels and rules" = "Etiquetas e regras";
 "Labels and snoozes" = "Etiquetas e adiamentos";
 "Label…" = "Etiqueta…";
 "Language" = "Idioma";
@@ -678,7 +666,6 @@
 /* A reaction to a message */
 "Love" = "Amei";
 "Mail from Margin on your iPhone shows up here." = "Os e-mails do Margin no seu iPhone aparecem aqui.";
-"Mail from an Outlook address goes out from that address, not another one on the same account." = "E-mails de um endereço do Outlook saem desse endereço, não de outro da mesma conta.";
 "Mail goes straight between this device and your provider. No account to make, nothing tracked." = "Os e-mails vão direto entre este dispositivo e o seu provedor. Sem conta para criar, sem rastreamento.";
 "Mail goes straight between this device and your provider. Passwords and tokens stay in this device's Keychain." = "Os e-mails vão direto entre este dispositivo e seu provedor. Senhas e tokens ficam no Chaveiro deste dispositivo.";
 "Mail in a language you don't read gets a Translate button. It's translated on this device." = "E-mails em um idioma que você não lê ganham um botão Traduzir. A tradução é feita neste dispositivo.";
@@ -709,15 +696,12 @@
 "Margin adds itself to %@'s settings file. Click Save to allow it." = "O Margin se adiciona ao arquivo de ajustes de %@. Clique em Salvar para permitir.";
 "Margin doesn't have the email for that invitation." = "O Margin não tem o e-mail desse convite.";
 "Margin doesn't open apps or scripts from email. It's shown in Finder." = "O Margin não abre apps nem scripts de e-mails. Ele é mostrado no Finder.";
-"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "O Margin segue o tamanho do texto do seu Mac, e ⌘+ e ⌘− deixam tudo maior ou menor. O texto dos e-mails tem ⌥⌘+ e ⌥⌘−.";
 "Margin is closed. Open Margin, or turn on Settings → AI Apps → Answer while Margin is closed." = "O Margin está fechado. Abra o Margin ou ative Ajustes → Apps de IA → Responder com o Margin fechado.";
 "Margin isn't allowed to read Contacts. Turn it on in Settings → Apps → Margin." = "O Margin não tem permissão para ler os Contatos. Ative em Ajustes → Apps → Margin.";
 "Margin isn't allowed to read Contacts. Turn it on in System Settings → Privacy & Security → Contacts." = "O Margin não tem permissão para ler os Contatos. Ative em Ajustes do Sistema → Privacidade e Segurança → Contatos.";
 "Margin learns from the emails you send, on this device, and drafts replies the same way. Nothing is sent anywhere to learn it." = "O Margin aprende com os e-mails que você envia, neste dispositivo, e redige respostas do mesmo jeito. Nada é enviado a lugar nenhum para isso.";
 "Margin looks up the servers for your address. You can change them on the next step." = "O Margin procura os servidores do seu endereço. Você pode alterá-los na próxima etapa.";
-"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "O Margin não abre mais sozinho depois que você sai, e sair ficou mais rápido.";
 "Margin only interrupts you for what matters." = "O Margin só interrompe você pelo que importa.";
-"Margin opens from the Dock as usual while Codex, Claude or another AI app uses it, with no extra icon bouncing in the Dock." = "O Margin abre pelo Dock como sempre enquanto o Codex, o Claude ou outro app de IA o usa, sem um ícone extra pulando no Dock.";
 "Margin quit unexpectedly" = "O Margin encerrou inesperadamente";
 "Margin quit unexpectedly. What were you doing just before?" = "O Margin encerrou inesperadamente. O que você estava fazendo logo antes?";
 "Margin shows meetings from invitations in your mail. To see your whole calendar, turn on Calendar for an account in Settings." = "O Margin mostra reuniões dos convites nos seus e-mails. Para ver todo o seu calendário, ative Calendário para uma conta em Ajustes.";
@@ -742,7 +726,6 @@
 "Meeting" = "Reunião";
 "Meeting link copied" = "Link da reunião copiado";
 "Meeting reminders" = "Lembretes de reuniões";
-"Meeting times from Outlook" = "Horários de reuniões do Outlook";
 "Meetings" = "Reuniões";
 "Meetings from invitations in your mail" = "Reuniões dos convites nos seus e-mails";
 "Menu bar" = "Barra de menus";
@@ -789,7 +772,6 @@
 "Needs iOS 26 or later with Apple Intelligence." = "Requer iOS 26 ou posterior com Apple Intelligence.";
 "Needs macOS 26 or later with Apple Intelligence." = "Requer macOS 26 ou posterior com Apple Intelligence.";
 "Needs you" = "Precisa de você";
-"Never sent twice" = "Nunca enviado duas vezes";
 "New Event" = "Novo evento";
 "New Meeting" = "Nova reunião";
 "New Message" = "Nova mensagem";
@@ -799,7 +781,6 @@
 "New mail alerts" = "Alertas de novos e-mails";
 "New mail from an inbox starts with its default signature, and replies and forwards with the one picked for them. Pick another one while writing from the signature menu." = "Novos e-mails de uma caixa começam com a assinatura padrão, e respostas e encaminhamentos com a escolhida para eles. Escolha outra enquanto escreve no menu de assinatura.";
 "New meeting" = "Nova reunião";
-"New meetings get a call link, and Margin suggests times that work for everyone." = "Novas reuniões ganham um link de chamada, e o Margin sugere horários que funcionam para todos.";
 "New message" = "Nova mensagem";
 "New message  C" = "Nova mensagem  C";
 "New message  ⌘N" = "Nova mensagem  ⌘N";
@@ -894,7 +875,6 @@
 "Offer to translate" = "Oferecer tradução";
 "Offline · showing saved mail" = "Off-line · mostrando e-mails salvos";
 "Offline. Showing saved mail; it keeps trying." = "Offline. Mostrando e-mails salvos; continua tentando.";
-"Older mail loads before you reach the end, straight from what's saved on your Mac." = "E-mails mais antigos carregam antes de você chegar ao fim, direto do que está salvo no seu Mac.";
 "Older mail's senders, subjects and previews are downloaded in the background, so it can be searched and scrolled without a connection. The text of recent mail is saved too, without its files, so opening it doesn't wait; older texts and all files come when a mail is opened. On iPhone and iPad only on Wi-Fi, and while charging or above 20% battery." = "Remetentes, assuntos e prévias de e-mails antigos são baixados em segundo plano, para que você possa pesquisar e rolar sem conexão. O texto dos e-mails recentes também é salvo, sem os arquivos, para abrir sem espera; textos mais antigos e todos os arquivos chegam quando você abre um e-mail. No iPhone e iPad, só no Wi-Fi e carregando ou acima de 20% de bateria.";
 "On" = "Ativado";
 "On the server" = "No servidor";
@@ -934,7 +914,6 @@
 "Open in browser" = "Abrir no navegador";
 "Open recent mail instantly" = "Abrir e-mails recentes na hora";
 "Opens this message" = "Abre esta mensagem";
-"Opens while AI apps are connected" = "Abre com apps de IA conectados";
 "Optional" = "Opcional";
 "Opus: most capable, slowest" = "Opus: o mais capaz e o mais lento";
 "Or write to %@." = "Ou escreva para %@.";
@@ -992,7 +971,6 @@
 "Providers you've set up and saved above stay available for actions after you switch to another." = "Os provedores configurados e salvos acima continuam disponíveis para ações depois que você muda para outro.";
 "Purple" = "Roxo";
 "Quick Look" = "Visualização Rápida";
-"Quick Look and Save All, and a clear note when a file is too big to send." = "Visualização Rápida e Salvar tudo, e um aviso claro quando um arquivo é grande demais para enviar.";
 "Quick replies keep the simple editor. Needs a Mac with Apple silicon." = "Respostas rápidas mantêm o editor simples. Requer um Mac com chip da Apple.";
 "Quick reply" = "Resposta rápida";
 "Quick suggestions" = "Sugestões rápidas";
@@ -1004,13 +982,11 @@
 "Reactions" = "Reações";
 "Read" = "Lida";
 "Read or unread" = "Lida ou não lida";
-"Readable on every accent colour" = "Legível em qualquer cor de destaque";
 "Reading %lld conversations…" = "Lendo %lld conversas…";
 "Reading 1 conversation…" = "Lendo 1 conversa…";
 "Reading your mail…" = "Lendo seus e-mails…";
 "Reading your sent mail…" = "Lendo seus e-mails enviados…";
 "Ready to paste the moment the email lands." = "Pronto para colar assim que o e-mail chega.";
-"Real labels for Gmail, and rules that keep running on your mail server when your Mac is off." = "Etiquetas de verdade para o Gmail e regras que continuam funcionando no seu servidor de e-mail quando o Mac está desligado.";
 "Receipts" = "Recibos";
 "Recent activity" = "Atividade recente";
 "Recent chats" = "Conversas recentes";
@@ -1097,7 +1073,6 @@
 "Scheduled mail" = "E-mails agendados";
 "Scheduled message sent" = "Mensagem agendada enviada";
 "Search" = "Buscar";
-"Search by sender, date or attachment, on the server too, and save searches you use often." = "Busque por remetente, data ou anexo, também no servidor, e salve as buscas que você usa com frequência.";
 "Search help" = "Buscar na ajuda";
 "Search looks through mail saved on this device first, then asks your mail servers." = "A busca olha primeiro os e-mails salvos neste dispositivo e depois consulta seus servidores.";
 "Search mail for “%@”" = "Buscar e-mails por “%@”";
@@ -1105,7 +1080,6 @@
 "Searches" = "Pesquisas";
 "Searching" = "Pesquisar";
 "Searching your mail…" = "Pesquisando seus e-mails…";
-"See when colleagues are busy or out of office, and when you're all free together." = "Veja quando os colegas estão ocupados ou fora do escritório, e quando todos estão livres.";
 "See when they're busy next to your own day. Only busy times are shared, never what." = "Veja quando estão ocupados ao lado do seu próprio dia. Só os horários ocupados são compartilhados, nunca o quê.";
 "Select all conversations" = "Selecionar todas as conversas";
 "Select conversation" = "Selecionar conversa";
@@ -1115,7 +1089,6 @@
 "Send Report…" = "Enviar relatório…";
 "Send at" = "Enviar em";
 "Send feedback" = "Enviar feedback";
-"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "Envie feedback pela Ajuda ou pelos Ajustes e, depois de uma falha, revise o relatório antes de enviar.";
 "Send later" = "Enviar mais tarde";
 "Send later is in the menu next to Send. Undo Send gives you a few seconds after Send; set how long in Settings → Writing." = "Enviar mais tarde fica no menu ao lado de Enviar. Desfazer envio dá alguns segundos após enviar; ajuste o tempo em Ajustes → Escrita.";
 "Send now" = "Enviar agora";
@@ -1125,7 +1098,6 @@
 "Sending your answer to %@…" = "Enviando sua resposta para %@…";
 "Sending…" = "Enviando…";
 "Sends %@ a short reply" = "Envia uma resposta curta para %@";
-"Sends from the address you pick" = "Envia do endereço que você escolher";
 "Sends mail by itself: each new email that matches is forwarded with its formatting, never back to its sender." = "Envia e-mails sozinha: cada e-mail novo correspondente é encaminhado com a formatação, nunca de volta ao remetente.";
 "Sends mail by itself: each sender gets the answer at most once every 4 days, and mailing lists and no-reply addresses never do." = "Envia e-mails sozinha: cada remetente recebe a resposta no máximo uma vez a cada 4 dias, e listas de e-mail e endereços no-reply nunca.";
 "Sent" = "Enviados";
@@ -1142,7 +1114,6 @@
 "Set automatic replies on your provider's website." = "Configure as respostas automáticas no site do seu provedor.";
 "Settings" = "Ajustes";
 "Settings  ⌘," = "Ajustes  ⌘,";
-"Settings → AI Apps → Answer while Margin is closed: turn it off and AI apps ask you to open Margin instead." = "Ajustes → Apps de IA → Responder com o Margin fechado: desative e os apps de IA vão pedir que você abra o Margin.";
 "Settings → Display & Brightness → Text Size." = "Ajustes → Tela e Brilho → Tamanho do Texto.";
 "Shared mailboxes" = "Caixas de correio compartilhadas";
 "Short back-and-forth reads as bubbles instead of a stack of emails." = "Trocas curtas aparecem como balões em vez de uma pilha de e-mails.";
@@ -1249,7 +1220,6 @@
 "Start Using Margin" = "Começar a usar o Margin";
 "Start from the keys of" = "Começar com as teclas de";
 "Starts at %@" = "Começa às %@";
-"Stays closed when you quit" = "Fica fechado quando você sai";
 "Stop" = "Parar";
 "Stop (%lld of %lld)" = "Parar (%lld de %lld)";
 "Stop comparing" = "Parar de comparar";
@@ -1295,7 +1265,6 @@
 "Tentatively accepted: %@" = "Aceito provisoriamente: %@";
 "Text" = "Texto";
 "Text color" = "Cor do texto";
-"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "O texto em botões e eventos na sua cor de destaque continua fácil de ler, seja qual for a cor escolhida.";
 "Text size" = "Tamanho do texto";
 /* Name of a starter reply template */
 "Thanks" = "Obrigado";
@@ -1493,7 +1462,6 @@
 "Username" = "Nome de usuário";
 "VIPs" = "VIPs";
 "Version %@" = "Versão %@";
-"Video calls and suggested times" = "Chamadas de vídeo e horários sugeridos";
 "Violet" = "Violeta";
 "Waiting for a connection" = "Aguardando conexão";
 "Waiting for a reply" = "Aguardando resposta";
@@ -1570,7 +1538,6 @@
 "You're not going" = "Você não vai";
 "You're not going · %@ has been told" = "Você não vai · %@ foi avisado";
 "Your @icloud.com address" = "Seu endereço @icloud.com";
-"Your choice when Margin is closed" = "Você escolhe com o Margin fechado";
 "Your mail" = "Seus e-mails";
 "Your mail and settings stay as they are. If your provider uses app passwords, enter one of those." = "Seus e-mails e ajustes ficam como estão. Se o seu provedor usa senhas de app, digite uma delas.";
 "Your mail goes straight to your provider." = "Seus e-mails vão direto para o seu provedor.";

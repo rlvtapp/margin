@@ -1,0 +1,17 @@
+/* Margin 2026.11.21.1 release titles and descriptions. */
+"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "Marginを開いていなくても、AIアプリがメールとカレンダーを読み、予定を変更できます。依頼があるまで何も動きません。";
+"AI apps while Margin is closed" = "Marginを閉じていてもAIアプリが使える";
+"All of Margin, bigger or smaller" = "Margin全体を大きく・小さく";
+"Feedback and crash reports" = "フィードバックとクラッシュレポート";
+"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "送信の瞬間に接続が切れても、メッセージは再送されません。届いていない場合に備えて、コピーが下書きに残ります。";
+"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "OutlookとExchangeからの招待は、どのタイムゾーンから送られても正しい時刻で表示されます。";
+"Mail from an Outlook address goes out from that address, not another one on the same account." = "Outlookのアドレスから送ったメールは、同じアカウントの別のアドレスではなく、そのアドレスから送信されます。";
+"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "MarginはMacの文字サイズに従い、⌘+と⌘−ですべてを拡大・縮小できます。メールの文字は⌥⌘+と⌥⌘−です。";
+"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "終了した後にMarginが勝手に開くことはなくなり、終了もすばやくなりました。";
+"Meeting times from Outlook" = "Outlookからの会議時刻";
+"Never sent twice" = "二重送信しません";
+"Readable on every accent colour" = "どのアクセントカラーでも読みやすく";
+"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "ヘルプや設定からフィードバックを送れます。クラッシュ後は、送信前にレポートを確認できます。";
+"Sends from the address you pick" = "選んだアドレスから送信";
+"Stays closed when you quit" = "終了したら閉じたまま";
+"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "アクセントカラーのボタンや予定の文字は、どの色を選んでも読みやすいままです。";

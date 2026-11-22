@@ -24,11 +24,16 @@ Margin keeps a short list of what changed in each version, inside the app.
    has them; the sheet opens once on the first version with notes newer than the one seen last.
 2. Three to six changes people will notice, written for them: what it does for you, not how it
    works. One SF Symbol and an account colour (`hue`) each.
-3. Every title and sentence is `String(localized:)`, so translate them like any other string
-   ([localization.md](localization.md)). Notes that aren't translated show in English.
+3. Every title and sentence uses its release's table, for example
+   `String(localized: "…", table: "Changelog-2026.11.26")`. Add its translations to
+   `Apps/Shared/Changelogs/<locale>.lproj/Changelog-2026.11.26.strings`
+   ([localization.md](localization.md)). Create a file for each locale (Canadian English can
+   contain just a comment when no spelling differs). Add the new table as a localized variant
+   group to the Mac, iOS and Watch targets in Xcode. Keep older releases in their own tables.
+   Notes that aren't translated show in English.
 4. Tag and release as in [updates.md](updates.md). The release script puts the same notes in the
    update feed (`scripts/release-notes.py`): one Sparkle `<description>` per language from the
-   string catalog, so the update window shows what's new in the Mac's language before people
+   release's `Changelog-<version>.strings` files, so the update window shows what's new in the Mac's language before people
    install. A version without its own entry (a fix the same day, `2026.11.26.1`) gets the newest notes before it, like the sheet. The GitHub release notes can be
    copied from the same lines.
 

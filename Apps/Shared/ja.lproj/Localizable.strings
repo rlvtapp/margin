@@ -111,7 +111,6 @@
 "3 months" = "3か月";
 "99+" = "99+";
 "A calm mail app that works directly with your provider." = "プロバイダと直接つながる、落ち着いたメールアプリ。";
-"A full calendar" = "本格的なカレンダー";
 "A heads-up before meetings from your invitations." = "招待されたミーティングの前にお知らせ。";
 "A label, an answer and keeping quiet work only in Margin." = "ラベル、返信、通知なしはMargin内でのみ動作します。";
 "A mailbox that's in no workspace shows in all of them." = "どのワークスペースにも入っていないメールボックスは、すべてのワークスペースに表示されます。";
@@ -126,11 +125,9 @@
 "AI" = "AI";
 "AI Apps" = "AI App";
 "AI apps" = "AI アプリ";
-"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "Marginを開いていなくても、AIアプリがメールとカレンダーを読み、予定を変更できます。依頼があるまで何も動きません。";
 "AI apps can read your mail and calendar without Margin open: a small helper starts when they ask and quits after 5 quiet minutes. Off, they ask you to open Margin." = "Marginを開いていなくても、AIアプリがメールとカレンダーを読めます。求められたときに小さなヘルパーが起動し、5分間何もなければ終了します。オフにすると、Marginを開くよう求められます。";
 "AI apps can't connect" = "AI アプリが接続できない";
 "AI apps on your Mac can search your mail, sort it, save drafts and make rules through Margin once you turn it on." = "オンにすると、Mac の AI アプリが Margin を通じてメールの検索、整理、下書きの保存、ルール作成を行えます。";
-"AI apps while Margin is closed" = "Marginを閉じていてもAIアプリが使える";
 "AI is off" = "AI はオフです";
 "AI is on" = "AI はオンです";
 "AI, or just mail" = "AI か、メールだけか";
@@ -194,7 +191,6 @@
 "All mail" = "すべてのメール";
 "All mailboxes" = "すべてのメールボックス";
 "All new mail" = "すべての新着メール";
-"All of Margin, bigger or smaller" = "Margin全体を大きく・小さく";
 "All of Margin. A size picked here is kept until you follow the system again." = "Margin 全体。ここで選んだサイズは、システムに戻すまで保たれます。";
 "All of Margin. ⌘+ and ⌘− change it anywhere; ⌘0 follows the system again." = "Margin 全体。⌘+ と ⌘− でどこからでも変更でき、⌘0 でシステムに戻ります。";
 "All your calendars" = "すべてのカレンダー";
@@ -286,7 +282,6 @@
 "Bad upload address." = "アップロード先のアドレスが正しくありません。";
 "Balanced" = "バランス型";
 "Bcc" = "Bcc";
-"Better search" = "検索の強化";
 "Bills to Pay" = "支払う請求書";
 "Block" = "ブロック";
 "Block %@" = "%@ をブロック";
@@ -367,7 +362,6 @@
 "Colors" = "カラー";
 "Command copied. Paste it in Terminal." = "コマンドをコピーしました。ターミナルにペーストしてください。";
 "Command palette" = "コマンドパレット";
-"Compare calendars" = "カレンダーを比較";
 "Compare with a colleague" = "同僚と比較";
 "Confirm" = "確認";
 "Confirm in the browser" = "ブラウザで確認";
@@ -413,7 +407,6 @@
 "Dark mode for emails" = "メールのダークモード";
 "Darker text and clearer lines." = "濃い文字とはっきりした線。";
 "Day" = "日";
-"Day, Week and Month next to your invitations, with your Mac's calendars and reminders. Make, move and delete events right there." = "招待状の隣に日・週・月表示。Mac のカレンダーとリマインダーも一緒に。予定の作成、移動、削除もその場でできます。";
 "Decline" = "辞退";
 "Decline and Delete" = "辞退して削除";
 "Declined" = "辞退";
@@ -476,9 +469,7 @@
 "Everything on this page works. The switch on the AI page turns all of it off." = "このページの機能はすべて動作します。AI ページのスイッチですべてオフにできます。";
 "Everything's handled. Enjoy the quiet." = "すべて片付きました。静かなひとときをお楽しみください。";
 "Expanded" = "展開";
-"Faster at the bottom of the list" = "リストの末尾がより速く";
 "Fastest and cheapest" = "最速・最安";
-"Feedback and crash reports" = "フィードバックとクラッシュレポート";
 "Fill in at least one condition." = "条件を1つ以上入力してください。";
 "Filter" = "フィルタ";
 "Find a time and send it from your calendar" = "カレンダーで時間を探して送信";
@@ -583,7 +574,6 @@
 "If no reply by tomorrow" = "明日までに返信がない場合";
 "If no reply in 3 days" = "3日以内に返信がない場合";
 "If no reply in a week" = "1週間以内に返信がない場合";
-"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "送信の瞬間に接続が切れても、メッセージは再送されません。届いていない場合に備えて、コピーが下書きに残ります。";
 "Important" = "重要";
 "In %@" = "%@後";
 "In %@, the way you write in it." = "%@で、あなたがその言語で書くように。";
@@ -602,7 +592,6 @@
 "Insert template: %@" = "テンプレートを挿入:%@";
 "Install Proton Mail Bridge on this Mac and sign in to it." = "この Mac に Proton Mail Bridge をインストールしてサインインします。";
 "Instant notifications" = "即時通知";
-"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "OutlookとExchangeからの招待は、どのタイムゾーンから送られても正しい時刻で表示されます。";
 "Invitations go out from %@." = "招待状は %@ から送信されます。";
 "Invitations in your mail, and the calendars you connected." = "メールの招待状と、接続したカレンダー。";
 "Invitations in your mail. Connect a mailbox to see its whole calendar." = "メールの招待状です。メールボックスを接続すると、そのカレンダー全体が表示されます。";
@@ -636,7 +625,6 @@
 "Label “%@”" = "ラベル「%@」";
 "Label, archive, move, snooze, trash, folders, templates, newsletters and the outbox. Apps can undo their own last change." = "ラベル、アーカイブ、移動、スヌーズ、ゴミ箱、フォルダ、テンプレート、ニュースレター、送信予定。アプリは自分の直前の変更を取り消せます。";
 "Labels" = "ラベル";
-"Labels and rules" = "ラベルとルール";
 "Labels and snoozes" = "ラベルとスヌーズ";
 "Label…" = "ラベル…";
 "Language" = "言語";
@@ -678,7 +666,6 @@
 /* A reaction to a message */
 "Love" = "大好き";
 "Mail from Margin on your iPhone shows up here." = "iPhone の Margin のメールがここに表示されます。";
-"Mail from an Outlook address goes out from that address, not another one on the same account." = "Outlookのアドレスから送ったメールは、同じアカウントの別のアドレスではなく、そのアドレスから送信されます。";
 "Mail goes straight between this device and your provider. No account to make, nothing tracked." = "メールはこのデバイスとプロバイダの間を直接やり取りします。アカウント作成も追跡もありません。";
 "Mail goes straight between this device and your provider. Passwords and tokens stay in this device's Keychain." = "メールはこのデバイスとメールプロバイダの間で直接やり取りされます。パスワードとトークンはこのデバイスのキーチェーンに保存されます。";
 "Mail in a language you don't read gets a Translate button. It's translated on this device." = "読まない言語のメールに「翻訳」ボタンが表示されます。翻訳はこのデバイス上で行われます。";
@@ -709,15 +696,12 @@
 "Margin adds itself to %@'s settings file. Click Save to allow it." = "Margin は %@ の設定ファイルに自身を追加します。「保存」をクリックして許可してください。";
 "Margin doesn't have the email for that invitation." = "Margin にはその招待のメールがありません。";
 "Margin doesn't open apps or scripts from email. It's shown in Finder." = "Margin はメールのアプリやスクリプトを開きません。Finder に表示しました。";
-"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "MarginはMacの文字サイズに従い、⌘+と⌘−ですべてを拡大・縮小できます。メールの文字は⌥⌘+と⌥⌘−です。";
 "Margin is closed. Open Margin, or turn on Settings → AI Apps → Answer while Margin is closed." = "Marginは閉じています。Marginを開くか、設定 → AIアプリ → Marginを閉じていても応答 をオンにしてください。";
 "Margin isn't allowed to read Contacts. Turn it on in Settings → Apps → Margin." = "Margin は連絡先を読み取る許可がありません。設定 →「アプリ」→ Margin でオンにしてください。";
 "Margin isn't allowed to read Contacts. Turn it on in System Settings → Privacy & Security → Contacts." = "Margin は連絡先を読み取る許可がありません。システム設定 →「プライバシーとセキュリティ」→「連絡先」でオンにしてください。";
 "Margin learns from the emails you send, on this device, and drafts replies the same way. Nothing is sent anywhere to learn it." = "Margin はこのデバイス上で送信メールから書き方を学び、同じように返信を下書きします。学習のために何かが送信されることはありません。";
 "Margin looks up the servers for your address. You can change them on the next step." = "Margin がアドレスのサーバを調べます。次のステップで変更できます。";
-"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "終了した後にMarginが勝手に開くことはなくなり、終了もすばやくなりました。";
 "Margin only interrupts you for what matters." = "Margin は大事なことだけをお知らせします。";
-"Margin opens from the Dock as usual while Codex, Claude or another AI app uses it, with no extra icon bouncing in the Dock." = "Codex、Claude、その他のAIアプリが使用中でも、MarginはいつもどおりDockから開き、Dockで余分なアイコンが跳ねることもありません。";
 "Margin quit unexpectedly" = "Margin が予期しない理由で終了しました";
 "Margin quit unexpectedly. What were you doing just before?" = "Margin が予期しない理由で終了しました。直前に何をしていましたか？";
 "Margin shows meetings from invitations in your mail. To see your whole calendar, turn on Calendar for an account in Settings." = "Margin はメールの招待状からの会議を表示します。カレンダー全体を見るには、設定でアカウントの「カレンダー」をオンにしてください。";
@@ -742,7 +726,6 @@
 "Meeting" = "会議";
 "Meeting link copied" = "会議のリンクをコピーしました";
 "Meeting reminders" = "会議のリマインダー";
-"Meeting times from Outlook" = "Outlookからの会議時刻";
 "Meetings" = "会議";
 "Meetings from invitations in your mail" = "メールの招待状からの会議";
 "Menu bar" = "メニューバー";
@@ -789,7 +772,6 @@
 "Needs iOS 26 or later with Apple Intelligence." = "Apple Intelligence に対応した iOS 26 以降が必要です。";
 "Needs macOS 26 or later with Apple Intelligence." = "Apple Intelligence に対応した macOS 26 以降が必要です。";
 "Needs you" = "あなた宛て";
-"Never sent twice" = "二重送信しません";
 "New Event" = "新規予定";
 "New Meeting" = "新規会議";
 "New Message" = "新規メッセージ";
@@ -799,7 +781,6 @@
 "New mail alerts" = "新着メールの通知";
 "New mail from an inbox starts with its default signature, and replies and forwards with the one picked for them. Pick another one while writing from the signature menu." = "受信箱からの新規メールは既定の署名で、返信と転送はそのために選んだ署名で始まります。作成中は署名メニューから別の署名を選べます。";
 "New meeting" = "新規会議";
-"New meetings get a call link, and Margin suggests times that work for everyone." = "新しい会議には通話リンクが付き、Margin が全員に都合のよい時間を提案します。";
 "New message" = "新規メッセージ";
 "New message  C" = "新規メッセージ  C";
 "New message  ⌘N" = "新規メッセージ  ⌘N";
@@ -894,7 +875,6 @@
 "Offer to translate" = "翻訳を提案";
 "Offline · showing saved mail" = "オフライン · 保存済みのメールを表示中";
 "Offline. Showing saved mail; it keeps trying." = "オフラインです。保存済みのメールを表示し、再試行を続けます。";
-"Older mail loads before you reach the end, straight from what's saved on your Mac." = "末尾に着く前に、Macに保存済みのメールから古いメールを読み込みます。";
 "Older mail's senders, subjects and previews are downloaded in the background, so it can be searched and scrolled without a connection. The text of recent mail is saved too, without its files, so opening it doesn't wait; older texts and all files come when a mail is opened. On iPhone and iPad only on Wi-Fi, and while charging or above 20% battery." = "以前のメールの差出人・件名・プレビューをバックグラウンドでダウンロードし、接続がなくても検索やスクロールができるようにします。最近のメールは本文も（ファイルを除いて）保存するので、待たずに開けます。それより前の本文とすべてのファイルは、メールを開いたときに取得します。iPhoneとiPadでは、Wi-Fi接続中で、充電中またはバッテリー残量20%以上のときのみ。";
 "On" = "オン";
 "On the server" = "サーバ上";
@@ -934,7 +914,6 @@
 "Open in browser" = "ブラウザで開く";
 "Open recent mail instantly" = "最近のメールをすぐに開く";
 "Opens this message" = "このメッセージを開きます";
-"Opens while AI apps are connected" = "AIアプリ接続中も開けます";
 "Optional" = "任意";
 "Opus: most capable, slowest" = "Opus:最も高性能、最も遅い";
 "Or write to %@." = "または %@ までどうぞ。";
@@ -992,7 +971,6 @@
 "Providers you've set up and saved above stay available for actions after you switch to another." = "上で設定して保存したプロバイダは、別のものに切り替えた後も操作に使えます。";
 "Purple" = "パープル";
 "Quick Look" = "クイックルック";
-"Quick Look and Save All, and a clear note when a file is too big to send." = "クイックルックと「すべて保存」、そしてファイルが大きすぎて送れないときのわかりやすいお知らせ。";
 "Quick replies keep the simple editor. Needs a Mac with Apple silicon." = "クイック返信はシンプルなエディタのままです。Apple シリコン搭載の Mac が必要です。";
 "Quick reply" = "クイック返信";
 "Quick suggestions" = "すばやい提案";
@@ -1004,13 +982,11 @@
 "Reactions" = "リアクション";
 "Read" = "既読";
 "Read or unread" = "既読/未読";
-"Readable on every accent colour" = "どのアクセントカラーでも読みやすく";
 "Reading %lld conversations…" = "%lld件のスレッドを読んでいます…";
 "Reading 1 conversation…" = "1件のスレッドを読んでいます…";
 "Reading your mail…" = "メールを読み込み中…";
 "Reading your sent mail…" = "送信済みメールを読み込み中…";
 "Ready to paste the moment the email lands." = "メールが届いた瞬間にペーストできます。";
-"Real labels for Gmail, and rules that keep running on your mail server when your Mac is off." = "Gmail の本物のラベルと、Mac の電源が切れていてもメールサーバ上で動き続けるルール。";
 "Receipts" = "領収書";
 "Recent activity" = "最近のアクティビティ";
 "Recent chats" = "最近のチャット";
@@ -1097,7 +1073,6 @@
 "Scheduled mail" = "予約メール";
 "Scheduled message sent" = "予約したメッセージを送信しました";
 "Search" = "検索";
-"Search by sender, date or attachment, on the server too, and save searches you use often." = "差出人、日付、添付ファイルで検索。サーバ上も検索でき、よく使う検索は保存できます。";
 "Search help" = "ヘルプを検索";
 "Search looks through mail saved on this device first, then asks your mail servers." = "検索はまずこのデバイスに保存されたメールを探し、次にメールサーバに問い合わせます。";
 "Search mail for “%@”" = "メールで「%@」を検索";
@@ -1105,7 +1080,6 @@
 "Searches" = "検索";
 "Searching" = "検索";
 "Searching your mail…" = "メールを検索中…";
-"See when colleagues are busy or out of office, and when you're all free together." = "同僚の予定ありや不在の時間と、全員が空いている時間がわかります。";
 "See when they're busy next to your own day. Only busy times are shared, never what." = "自分の 1 日の横に、相手の予定ありの時間を表示します。共有されるのは予定ありの時間だけで、内容は共有されません。";
 "Select all conversations" = "すべての会話を選択";
 "Select conversation" = "会話を選択";
@@ -1115,7 +1089,6 @@
 "Send Report…" = "レポートを送信…";
 "Send at" = "送信日時";
 "Send feedback" = "フィードバックを送信";
-"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "ヘルプや設定からフィードバックを送れます。クラッシュ後は、送信前にレポートを確認できます。";
 "Send later" = "後で送信";
 "Send later is in the menu next to Send. Undo Send gives you a few seconds after Send; set how long in Settings → Writing." = "後で送信は「送信」の横のメニューにあります。送信取り消しでは送信後に数秒の猶予があり、長さは設定 → 作成で変えられます。";
 "Send now" = "今すぐ送信";
@@ -1125,7 +1098,6 @@
 "Sending your answer to %@…" = "%@ に返信を送信中…";
 "Sending…" = "送信中…";
 "Sends %@ a short reply" = "%@ に短い返信を送信します";
-"Sends from the address you pick" = "選んだアドレスから送信";
 "Sends mail by itself: each new email that matches is forwarded with its formatting, never back to its sender." = "自動でメールを送ります:一致した新着メールを書式のまま転送し、差出人には送り返しません。";
 "Sends mail by itself: each sender gets the answer at most once every 4 days, and mailing lists and no-reply addresses never do." = "自動でメールを送ります:同じ差出人への返信は4日に1回まで、メーリングリストやno-replyアドレスには送りません。";
 "Sent" = "送信済み";
@@ -1142,7 +1114,6 @@
 "Set automatic replies on your provider's website." = "自動返信はプロバイダの Web サイトで設定してください。";
 "Settings" = "設定";
 "Settings  ⌘," = "設定  ⌘,";
-"Settings → AI Apps → Answer while Margin is closed: turn it off and AI apps ask you to open Margin instead." = "設定 → AIアプリ → Marginを閉じていても応答：オフにすると、AIアプリは代わりにMarginを開くよう求めます。";
 "Settings → Display & Brightness → Text Size." = "設定 → 画面表示と明るさ → テキストサイズを変更。";
 "Shared mailboxes" = "共有メールボックス";
 "Short back-and-forth reads as bubbles instead of a stack of emails." = "短いやりとりはメールの束ではなく吹き出しで表示。";
@@ -1249,7 +1220,6 @@
 "Start Using Margin" = "Margin を使い始める";
 "Start from the keys of" = "元にするキー設定";
 "Starts at %@" = "%@に開始";
-"Stays closed when you quit" = "終了したら閉じたまま";
 "Stop" = "停止";
 "Stop (%lld of %lld)" = "停止(%lld/%lld)";
 "Stop comparing" = "比較をやめる";
@@ -1295,7 +1265,6 @@
 "Tentatively accepted: %@" = "仮承諾:%@";
 "Text" = "テキスト";
 "Text color" = "文字の色";
-"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "アクセントカラーのボタンや予定の文字は、どの色を選んでも読みやすいままです。";
 "Text size" = "文字サイズ";
 /* Name of a starter reply template */
 "Thanks" = "お礼";
@@ -1493,7 +1462,6 @@
 "Username" = "ユーザ名";
 "VIPs" = "VIP";
 "Version %@" = "バージョン %@";
-"Video calls and suggested times" = "ビデオ通話と候補時間";
 "Violet" = "バイオレット";
 "Waiting for a connection" = "接続待ち";
 "Waiting for a reply" = "返信待ち";
@@ -1570,7 +1538,6 @@
 "You're not going" = "不参加";
 "You're not going · %@ has been told" = "不参加 · %@ に伝えました";
 "Your @icloud.com address" = "あなたの @icloud.com アドレス";
-"Your choice when Margin is closed" = "Marginを閉じているときの動作を選択";
 "Your mail" = "あなたのメール";
 "Your mail and settings stay as they are. If your provider uses app passwords, enter one of those." = "メールと設定はそのまま残ります。プロバイダがアプリパスワードを使っている場合は、そのひとつを入力してください。";
 "Your mail goes straight to your provider." = "メールはプロバイダと直接やり取り。";

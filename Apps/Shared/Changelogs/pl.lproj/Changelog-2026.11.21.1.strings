@@ -1,0 +1,17 @@
+/* Margin 2026.11.21.1 release titles and descriptions. */
+"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "Aplikacje AI mogą czytać pocztę i kalendarz oraz zmieniać wydarzenia bez otwierania Margin. Nic nie działa, dopóki o coś nie poproszą.";
+"AI apps while Margin is closed" = "Aplikacje AI przy zamkniętym Margin";
+"All of Margin, bigger or smaller" = "Cały Margin większy lub mniejszy";
+"Feedback and crash reports" = "Opinie i raporty o awariach";
+"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "Jeśli połączenie zerwie się w chwili wysyłania, wiadomość nie zostanie wysłana ponownie: kopia czeka w Wersjach roboczych, na wypadek gdyby nie dotarła.";
+"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "Zaproszenia z Outlooka i Exchange pokazują się o właściwej godzinie, niezależnie od strefy czasowej nadawcy.";
+"Mail from an Outlook address goes out from that address, not another one on the same account." = "Poczta z adresu Outlook wychodzi z tego adresu, a nie z innego adresu tego samego konta.";
+"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "Margin dostosowuje się do rozmiaru tekstu na Macu, a ⌘+ i ⌘− powiększają lub pomniejszają wszystko. Tekst e-maili zmieniasz przez ⌥⌘+ i ⌥⌘−.";
+"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "Margin nie otwiera się już sam po zakończeniu, a zamykanie jest szybsze.";
+"Meeting times from Outlook" = "Godziny spotkań z Outlooka";
+"Never sent twice" = "Nigdy nie wysyła się dwa razy";
+"Readable on every accent colour" = "Czytelne w każdym kolorze akcentu";
+"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "Wysyłaj opinie z Pomocy lub Ustawień, a po awarii przejrzyj raport przed wysłaniem.";
+"Sends from the address you pick" = "Wysyła z wybranego adresu";
+"Stays closed when you quit" = "Pozostaje zamknięty po zakończeniu";
+"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "Tekst na przyciskach i wydarzeniach w kolorze akcentu pozostaje czytelny, niezależnie od wybranego koloru.";

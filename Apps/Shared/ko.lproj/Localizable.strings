@@ -111,7 +111,6 @@
 "3 months" = "3개월";
 "99+" = "99+";
 "A calm mail app that works directly with your provider." = "제공업체와 바로 연결되는 차분한 메일 앱.";
-"A full calendar" = "완전한 캘린더";
 "A heads-up before meetings from your invitations." = "초대받은 회의 전에 알려 줘요.";
 "A label, an answer and keeping quiet work only in Margin." = "레이블, 답장, 알림 끄기는 Margin에서만 작동합니다.";
 "A mailbox that's in no workspace shows in all of them." = "어느 작업 공간에도 속하지 않은 메일함은 모든 작업 공간에 표시됩니다.";
@@ -126,11 +125,9 @@
 "AI" = "AI";
 "AI Apps" = "AI 앱";
 "AI apps" = "AI 앱";
-"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "Margin을 열지 않아도 AI 앱이 메일과 캘린더를 읽고 일정을 바꿀 수 있습니다. 요청이 있을 때까지는 아무것도 실행되지 않습니다.";
 "AI apps can read your mail and calendar without Margin open: a small helper starts when they ask and quits after 5 quiet minutes. Off, they ask you to open Margin." = "Margin을 열지 않아도 AI 앱이 메일과 캘린더를 읽을 수 있습니다. 요청이 있을 때 작은 도우미가 시작되고 5분 동안 조용하면 종료됩니다. 끄면 Margin을 열라고 안내합니다.";
 "AI apps can't connect" = "AI 앱이 연결되지 않음";
 "AI apps on your Mac can search your mail, sort it, save drafts and make rules through Margin once you turn it on." = "켜면 Mac의 AI 앱이 Margin을 통해 메일을 검색하고 정리하고 초안을 저장하고 규칙을 만들 수 있습니다.";
-"AI apps while Margin is closed" = "Margin이 닫혀 있어도 AI 앱 사용";
 "AI is off" = "AI가 꺼져 있음";
 "AI is on" = "AI가 켜져 있음";
 "AI, or just mail" = "AI 또는 메일만";
@@ -194,7 +191,6 @@
 "All mail" = "전체 메일";
 "All mailboxes" = "모든 메일함";
 "All new mail" = "새 메일 전체";
-"All of Margin, bigger or smaller" = "Margin 전체를 크게 또는 작게";
 "All of Margin. A size picked here is kept until you follow the system again." = "Margin 전체. 여기서 고른 크기는 다시 시스템을 따를 때까지 유지됩니다.";
 "All of Margin. ⌘+ and ⌘− change it anywhere; ⌘0 follows the system again." = "Margin 전체. ⌘+와 ⌘−로 어디서든 바꾸고, ⌘0을 누르면 다시 시스템을 따릅니다.";
 "All your calendars" = "모든 캘린더";
@@ -286,7 +282,6 @@
 "Bad upload address." = "업로드 주소가 잘못되었습니다.";
 "Balanced" = "균형형";
 "Bcc" = "숨은 참조";
-"Better search" = "더 나아진 검색";
 "Bills to Pay" = "납부할 청구서";
 "Block" = "차단";
 "Block %@" = "%@ 차단";
@@ -367,7 +362,6 @@
 "Colors" = "색상";
 "Command copied. Paste it in Terminal." = "명령을 복사했어요. 터미널에 붙여넣으세요.";
 "Command palette" = "명령 팔레트";
-"Compare calendars" = "캘린더 비교";
 "Compare with a colleague" = "동료와 비교";
 "Confirm" = "확인";
 "Confirm in the browser" = "브라우저에서 확인";
@@ -413,7 +407,6 @@
 "Dark mode for emails" = "이메일 다크 모드";
 "Darker text and clearer lines." = "더 진한 글자와 또렷한 선.";
 "Day" = "일";
-"Day, Week and Month next to your invitations, with your Mac's calendars and reminders. Make, move and delete events right there." = "초대장 옆에서 일, 주, 월 보기와 Mac의 캘린더 및 미리 알림을 함께 보세요. 일정을 그 자리에서 만들고, 옮기고, 삭제할 수 있어요.";
 "Decline" = "거절";
 "Decline and Delete" = "거절 후 삭제";
 "Declined" = "거절함";
@@ -476,9 +469,7 @@
 "Everything on this page works. The switch on the AI page turns all of it off." = "이 페이지의 모든 기능이 작동합니다. AI 페이지의 스위치로 모두 끌 수 있습니다.";
 "Everything's handled. Enjoy the quiet." = "모두 처리했어요. 여유를 즐기세요.";
 "Expanded" = "펼침";
-"Faster at the bottom of the list" = "목록 끝에서 더 빠르게";
 "Fastest and cheapest" = "가장 빠르고 저렴함";
-"Feedback and crash reports" = "피드백 및 충돌 보고서";
 "Fill in at least one condition." = "조건을 하나 이상 입력하세요.";
 "Filter" = "필터";
 "Find a time and send it from your calendar" = "캘린더에서 시간을 찾아 보내기";
@@ -583,7 +574,6 @@
 "If no reply by tomorrow" = "내일까지 답장이 없으면";
 "If no reply in 3 days" = "3일 내에 답장이 없으면";
 "If no reply in a week" = "일주일 내에 답장이 없으면";
-"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "메시지를 보내는 순간 연결이 끊겨도 다시 보내지 않습니다. 도착하지 않았을 경우를 위해 사본이 임시 보관함에 남습니다.";
 "Important" = "중요";
 "In %@" = "%@ 후";
 "In %@, the way you write in it." = "%@로, 당신이 그 언어로 쓰는 방식대로.";
@@ -602,7 +592,6 @@
 "Insert template: %@" = "템플릿 삽입: %@";
 "Install Proton Mail Bridge on this Mac and sign in to it." = "이 Mac에 Proton Mail Bridge를 설치하고 로그인하세요.";
 "Instant notifications" = "즉시 알림";
-"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "Outlook과 Exchange의 초대는 어느 시간대에서 보냈든 올바른 시각에 표시됩니다.";
 "Invitations go out from %@." = "초대장은 %@에서 발송됩니다.";
 "Invitations in your mail, and the calendars you connected." = "메일 속 초대장과 연결한 캘린더.";
 "Invitations in your mail. Connect a mailbox to see its whole calendar." = "메일 속 초대장입니다. 메일함을 연결하면 그 캘린더 전체를 볼 수 있어요.";
@@ -636,7 +625,6 @@
 "Label “%@”" = "레이블 “%@”";
 "Label, archive, move, snooze, trash, folders, templates, newsletters and the outbox. Apps can undo their own last change." = "레이블, 보관, 이동, 다시 알림, 휴지통, 폴더, 템플릿, 뉴스레터, 보낼 편지함. 앱은 자신의 마지막 변경을 되돌릴 수 있어요.";
 "Labels" = "레이블";
-"Labels and rules" = "레이블과 규칙";
 "Labels and snoozes" = "레이블 및 다시 알림";
 "Label…" = "레이블…";
 "Language" = "언어";
@@ -678,7 +666,6 @@
 /* A reaction to a message */
 "Love" = "사랑해요";
 "Mail from Margin on your iPhone shows up here." = "iPhone의 Margin에서 보낸 메일이 여기에 표시돼요.";
-"Mail from an Outlook address goes out from that address, not another one on the same account." = "Outlook 주소로 보낸 메일은 같은 계정의 다른 주소가 아닌 그 주소로 보내집니다.";
 "Mail goes straight between this device and your provider. No account to make, nothing tracked." = "메일은 이 기기와 제공업체 사이를 바로 오갑니다. 계정을 만들 필요도, 추적도 없습니다.";
 "Mail goes straight between this device and your provider. Passwords and tokens stay in this device's Keychain." = "메일은 이 기기와 제공업체 사이에서 바로 오가요. 암호와 토큰은 이 기기의 키체인에 보관돼요.";
 "Mail in a language you don't read gets a Translate button. It's translated on this device." = "읽지 않는 언어로 된 메일에 번역 버튼이 표시됩니다. 번역은 이 기기에서 이루어집니다.";
@@ -709,15 +696,12 @@
 "Margin adds itself to %@'s settings file. Click Save to allow it." = "Margin이 %@의 설정 파일에 자신을 추가해요. 허용하려면 저장을 클릭하세요.";
 "Margin doesn't have the email for that invitation." = "Margin에 그 초대의 메일이 없습니다.";
 "Margin doesn't open apps or scripts from email. It's shown in Finder." = "Margin은 이메일의 앱이나 스크립트를 열지 않습니다. Finder에 표시했습니다.";
-"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "Margin은 Mac의 텍스트 크기를 따르며, ⌘+와 ⌘−로 모든 것을 크게 또는 작게 할 수 있습니다. 이메일 텍스트는 ⌥⌘+와 ⌥⌘−입니다.";
 "Margin is closed. Open Margin, or turn on Settings → AI Apps → Answer while Margin is closed." = "Margin이 닫혀 있습니다. Margin을 열거나 설정 → AI 앱 → Margin이 닫혀 있어도 응답을 켜세요.";
 "Margin isn't allowed to read Contacts. Turn it on in Settings → Apps → Margin." = "Margin이 연락처를 읽을 수 없습니다. 설정 → 앱 → Margin에서 켜세요.";
 "Margin isn't allowed to read Contacts. Turn it on in System Settings → Privacy & Security → Contacts." = "Margin이 연락처를 읽을 수 없습니다. 시스템 설정 → 개인정보 보호 및 보안 → 연락처에서 켜세요.";
 "Margin learns from the emails you send, on this device, and drafts replies the same way. Nothing is sent anywhere to learn it." = "Margin은 이 기기에서 내가 보낸 이메일을 학습하고 같은 방식으로 답장 초안을 작성해요. 학습을 위해 어디로도 전송하지 않아요.";
 "Margin looks up the servers for your address. You can change them on the next step." = "Margin이 주소의 서버를 찾아 줍니다. 다음 단계에서 바꿀 수 있습니다.";
-"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "종료한 후 Margin이 저절로 다시 열리지 않으며, 종료도 더 빨라졌습니다.";
 "Margin only interrupts you for what matters." = "Margin은 중요한 일에만 알려 드립니다.";
-"Margin opens from the Dock as usual while Codex, Claude or another AI app uses it, with no extra icon bouncing in the Dock." = "Codex, Claude 또는 다른 AI 앱이 사용 중이어도 Margin이 평소처럼 Dock에서 열리며, Dock에서 추가 아이콘이 튀지 않습니다.";
 "Margin quit unexpectedly" = "Margin이 예기치 않게 종료되었습니다";
 "Margin quit unexpectedly. What were you doing just before?" = "Margin이 예기치 않게 종료되었습니다. 바로 전에 무엇을 하고 있었나요?";
 "Margin shows meetings from invitations in your mail. To see your whole calendar, turn on Calendar for an account in Settings." = "Margin은 메일 속 초대장의 회의를 보여 줍니다. 캘린더 전체를 보려면 설정에서 계정의 캘린더를 켜세요.";
@@ -742,7 +726,6 @@
 "Meeting" = "회의";
 "Meeting link copied" = "회의 링크를 복사했습니다";
 "Meeting reminders" = "미팅 알림";
-"Meeting times from Outlook" = "Outlook 회의 시간";
 "Meetings" = "미팅";
 "Meetings from invitations in your mail" = "메일 속 초대장의 회의";
 "Menu bar" = "메뉴 막대";
@@ -789,7 +772,6 @@
 "Needs iOS 26 or later with Apple Intelligence." = "Apple Intelligence가 있는 iOS 26 이상이 필요해요.";
 "Needs macOS 26 or later with Apple Intelligence." = "Apple Intelligence가 있는 macOS 26 이상이 필요해요.";
 "Needs you" = "확인 필요";
-"Never sent twice" = "두 번 보내지 않음";
 "New Event" = "새로운 일정";
 "New Meeting" = "새 회의";
 "New Message" = "새로운 메시지";
@@ -799,7 +781,6 @@
 "New mail alerts" = "새 메일 알림";
 "New mail from an inbox starts with its default signature, and replies and forwards with the one picked for them. Pick another one while writing from the signature menu." = "받은편지함의 새 메일은 기본 서명으로, 답장과 전달은 그에 맞게 고른 서명으로 시작합니다. 작성 중에 서명 메뉴에서 다른 서명을 고르세요.";
 "New meeting" = "새 회의";
-"New meetings get a call link, and Margin suggests times that work for everyone." = "새 회의에는 통화 링크가 추가되고, Margin이 모두에게 맞는 시간을 추천해요.";
 "New message" = "새로운 메시지";
 "New message  C" = "새로운 메시지  C";
 "New message  ⌘N" = "새로운 메시지  ⌘N";
@@ -894,7 +875,6 @@
 "Offer to translate" = "번역 제안";
 "Offline · showing saved mail" = "오프라인 · 저장된 메일 표시 중";
 "Offline. Showing saved mail; it keeps trying." = "오프라인입니다. 저장된 메일을 보여 주며 계속 시도합니다.";
-"Older mail loads before you reach the end, straight from what's saved on your Mac." = "끝에 도달하기 전에 Mac에 저장된 메일에서 이전 메일을 바로 불러옵니다.";
 "Older mail's senders, subjects and previews are downloaded in the background, so it can be searched and scrolled without a connection. The text of recent mail is saved too, without its files, so opening it doesn't wait; older texts and all files come when a mail is opened. On iPhone and iPad only on Wi-Fi, and while charging or above 20% battery." = "이전 메일의 보낸 사람, 제목, 미리보기를 백그라운드에서 다운로드해 연결 없이도 검색하고 스크롤할 수 있습니다. 최근 메일은 본문도 파일 없이 저장해 기다리지 않고 열 수 있습니다. 더 오래된 본문과 모든 파일은 메일을 열 때 받습니다. iPhone과 iPad에서는 Wi-Fi에서, 충전 중이거나 배터리가 20% 이상일 때만 진행합니다.";
 "On" = "켬";
 "On the server" = "서버에서";
@@ -934,7 +914,6 @@
 "Open in browser" = "브라우저에서 열기";
 "Open recent mail instantly" = "최근 메일 바로 열기";
 "Opens this message" = "이 메시지를 열어요";
-"Opens while AI apps are connected" = "AI 앱이 연결되어 있어도 열림";
 "Optional" = "선택 사항";
 "Opus: most capable, slowest" = "Opus: 가장 뛰어나고 가장 느림";
 "Or write to %@." = "또는 %@(으)로 메일을 보내세요.";
@@ -992,7 +971,6 @@
 "Providers you've set up and saved above stay available for actions after you switch to another." = "위에서 설정하고 저장한 제공자는 다른 제공자로 바꾼 뒤에도 작업에 계속 쓸 수 있어요.";
 "Purple" = "보라색";
 "Quick Look" = "훑어보기";
-"Quick Look and Save All, and a clear note when a file is too big to send." = "훑어보기와 모두 저장, 그리고 파일이 너무 커서 보낼 수 없을 때 알기 쉬운 안내.";
 "Quick replies keep the simple editor. Needs a Mac with Apple silicon." = "빠른 답장은 간단한 편집기를 그대로 씁니다. Apple 실리콘 Mac이 필요합니다.";
 "Quick reply" = "빠른 답장";
 "Quick suggestions" = "빠른 제안";
@@ -1004,13 +982,11 @@
 "Reactions" = "반응";
 "Read" = "읽음";
 "Read or unread" = "읽음 또는 읽지 않음";
-"Readable on every accent colour" = "모든 강조 색상에서 읽기 쉽게";
 "Reading %lld conversations…" = "대화 %lld개 읽는 중…";
 "Reading 1 conversation…" = "대화 1개 읽는 중…";
 "Reading your mail…" = "내 메일을 읽는 중…";
 "Reading your sent mail…" = "보낸 메일을 읽는 중…";
 "Ready to paste the moment the email lands." = "메일이 도착하자마자 붙여넣을 수 있습니다.";
-"Real labels for Gmail, and rules that keep running on your mail server when your Mac is off." = "Gmail용 진짜 레이블, 그리고 Mac이 꺼져 있어도 메일 서버에서 계속 실행되는 규칙.";
 "Receipts" = "영수증";
 "Recent activity" = "최근 활동";
 "Recent chats" = "최근 대화";
@@ -1097,7 +1073,6 @@
 "Scheduled mail" = "예약 메일";
 "Scheduled message sent" = "예약한 메시지를 보냈어요";
 "Search" = "검색";
-"Search by sender, date or attachment, on the server too, and save searches you use often." = "보낸 사람, 날짜, 첨부 파일로 서버에서도 검색하고, 자주 쓰는 검색은 저장하세요.";
 "Search help" = "도움말 검색";
 "Search looks through mail saved on this device first, then asks your mail servers." = "검색은 먼저 이 기기에 저장된 메일을 찾은 뒤 메일 서버에 묻습니다.";
 "Search mail for “%@”" = "“%@” 메일 검색";
@@ -1105,7 +1080,6 @@
 "Searches" = "검색";
 "Searching" = "검색";
 "Searching your mail…" = "메일 검색 중…";
-"See when colleagues are busy or out of office, and when you're all free together." = "동료의 일정이 있거나 부재중인 시간, 모두 비어 있는 시간을 확인하세요.";
 "See when they're busy next to your own day. Only busy times are shared, never what." = "내 하루 옆에서 상대의 일정이 있는 시간을 확인하세요. 일정이 있는 시간만 공유되고, 내용은 공유되지 않아요.";
 "Select all conversations" = "모든 대화 선택";
 "Select conversation" = "대화 선택";
@@ -1115,7 +1089,6 @@
 "Send Report…" = "보고서 보내기…";
 "Send at" = "보낼 시간";
 "Send feedback" = "피드백 보내기";
-"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "도움말이나 설정에서 피드백을 보내고, 충돌 후에는 보내기 전에 보고서를 확인하세요.";
 "Send later" = "나중에 보내기";
 "Send later is in the menu next to Send. Undo Send gives you a few seconds after Send; set how long in Settings → Writing." = "나중에 보내기는 보내기 옆 메뉴에 있습니다. 보내기 취소는 보낸 후 몇 초를 주며, 길이는 설정 → 작성에서 정합니다.";
 "Send now" = "지금 보내기";
@@ -1125,7 +1098,6 @@
 "Sending your answer to %@…" = "%@에게 답장을 보내는 중…";
 "Sending…" = "보내는 중…";
 "Sends %@ a short reply" = "%@님에게 짧은 답장을 보냅니다";
-"Sends from the address you pick" = "선택한 주소로 보내기";
 "Sends mail by itself: each new email that matches is forwarded with its formatting, never back to its sender." = "자동으로 메일을 보냅니다. 일치하는 새 이메일을 서식 그대로 전달하며, 발신자에게 되돌려 보내지 않습니다.";
 "Sends mail by itself: each sender gets the answer at most once every 4 days, and mailing lists and no-reply addresses never do." = "자동으로 메일을 보냅니다. 같은 발신자에게는 최대 4일에 한 번만 답하며, 메일링 리스트와 no-reply 주소에는 보내지 않습니다.";
 "Sent" = "보낸 편지함";
@@ -1142,7 +1114,6 @@
 "Set automatic replies on your provider's website." = "자동 답장은 제공업체 웹사이트에서 설정하세요.";
 "Settings" = "설정";
 "Settings  ⌘," = "설정  ⌘,";
-"Settings → AI Apps → Answer while Margin is closed: turn it off and AI apps ask you to open Margin instead." = "설정 → AI 앱 → Margin이 닫혀 있어도 응답: 끄면 AI 앱이 대신 Margin을 열라고 안내합니다.";
 "Settings → Display & Brightness → Text Size." = "설정 → 디스플레이 및 밝기 → 텍스트 크기.";
 "Shared mailboxes" = "공유 사서함";
 "Short back-and-forth reads as bubbles instead of a stack of emails." = "짧은 대화는 메일 묶음 대신 말풍선으로 보여요.";
@@ -1249,7 +1220,6 @@
 "Start Using Margin" = "Margin 시작하기";
 "Start from the keys of" = "다음 키에서 시작";
 "Starts at %@" = "%@에 시작";
-"Stays closed when you quit" = "종료하면 닫힌 상태 유지";
 "Stop" = "중지";
 "Stop (%lld of %lld)" = "중단(%lld/%lld)";
 "Stop comparing" = "비교 중단";
@@ -1295,7 +1265,6 @@
 "Tentatively accepted: %@" = "잠정 수락함: %@";
 "Text" = "텍스트";
 "Text color" = "글자 색";
-"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "강조 색상의 버튼과 일정 위 글자는 어떤 색을 고르든 읽기 쉽습니다.";
 "Text size" = "텍스트 크기";
 /* Name of a starter reply template */
 "Thanks" = "감사해요";
@@ -1493,7 +1462,6 @@
 "Username" = "사용자 이름";
 "VIPs" = "VIP";
 "Version %@" = "버전 %@";
-"Video calls and suggested times" = "영상 통화와 추천 시간";
 "Violet" = "보라";
 "Waiting for a connection" = "연결 대기 중";
 "Waiting for a reply" = "답장 대기 중";
@@ -1570,7 +1538,6 @@
 "You're not going" = "불참";
 "You're not going · %@ has been told" = "불참 · %@에게 알렸습니다";
 "Your @icloud.com address" = "내 @icloud.com 주소";
-"Your choice when Margin is closed" = "Margin이 닫혀 있을 때 직접 선택";
 "Your mail" = "내 메일";
 "Your mail and settings stay as they are. If your provider uses app passwords, enter one of those." = "메일과 설정은 그대로 유지됩니다. 제공업체가 앱 암호를 사용한다면 그중 하나를 입력하세요.";
 "Your mail goes straight to your provider." = "메일은 제공업체와 바로 오갑니다.";

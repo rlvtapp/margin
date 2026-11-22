@@ -111,7 +111,6 @@
 "3 months" = "3 maanden";
 "99+" = "99+";
 "A calm mail app that works directly with your provider." = "Een rustige mailapp die rechtstreeks met je provider werkt.";
-"A full calendar" = "Een volledige agenda";
 "A heads-up before meetings from your invitations." = "Een seintje voor vergaderingen uit je uitnodigingen.";
 "A label, an answer and keeping quiet work only in Margin." = "Een label, een antwoord en stil houden werken alleen in Margin.";
 "A mailbox that's in no workspace shows in all of them." = "Een mailbox die in geen enkele werkruimte zit, is in alle werkruimten te zien.";
@@ -126,11 +125,9 @@
 "AI" = "AI";
 "AI Apps" = "AI-apps";
 "AI apps" = "AI-apps";
-"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "AI-apps kunnen je mail en agenda lezen en afspraken wijzigen zonder dat Margin open is. Er draait niets tot ze iets vragen.";
 "AI apps can read your mail and calendar without Margin open: a small helper starts when they ask and quits after 5 quiet minutes. Off, they ask you to open Margin." = "AI-apps kunnen je mail en agenda lezen zonder dat Margin open is: een kleine helper start als ze iets vragen en stopt na 5 stille minuten. Uit: ze vragen je Margin te openen.";
 "AI apps can't connect" = "AI-apps kunnen geen verbinding maken";
 "AI apps on your Mac can search your mail, sort it, save drafts and make rules through Margin once you turn it on." = "Zodra je het aanzet, kunnen AI-apps op je Mac via Margin in je mail zoeken, die sorteren, concepten bewaren en regels maken.";
-"AI apps while Margin is closed" = "AI-apps terwijl Margin dicht is";
 "AI is off" = "AI staat uit";
 "AI is on" = "AI staat aan";
 "AI, or just mail" = "AI, of alleen mail";
@@ -194,7 +191,6 @@
 "All mail" = "Alle e-mail";
 "All mailboxes" = "Alle mailboxen";
 "All new mail" = "Alle nieuwe e-mail";
-"All of Margin, bigger or smaller" = "Heel Margin groter of kleiner";
 "All of Margin. A size picked here is kept until you follow the system again." = "Heel Margin. Een hier gekozen grootte blijft tot je het systeem weer volgt.";
 "All of Margin. ⌘+ and ⌘− change it anywhere; ⌘0 follows the system again." = "Heel Margin. ⌘+ en ⌘− veranderen het overal; ⌘0 volgt weer het systeem.";
 "All your calendars" = "Al je agenda's";
@@ -286,7 +282,6 @@
 "Bad upload address." = "Ongeldig uploadadres.";
 "Balanced" = "Gebalanceerd";
 "Bcc" = "Bcc";
-"Better search" = "Beter zoeken";
 "Bills to Pay" = "Te betalen rekeningen";
 "Block" = "Blokkeren";
 "Block %@" = "%@ blokkeren";
@@ -367,7 +362,6 @@
 "Colors" = "Kleuren";
 "Command copied. Paste it in Terminal." = "Opdracht gekopieerd. Plak hem in Terminal.";
 "Command palette" = "Opdrachtenpalet";
-"Compare calendars" = "Agenda's vergelijken";
 "Compare with a colleague" = "Vergelijk met een collega";
 "Confirm" = "Bevestig";
 "Confirm in the browser" = "Bevestig in de browser";
@@ -413,7 +407,6 @@
 "Dark mode for emails" = "Donkere modus voor e-mails";
 "Darker text and clearer lines." = "Donkerdere tekst en duidelijkere lijnen.";
 "Day" = "Dag";
-"Day, Week and Month next to your invitations, with your Mac's calendars and reminders. Make, move and delete events right there." = "Dag, Week en Maand naast je uitnodigingen, met de agenda's en herinneringen van je Mac. Maak, verplaats en verwijder afspraken meteen daar.";
 "Decline" = "Wijs af";
 "Decline and Delete" = "Afwijzen en verwijderen";
 "Declined" = "Afgewezen";
@@ -476,9 +469,7 @@
 "Everything on this page works. The switch on the AI page turns all of it off." = "Alles op deze pagina werkt. De schakelaar op de pagina AI zet het allemaal uit.";
 "Everything's handled. Enjoy the quiet." = "Alles is afgehandeld. Geniet van de rust.";
 "Expanded" = "Uitgeklapt";
-"Faster at the bottom of the list" = "Sneller onderaan de lijst";
 "Fastest and cheapest" = "Snelst en goedkoopst";
-"Feedback and crash reports" = "Feedback en crashrapporten";
 "Fill in at least one condition." = "Vul minstens één voorwaarde in.";
 "Filter" = "Filter";
 "Find a time and send it from your calendar" = "Zoek een tijd en verstuur hem vanuit je agenda";
@@ -583,7 +574,6 @@
 "If no reply by tomorrow" = "Als er morgen nog geen antwoord is";
 "If no reply in 3 days" = "Als er na 3 dagen geen antwoord is";
 "If no reply in a week" = "Als er na een week geen antwoord is";
-"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "Valt de verbinding weg precies als een bericht vertrekt, dan wordt het niet opnieuw verstuurd: een kopie staat in Concepten voor het geval het niet is aangekomen.";
 "Important" = "Belangrijk";
 "In %@" = "Over %@";
 "In %@, the way you write in it." = "In het %@, zoals jij erin schrijft.";
@@ -602,7 +592,6 @@
 "Insert template: %@" = "Voeg sjabloon in: %@";
 "Install Proton Mail Bridge on this Mac and sign in to it." = "Installeer Proton Mail Bridge op deze Mac en log erin in.";
 "Instant notifications" = "Directe meldingen";
-"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "Uitnodigingen uit Outlook en Exchange staan op het juiste uur, uit welke tijdzone ze ook komen.";
 "Invitations go out from %@." = "Uitnodigingen worden verstuurd vanuit %@.";
 "Invitations in your mail, and the calendars you connected." = "Uitnodigingen in je mail en de agenda's die je hebt gekoppeld.";
 "Invitations in your mail. Connect a mailbox to see its whole calendar." = "Uitnodigingen in je mail. Koppel een mailbox om de hele agenda te zien.";
@@ -636,7 +625,6 @@
 "Label “%@”" = "Label ‘%@’";
 "Label, archive, move, snooze, trash, folders, templates, newsletters and the outbox. Apps can undo their own last change." = "Labelen, archiveren, verplaatsen, sluimeren, prullenmand, mappen, sjablonen, nieuwsbrieven en ingeplande mail. Apps kunnen hun eigen laatste wijziging ongedaan maken.";
 "Labels" = "Labels";
-"Labels and rules" = "Labels en regels";
 "Labels and snoozes" = "Labels en gesluimerde e-mail";
 "Label…" = "Label…";
 "Language" = "Taal";
@@ -678,7 +666,6 @@
 /* A reaction to a message */
 "Love" = "Hart";
 "Mail from Margin on your iPhone shows up here." = "Mail uit Margin op je iPhone verschijnt hier.";
-"Mail from an Outlook address goes out from that address, not another one on the same account." = "Mail vanaf een Outlook-adres gaat ook echt vanaf dat adres de deur uit, niet vanaf een ander adres van hetzelfde account.";
 "Mail goes straight between this device and your provider. No account to make, nothing tracked." = "Mail gaat rechtstreeks tussen dit apparaat en je provider. Geen account nodig, niets gevolgd.";
 "Mail goes straight between this device and your provider. Passwords and tokens stay in this device's Keychain." = "E-mail gaat rechtstreeks tussen dit apparaat en je provider. Wachtwoorden en tokens blijven in de sleutelhanger van dit apparaat.";
 "Mail in a language you don't read gets a Translate button. It's translated on this device." = "Mail in een taal die je niet leest krijgt een knop Vertaal. Er wordt vertaald op dit apparaat.";
@@ -709,15 +696,12 @@
 "Margin adds itself to %@'s settings file. Click Save to allow it." = "Margin voegt zichzelf toe aan het instellingenbestand van %@. Klik op Bewaar om dit toe te staan.";
 "Margin doesn't have the email for that invitation." = "Margin heeft de e-mail van die uitnodiging niet.";
 "Margin doesn't open apps or scripts from email. It's shown in Finder." = "Margin opent geen apps of scripts uit e-mail. Het wordt in de Finder getoond.";
-"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "Margin volgt de tekstgrootte van je Mac, en met ⌘+ en ⌘− maak je alles groter of kleiner. Voor de tekst van e-mails is er ⌥⌘+ en ⌥⌘−.";
 "Margin is closed. Open Margin, or turn on Settings → AI Apps → Answer while Margin is closed." = "Margin is gesloten. Open Margin, of zet Instellingen → AI-apps → Antwoorden als Margin gesloten is aan.";
 "Margin isn't allowed to read Contacts. Turn it on in Settings → Apps → Margin." = "Margin mag Contacten niet lezen. Zet het aan in Instellingen → Apps → Margin.";
 "Margin isn't allowed to read Contacts. Turn it on in System Settings → Privacy & Security → Contacts." = "Margin mag Contacten niet lezen. Zet het aan in Systeeminstellingen → Privacy en beveiliging → Contacten.";
 "Margin learns from the emails you send, on this device, and drafts replies the same way. Nothing is sent anywhere to learn it." = "Margin leert van de e-mails die je verstuurt, op dit apparaat, en schrijft antwoorden op dezelfde manier. Er wordt niets verstuurd om dit te leren.";
 "Margin looks up the servers for your address. You can change them on the next step." = "Margin zoekt de servers voor je adres op. Je kunt ze in de volgende stap aanpassen.";
-"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "Margin gaat na het stoppen niet meer vanzelf open, en stoppen gaat sneller.";
 "Margin only interrupts you for what matters." = "Margin stoort je alleen voor wat ertoe doet.";
-"Margin opens from the Dock as usual while Codex, Claude or another AI app uses it, with no extra icon bouncing in the Dock." = "Margin opent gewoon vanuit het Dock terwijl Codex, Claude of een andere AI-app het gebruikt, zonder extra stuiterend icoon in het Dock.";
 "Margin quit unexpectedly" = "Margin is onverwacht gestopt";
 "Margin quit unexpectedly. What were you doing just before?" = "Margin is onverwacht gestopt. Wat deed je vlak daarvoor?";
 "Margin shows meetings from invitations in your mail. To see your whole calendar, turn on Calendar for an account in Settings." = "Margin toont afspraken uit uitnodigingen in je mail. Zet in Instellingen Agenda aan voor een account om je hele agenda te zien.";
@@ -742,7 +726,6 @@
 "Meeting" = "Afspraak";
 "Meeting link copied" = "Vergaderlink gekopieerd";
 "Meeting reminders" = "Herinneringen voor vergaderingen";
-"Meeting times from Outlook" = "Vergadertijden uit Outlook";
 "Meetings" = "Vergaderingen";
 "Meetings from invitations in your mail" = "Afspraken uit uitnodigingen in je mail";
 "Menu bar" = "Menubalk";
@@ -789,7 +772,6 @@
 "Needs iOS 26 or later with Apple Intelligence." = "Vereist iOS 26 of nieuwer met Apple Intelligence.";
 "Needs macOS 26 or later with Apple Intelligence." = "Vereist macOS 26 of nieuwer met Apple Intelligence.";
 "Needs you" = "Wacht op jou";
-"Never sent twice" = "Nooit twee keer verstuurd";
 "New Event" = "Nieuwe afspraak";
 "New Meeting" = "Nieuwe afspraak";
 "New Message" = "Nieuw bericht";
@@ -799,7 +781,6 @@
 "New mail alerts" = "Meldingen voor nieuwe e-mail";
 "New mail from an inbox starts with its default signature, and replies and forwards with the one picked for them. Pick another one while writing from the signature menu." = "Nieuwe mail uit een inbox begint met de standaardhandtekening, antwoorden en doorsturen met de handtekening die daarvoor is gekozen. Kies tijdens het schrijven een andere in het handtekeningmenu.";
 "New meeting" = "Nieuwe afspraak";
-"New meetings get a call link, and Margin suggests times that work for everyone." = "Nieuwe afspraken krijgen een gesprekslink, en Margin stelt tijden voor die iedereen uitkomen.";
 "New message" = "Nieuw bericht";
 "New message  C" = "Nieuw bericht  C";
 "New message  ⌘N" = "Nieuw bericht  ⌘N";
@@ -894,7 +875,6 @@
 "Offer to translate" = "Vertaling aanbieden";
 "Offline · showing saved mail" = "Offline · bewaarde e-mail wordt getoond";
 "Offline. Showing saved mail; it keeps trying." = "Offline. Bewaarde mail wordt getoond; het blijft proberen.";
-"Older mail loads before you reach the end, straight from what's saved on your Mac." = "Oudere mail laadt al voordat je onderaan bent, direct uit wat op je Mac is bewaard.";
 "Older mail's senders, subjects and previews are downloaded in the background, so it can be searched and scrolled without a connection. The text of recent mail is saved too, without its files, so opening it doesn't wait; older texts and all files come when a mail is opened. On iPhone and iPad only on Wi-Fi, and while charging or above 20% battery." = "Afzenders, onderwerpen en voorbeelden van oudere mail worden op de achtergrond gedownload, zodat je ze zonder verbinding kunt doorzoeken en doorbladeren. De tekst van recente mail wordt ook bewaard, zonder bestanden, zodat openen niet hoeft te wachten; oudere teksten en alle bestanden komen als je een mail opent. Op iPhone en iPad alleen via wifi, en tijdens het opladen of boven 20% batterij.";
 "On" = "Aan";
 "On the server" = "Op de server";
@@ -934,7 +914,6 @@
 "Open in browser" = "Open in browser";
 "Open recent mail instantly" = "Recente mail direct openen";
 "Opens this message" = "Opent dit bericht";
-"Opens while AI apps are connected" = "Opent terwijl AI-apps verbonden zijn";
 "Optional" = "Optioneel";
 "Opus: most capable, slowest" = "Opus: krachtigst, langzaamst";
 "Or write to %@." = "Of schrijf naar %@.";
@@ -992,7 +971,6 @@
 "Providers you've set up and saved above stay available for actions after you switch to another." = "Aanbieders die je hierboven hebt ingesteld en bewaard, blijven beschikbaar voor acties nadat je naar een andere overstapt.";
 "Purple" = "Paars";
 "Quick Look" = "Snel bekijken";
-"Quick Look and Save All, and a clear note when a file is too big to send." = "Snel bekijken en Bewaar alle, en een duidelijke melding als een bestand te groot is om te versturen.";
 "Quick replies keep the simple editor. Needs a Mac with Apple silicon." = "Snelle antwoorden houden de eenvoudige editor. Vereist een Mac met Apple silicon.";
 "Quick reply" = "Snel antwoord";
 "Quick suggestions" = "Snelle suggesties";
@@ -1004,13 +982,11 @@
 "Reactions" = "Reacties";
 "Read" = "Gelezen";
 "Read or unread" = "Gelezen of ongelezen";
-"Readable on every accent colour" = "Leesbaar op elke accentkleur";
 "Reading %lld conversations…" = "%lld gesprekken lezen…";
 "Reading 1 conversation…" = "1 gesprek lezen…";
 "Reading your mail…" = "Je e-mail lezen…";
 "Reading your sent mail…" = "Je verstuurde mail lezen…";
 "Ready to paste the moment the email lands." = "Klaar om te plakken zodra de mail binnen is.";
-"Real labels for Gmail, and rules that keep running on your mail server when your Mac is off." = "Echte labels voor Gmail, en regels die op je mailserver blijven werken als je Mac uit staat.";
 "Receipts" = "Bonnetjes";
 "Recent activity" = "Recente activiteit";
 "Recent chats" = "Recente chats";
@@ -1097,7 +1073,6 @@
 "Scheduled mail" = "Geplande e-mail";
 "Scheduled message sent" = "Gepland bericht verstuurd";
 "Search" = "Zoek";
-"Search by sender, date or attachment, on the server too, and save searches you use often." = "Zoek op afzender, datum of bijlage, ook op de server, en bewaar zoekopdrachten die je vaak gebruikt.";
 "Search help" = "Help doorzoeken";
 "Search looks through mail saved on this device first, then asks your mail servers." = "Zoeken kijkt eerst in de mail op dit apparaat en vraagt het daarna aan je mailservers.";
 "Search mail for “%@”" = "Zoek in e-mail naar “%@”";
@@ -1105,7 +1080,6 @@
 "Searches" = "Zoekopdrachten";
 "Searching" = "Zoeken";
 "Searching your mail…" = "Je mail doorzoeken…";
-"See when colleagues are busy or out of office, and when you're all free together." = "Zie wanneer collega's bezet of afwezig zijn, en wanneer jullie allemaal vrij zijn.";
 "See when they're busy next to your own day. Only busy times are shared, never what." = "Zie naast je eigen dag wanneer zij bezet zijn. Alleen bezette tijden worden gedeeld, nooit waarmee.";
 "Select all conversations" = "Selecteer alle gesprekken";
 "Select conversation" = "Selecteer gesprek";
@@ -1115,7 +1089,6 @@
 "Send Report…" = "Stuur rapport…";
 "Send at" = "Verstuur om";
 "Send feedback" = "Feedback sturen";
-"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "Stuur feedback vanuit Help of Instellingen, en bekijk na een crash het rapport voordat het wordt verstuurd.";
 "Send later" = "Verstuur later";
 "Send later is in the menu next to Send. Undo Send gives you a few seconds after Send; set how long in Settings → Writing." = "Later versturen zit in het menu naast Versturen. Versturen ongedaan maken geeft je een paar seconden; stel de duur in bij Instellingen → Schrijven.";
 "Send now" = "Verstuur nu";
@@ -1125,7 +1098,6 @@
 "Sending your answer to %@…" = "Je antwoord wordt naar %@ gestuurd…";
 "Sending…" = "Versturen…";
 "Sends %@ a short reply" = "Stuurt %@ een kort antwoord";
-"Sends from the address you pick" = "Verstuurt vanaf het adres dat je kiest";
 "Sends mail by itself: each new email that matches is forwarded with its formatting, never back to its sender." = "Verstuurt zelf mail: elke nieuwe passende e-mail wordt met opmaak doorgestuurd, nooit terug naar de afzender.";
 "Sends mail by itself: each sender gets the answer at most once every 4 days, and mailing lists and no-reply addresses never do." = "Verstuurt zelf mail: elke afzender krijgt het antwoord hooguit eens per 4 dagen, mailinglijsten en no-reply-adressen nooit.";
 "Sent" = "Verstuurd";
@@ -1142,7 +1114,6 @@
 "Set automatic replies on your provider's website." = "Stel automatische antwoorden in op de website van je provider.";
 "Settings" = "Instellingen";
 "Settings  ⌘," = "Instellingen  ⌘,";
-"Settings → AI Apps → Answer while Margin is closed: turn it off and AI apps ask you to open Margin instead." = "Instellingen → AI-apps → Antwoorden als Margin gesloten is: zet het uit, dan vragen AI-apps je in plaats daarvan Margin te openen.";
 "Settings → Display & Brightness → Text Size." = "Instellingen → Beeldscherm en helderheid → Tekstgrootte.";
 "Shared mailboxes" = "Gedeelde mailboxen";
 "Short back-and-forth reads as bubbles instead of a stack of emails." = "Kort heen-en-weer leest als bubbels in plaats van een stapel mails.";
@@ -1249,7 +1220,6 @@
 "Start Using Margin" = "Margin gaan gebruiken";
 "Start from the keys of" = "Begin met de toetsen van";
 "Starts at %@" = "Begint om %@";
-"Stays closed when you quit" = "Blijft dicht als je stopt";
 "Stop" = "Stop";
 "Stop (%lld of %lld)" = "Stop (%lld van %lld)";
 "Stop comparing" = "Niet meer vergelijken";
@@ -1295,7 +1265,6 @@
 "Tentatively accepted: %@" = "Voorlopig geaccepteerd: %@";
 "Text" = "Tekst";
 "Text color" = "Tekstkleur";
-"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "Tekst op knoppen en afspraken in je accentkleur blijft goed leesbaar, welke kleur je ook kiest.";
 "Text size" = "Tekstgrootte";
 /* Name of a starter reply template */
 "Thanks" = "Bedankt";
@@ -1493,7 +1462,6 @@
 "Username" = "Gebruikersnaam";
 "VIPs" = "VIP's";
 "Version %@" = "Versie %@";
-"Video calls and suggested times" = "Videogesprekken en voorgestelde tijden";
 "Violet" = "Violet";
 "Waiting for a connection" = "Wacht op verbinding";
 "Waiting for a reply" = "Wacht op antwoord";
@@ -1570,7 +1538,6 @@
 "You're not going" = "Je gaat niet";
 "You're not going · %@ has been told" = "Je gaat niet · %@ is op de hoogte";
 "Your @icloud.com address" = "Je @icloud.com-adres";
-"Your choice when Margin is closed" = "Jouw keuze als Margin gesloten is";
 "Your mail" = "Je mail";
 "Your mail and settings stay as they are. If your provider uses app passwords, enter one of those." = "Je mail en instellingen blijven zoals ze zijn. Gebruikt je provider app-wachtwoorden, vul er dan een in.";
 "Your mail goes straight to your provider." = "Je mail gaat rechtstreeks naar je provider.";

@@ -1,0 +1,17 @@
+/* Margin 2026.11.21.1 release titles and descriptions. */
+"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "AI-appar kan läsa din e-post och kalender och ändra händelser utan att Margin är öppet. Inget körs förrän de frågar.";
+"AI apps while Margin is closed" = "AI-appar medan Margin är stängt";
+"All of Margin, bigger or smaller" = "Hela Margin större eller mindre";
+"Feedback and crash reports" = "Feedback och kraschrapporter";
+"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "Om anslutningen bryts precis när ett meddelande skickas skickas det inte igen: en kopia väntar i Utkast ifall det inte kom fram.";
+"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "Inbjudningar från Outlook och Exchange visas på rätt tid, oavsett vilken tidszon de skickades från.";
+"Mail from an Outlook address goes out from that address, not another one on the same account." = "Mejl från en Outlook-adress skickas från just den adressen, inte från en annan på samma konto.";
+"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "Margin följer textstorleken på din Mac, och ⌘+ och ⌘− gör allt större eller mindre. För texten i mejl finns ⌥⌘+ och ⌥⌘−.";
+"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "Margin öppnas inte längre av sig självt efter att du avslutat, och det går snabbare att avsluta.";
+"Meeting times from Outlook" = "Mötestider från Outlook";
+"Never sent twice" = "Skickas aldrig två gånger";
+"Readable on every accent colour" = "Läsbart i alla accentfärger";
+"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "Skicka feedback från Hjälp eller Inställningar, och granska rapporten efter en krasch innan den skickas.";
+"Sends from the address you pick" = "Skickar från adressen du väljer";
+"Stays closed when you quit" = "Förblir stängt när du avslutar";
+"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "Text på knappar och händelser i din accentfärg är lätt att läsa, vilken färg du än väljer.";

@@ -16,6 +16,9 @@ below.
   These are native Apple resources; no generated catalog or extra build step is needed.
 - `Localizable.strings` holds general interface text and labels passed through shared controls.
   `Settings.strings`, `Calendar.strings` and `Composer.strings` hold those features' text.
+  `Apps/Shared/Changelogs/<locale>.lproj/Changelog-<version>.strings` holds one release's
+  titles and descriptions. Version files stay in the Changelogs folder; the update feed reads
+  that release's table too, including when a later build reuses its notes.
   A key used by several features belongs in each table that looks it up. Keep its general-table
   entry while any shared control or other screen still looks it up there.
 - Feature lookups specify their table: `String(localized: "…", table: "Calendar")` or
@@ -49,8 +52,13 @@ Keep every format specifier (`%@`, `%lld`); use positional forms (`%2$@`) when a
 Canadian English only differs in spelling (colour, centre, cancelled), so it lists just those strings.
 
 Validate an edited file with `plutil -lint Apps/Shared/<locale>.lproj/Localizable.strings`.
+Run `python3 scripts/check-localizations.py` to validate all tables. After compiler extraction,
+`python3 scripts/check-localizations.py --extracted-strings /tmp/margin-loc` also checks that
+feature lookups have entries in the matching English table. Extract Mac and iOS builds into
+separate directories and check both to cover platform-specific text.
 When adding a locale, also add it to every table's variant group and the project's
-known regions. `scripts/release-notes.py` reads `Localizable.strings` for translated update notes.
+known regions. `scripts/release-notes.py` reads `Changelog-<version>.strings` for translated
+update notes. Use the version of the notes, which may be earlier than the build being released.
 
 ## Changing the language
 

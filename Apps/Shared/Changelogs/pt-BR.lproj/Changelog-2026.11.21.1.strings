@@ -1,0 +1,17 @@
+/* Margin 2026.11.21.1 release titles and descriptions. */
+"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "Apps de IA podem ler seu e-mail e calendário e alterar eventos sem o Margin aberto. Nada roda até que eles peçam.";
+"AI apps while Margin is closed" = "Apps de IA com o Margin fechado";
+"All of Margin, bigger or smaller" = "Todo o Margin, maior ou menor";
+"Feedback and crash reports" = "Feedback e relatórios de falhas";
+"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "Se a conexão cair bem na hora em que uma mensagem sai, ela não é enviada de novo: uma cópia fica nos Rascunhos caso não tenha chegado.";
+"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "Convites do Outlook e do Exchange aparecem no horário certo, seja qual for o fuso horário de onde vieram.";
+"Mail from an Outlook address goes out from that address, not another one on the same account." = "E-mails de um endereço do Outlook saem desse endereço, não de outro da mesma conta.";
+"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "O Margin segue o tamanho do texto do seu Mac, e ⌘+ e ⌘− deixam tudo maior ou menor. O texto dos e-mails tem ⌥⌘+ e ⌥⌘−.";
+"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "O Margin não abre mais sozinho depois que você sai, e sair ficou mais rápido.";
+"Meeting times from Outlook" = "Horários de reuniões do Outlook";
+"Never sent twice" = "Nunca enviado duas vezes";
+"Readable on every accent colour" = "Legível em qualquer cor de destaque";
+"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "Envie feedback pela Ajuda ou pelos Ajustes e, depois de uma falha, revise o relatório antes de enviar.";
+"Sends from the address you pick" = "Envia do endereço que você escolher";
+"Stays closed when you quit" = "Fica fechado quando você sai";
+"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "O texto em botões e eventos na sua cor de destaque continua fácil de ler, seja qual for a cor escolhida.";

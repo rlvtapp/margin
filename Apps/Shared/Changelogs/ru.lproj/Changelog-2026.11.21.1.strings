@@ -1,0 +1,17 @@
+/* Margin 2026.11.21.1 release titles and descriptions. */
+"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "ИИ-приложения могут читать вашу почту и календарь и менять события без открытого Margin. Пока они ничего не просят, ничего не работает.";
+"AI apps while Margin is closed" = "ИИ-приложения при закрытом Margin";
+"All of Margin, bigger or smaller" = "Весь Margin крупнее или мельче";
+"Feedback and crash reports" = "Отзывы и отчёты о сбоях";
+"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "Если соединение прервётся в момент отправки, письмо не уйдёт повторно: копия ждёт в черновиках на случай, если оно не дошло.";
+"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "Приглашения из Outlook и Exchange показываются в правильное время, из какого бы часового пояса их ни отправили.";
+"Mail from an Outlook address goes out from that address, not another one on the same account." = "Письма с адреса Outlook отправляются с этого адреса, а не с другого адреса той же учётной записи.";
+"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "Margin следует размеру текста на Mac, а ⌘+ и ⌘− делают всё крупнее или мельче. Для текста писем есть ⌥⌘+ и ⌥⌘−.";
+"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "Margin больше не открывается сам после выхода, а выход стал быстрее.";
+"Meeting times from Outlook" = "Время встреч из Outlook";
+"Never sent twice" = "Никогда не отправляется дважды";
+"Readable on every accent colour" = "Читается на любом акцентном цвете";
+"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "Отправляйте отзывы из Справки или Настроек, а после сбоя просмотрите отчёт перед отправкой.";
+"Sends from the address you pick" = "Отправляет с выбранного адреса";
+"Stays closed when you quit" = "Остаётся закрытым после выхода";
+"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "Текст на кнопках и событиях в акцентном цвете легко читается, какой бы цвет вы ни выбрали.";

@@ -1,0 +1,17 @@
+/* Margin 2026.11.21.1 release titles and descriptions. */
+"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "即使 Margin 沒有打開，AI 應用程式也能讀取你的郵件和行事曆並修改行程。在它們請求之前，什麼都不會執行。";
+"AI apps while Margin is closed" = "Margin 關閉時也能用 AI 應用程式";
+"All of Margin, bigger or smaller" = "整個 Margin 放大或縮小";
+"Feedback and crash reports" = "意見回饋與當機報告";
+"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "如果在郵件寄出的那一刻連線中斷，它不會被再次寄出：一份副本會留在草稿中，以防它沒有送達。";
+"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "來自 Outlook 和 Exchange 的邀請會顯示在正確的時間，無論從哪個時區寄出。";
+"Mail from an Outlook address goes out from that address, not another one on the same account." = "從 Outlook 地址寄出的郵件會從該地址寄出，而不是同一帳號的另一個地址。";
+"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "Margin 跟隨 Mac 的文字大小，⌘+ 和 ⌘− 可放大或縮小一切。郵件文字用 ⌥⌘+ 和 ⌥⌘−。";
+"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "結束後 Margin 不會再自行打開，結束也更快了。";
+"Meeting times from Outlook" = "來自 Outlook 的會議時間";
+"Never sent twice" = "絕不重複寄出";
+"Readable on every accent colour" = "任何強調色都清晰易讀";
+"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "可從輔助說明或設定傳送意見；發生當機後，可在傳送前檢視報告。";
+"Sends from the address you pick" = "從你選擇的地址寄出";
+"Stays closed when you quit" = "結束後保持關閉";
+"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "無論選擇哪種顏色，強調色按鈕和行程上的文字都清晰易讀。";

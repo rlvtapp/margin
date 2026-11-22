@@ -111,7 +111,6 @@
 "3 months" = "3 месяца";
 "99+" = "99+";
 "A calm mail app that works directly with your provider." = "Спокойное почтовое приложение, которое работает напрямую с вашим провайдером.";
-"A full calendar" = "Полноценный календарь";
 "A heads-up before meetings from your invitations." = "Напоминание перед встречами из приглашений.";
 "A label, an answer and keeping quiet work only in Margin." = "Метка, ответ и отключение уведомлений работают только в Margin.";
 "A mailbox that's in no workspace shows in all of them." = "Ящик, не входящий ни в одно рабочее пространство, виден во всех.";
@@ -126,11 +125,9 @@
 "AI" = "ИИ";
 "AI Apps" = "ИИ-приложения";
 "AI apps" = "Приложения ИИ";
-"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "ИИ-приложения могут читать вашу почту и календарь и менять события без открытого Margin. Пока они ничего не просят, ничего не работает.";
 "AI apps can read your mail and calendar without Margin open: a small helper starts when they ask and quits after 5 quiet minutes. Off, they ask you to open Margin." = "ИИ-приложения могут читать почту и календарь без открытого Margin: небольшой помощник запускается по их запросу и закрывается после 5 минут бездействия. Если выключено, они попросят открыть Margin.";
 "AI apps can't connect" = "Приложения ИИ не подключаются";
 "AI apps on your Mac can search your mail, sort it, save drafts and make rules through Margin once you turn it on." = "После включения приложения ИИ на Mac смогут через Margin искать письма, сортировать их, сохранять черновики и создавать правила.";
-"AI apps while Margin is closed" = "ИИ-приложения при закрытом Margin";
 "AI is off" = "ИИ выключен";
 "AI is on" = "ИИ включён";
 "AI, or just mail" = "ИИ или только почта";
@@ -194,7 +191,6 @@
 "All mail" = "Вся почта";
 "All mailboxes" = "Все почтовые ящики";
 "All new mail" = "Вся новая почта";
-"All of Margin, bigger or smaller" = "Весь Margin крупнее или мельче";
 "All of Margin. A size picked here is kept until you follow the system again." = "Весь Margin. Выбранный здесь размер сохраняется, пока вы снова не выберете размер системы.";
 "All of Margin. ⌘+ and ⌘− change it anywhere; ⌘0 follows the system again." = "Весь Margin. ⌘+ и ⌘− меняют его где угодно; ⌘0 снова берёт размер системы.";
 "All your calendars" = "Все ваши календари";
@@ -286,7 +282,6 @@
 "Bad upload address." = "Неверный адрес загрузки.";
 "Balanced" = "Сбалансированная";
 "Bcc" = "Скрытая копия";
-"Better search" = "Улучшенный поиск";
 "Bills to Pay" = "Счета к оплате";
 "Block" = "Заблокировать";
 "Block %@" = "Заблокировать: %@";
@@ -367,7 +362,6 @@
 "Colors" = "Цвета";
 "Command copied. Paste it in Terminal." = "Команда скопирована. Вставьте её в Терминал.";
 "Command palette" = "Палитра команд";
-"Compare calendars" = "Сравнение календарей";
 "Compare with a colleague" = "Сравнить с коллегой";
 "Confirm" = "Подтвердить";
 "Confirm in the browser" = "Подтвердить в браузере";
@@ -413,7 +407,6 @@
 "Dark mode for emails" = "Тёмный режим для писем";
 "Darker text and clearer lines." = "Темнее текст, чётче линии.";
 "Day" = "День";
-"Day, Week and Month next to your invitations, with your Mac's calendars and reminders. Make, move and delete events right there." = "День, неделя и месяц рядом с приглашениями, вместе с календарями и напоминаниями вашего Mac. Создавайте, переносите и удаляйте события прямо там.";
 "Decline" = "Отклонить";
 "Decline and Delete" = "Отклонить и удалить";
 "Declined" = "Отклонено";
@@ -476,9 +469,7 @@
 "Everything on this page works. The switch on the AI page turns all of it off." = "На этой странице всё работает. Переключатель на странице «ИИ» выключает всё сразу.";
 "Everything's handled. Enjoy the quiet." = "Всё сделано. Наслаждайтесь тишиной.";
 "Expanded" = "Развёрнуто";
-"Faster at the bottom of the list" = "Быстрее внизу списка";
 "Fastest and cheapest" = "Самая быстрая и дешёвая";
-"Feedback and crash reports" = "Отзывы и отчёты о сбоях";
 "Fill in at least one condition." = "Заполните хотя бы одно условие.";
 "Filter" = "Фильтр";
 "Find a time and send it from your calendar" = "Найдите время и отправьте из календаря";
@@ -583,7 +574,6 @@
 "If no reply by tomorrow" = "Если нет ответа до завтра";
 "If no reply in 3 days" = "Если нет ответа в течение 3 дней";
 "If no reply in a week" = "Если нет ответа в течение недели";
-"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "Если соединение прервётся в момент отправки, письмо не уйдёт повторно: копия ждёт в черновиках на случай, если оно не дошло.";
 "Important" = "Важное";
 "In %@" = "Через %@";
 "In %@, the way you write in it." = "На языке «%@», так, как вы на нём пишете.";
@@ -602,7 +592,6 @@
 "Insert template: %@" = "Вставить шаблон: %@";
 "Install Proton Mail Bridge on this Mac and sign in to it." = "Установите Proton Mail Bridge на этот Mac и войдите в него.";
 "Instant notifications" = "Мгновенные уведомления";
-"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "Приглашения из Outlook и Exchange показываются в правильное время, из какого бы часового пояса их ни отправили.";
 "Invitations go out from %@." = "Приглашения отправляются из %@.";
 "Invitations in your mail, and the calendars you connected." = "Приглашения из почты и подключённые вами календари.";
 "Invitations in your mail. Connect a mailbox to see its whole calendar." = "Приглашения из почты. Подключите почтовый ящик, чтобы видеть весь его календарь.";
@@ -636,7 +625,6 @@
 "Label “%@”" = "Ярлык «%@»";
 "Label, archive, move, snooze, trash, folders, templates, newsletters and the outbox. Apps can undo their own last change." = "Ярлыки, архивация, перемещение, откладывание, удаление, папки, шаблоны, рассылки и исходящие. Приложения могут отменить своё последнее изменение.";
 "Labels" = "Ярлыки";
-"Labels and rules" = "Ярлыки и правила";
 "Labels and snoozes" = "Ярлыки и отложенные письма";
 "Label…" = "Ярлык…";
 "Language" = "Язык";
@@ -678,7 +666,6 @@
 /* A reaction to a message */
 "Love" = "Люблю";
 "Mail from Margin on your iPhone shows up here." = "Здесь появится почта из Margin на вашем iPhone.";
-"Mail from an Outlook address goes out from that address, not another one on the same account." = "Письма с адреса Outlook отправляются с этого адреса, а не с другого адреса той же учётной записи.";
 "Mail goes straight between this device and your provider. No account to make, nothing tracked." = "Почта идёт напрямую между этим устройством и провайдером. Без регистрации и слежки.";
 "Mail goes straight between this device and your provider. Passwords and tokens stay in this device's Keychain." = "Почта передаётся напрямую между этим устройством и вашим провайдером. Пароли и токены хранятся в связке ключей этого устройства.";
 "Mail in a language you don't read gets a Translate button. It's translated on this device." = "У писем на языке, который вы не читаете, появляется кнопка «Перевести». Перевод выполняется на этом устройстве.";
@@ -709,15 +696,12 @@
 "Margin adds itself to %@'s settings file. Click Save to allow it." = "Margin добавит себя в файл настроек %@. Нажмите «Сохранить», чтобы разрешить.";
 "Margin doesn't have the email for that invitation." = "В Margin нет письма с этим приглашением.";
 "Margin doesn't open apps or scripts from email. It's shown in Finder." = "Margin не открывает приложения и скрипты из писем. Файл показан в Finder.";
-"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "Margin следует размеру текста на Mac, а ⌘+ и ⌘− делают всё крупнее или мельче. Для текста писем есть ⌥⌘+ и ⌥⌘−.";
 "Margin is closed. Open Margin, or turn on Settings → AI Apps → Answer while Margin is closed." = "Margin закрыт. Откройте Margin или включите Настройки → ИИ-приложения → Отвечать, когда Margin закрыт.";
 "Margin isn't allowed to read Contacts. Turn it on in Settings → Apps → Margin." = "У Margin нет доступа к Контактам. Включите его в Настройках → Приложения → Margin.";
 "Margin isn't allowed to read Contacts. Turn it on in System Settings → Privacy & Security → Contacts." = "У Margin нет доступа к Контактам. Включите его в Системных настройках → Конфиденциальность и безопасность → Контакты.";
 "Margin learns from the emails you send, on this device, and drafts replies the same way. Nothing is sent anywhere to learn it." = "Margin учится на письмах, которые вы отправляете, прямо на этом устройстве и составляет ответы в том же стиле. Для этого ничего никуда не отправляется.";
 "Margin looks up the servers for your address. You can change them on the next step." = "Margin найдёт серверы для вашего адреса. Их можно изменить на следующем шаге.";
-"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "Margin больше не открывается сам после выхода, а выход стал быстрее.";
 "Margin only interrupts you for what matters." = "Margin отвлекает только по важному.";
-"Margin opens from the Dock as usual while Codex, Claude or another AI app uses it, with no extra icon bouncing in the Dock." = "Margin открывается из Dock как обычно, пока им пользуется Codex, Claude или другое ИИ-приложение, без лишнего прыгающего значка в Dock.";
 "Margin quit unexpectedly" = "Программа Margin неожиданно завершила работу";
 "Margin quit unexpectedly. What were you doing just before?" = "Программа Margin неожиданно завершила работу. Что вы делали перед этим?";
 "Margin shows meetings from invitations in your mail. To see your whole calendar, turn on Calendar for an account in Settings." = "Margin показывает встречи из приглашений в почте. Чтобы видеть весь календарь, включите «Календарь» для аккаунта в настройках.";
@@ -742,7 +726,6 @@
 "Meeting" = "Встреча";
 "Meeting link copied" = "Ссылка на встречу скопирована";
 "Meeting reminders" = "Напоминания о встречах";
-"Meeting times from Outlook" = "Время встреч из Outlook";
 "Meetings" = "Встречи";
 "Meetings from invitations in your mail" = "Встречи из приглашений в вашей почте";
 "Menu bar" = "Строка меню";
@@ -789,7 +772,6 @@
 "Needs iOS 26 or later with Apple Intelligence." = "Требуется iOS 26 или новее с Apple Intelligence.";
 "Needs macOS 26 or later with Apple Intelligence." = "Требуется macOS 26 или новее с Apple Intelligence.";
 "Needs you" = "Ждёт вас";
-"Never sent twice" = "Никогда не отправляется дважды";
 "New Event" = "Новое событие";
 "New Meeting" = "Новая встреча";
 "New Message" = "Новое сообщение";
@@ -799,7 +781,6 @@
 "New mail alerts" = "Оповещения о новой почте";
 "New mail from an inbox starts with its default signature, and replies and forwards with the one picked for them. Pick another one while writing from the signature menu." = "Новые письма из ящика начинаются с его подписи по умолчанию, а ответы и пересылки — с выбранной для них. Во время написания выберите другую в меню подписи.";
 "New meeting" = "Новая встреча";
-"New meetings get a call link, and Margin suggests times that work for everyone." = "Новые встречи получают ссылку на звонок, а Margin предлагает время, удобное всем.";
 "New message" = "Новое сообщение";
 "New message  C" = "Новое сообщение  C";
 "New message  ⌘N" = "Новое письмо  ⌘N";
@@ -894,7 +875,6 @@
 "Offer to translate" = "Предлагать перевод";
 "Offline · showing saved mail" = "Не в сети · показана сохранённая почта";
 "Offline. Showing saved mail; it keeps trying." = "Нет сети. Показана сохранённая почта, попытки продолжаются.";
-"Older mail loads before you reach the end, straight from what's saved on your Mac." = "Старые письма загружаются ещё до того, как вы дойдёте до конца, прямо из сохранённого на Mac.";
 "Older mail's senders, subjects and previews are downloaded in the background, so it can be searched and scrolled without a connection. The text of recent mail is saved too, without its files, so opening it doesn't wait; older texts and all files come when a mail is opened. On iPhone and iPad only on Wi-Fi, and while charging or above 20% battery." = "Отправители, темы и превью старой почты загружаются в фоне, чтобы её можно было искать и листать без подключения. Текст недавних писем тоже сохраняется, без файлов, чтобы они открывались сразу; более старый текст и все файлы загружаются при открытии письма. На iPhone и iPad — только по Wi-Fi и во время зарядки или при заряде выше 20%.";
 "On" = "Вкл.";
 "On the server" = "На сервере";
@@ -934,7 +914,6 @@
 "Open in browser" = "Открыть в браузере";
 "Open recent mail instantly" = "Открывать недавние письма сразу";
 "Opens this message" = "Открывает это сообщение";
-"Opens while AI apps are connected" = "Открывается, пока подключены ИИ-приложения";
 "Optional" = "Необязательно";
 "Opus: most capable, slowest" = "Opus: самый умный и самый медленный";
 "Or write to %@." = "Или напишите на %@.";
@@ -992,7 +971,6 @@
 "Providers you've set up and saved above stay available for actions after you switch to another." = "Провайдеры, настроенные и сохранённые выше, остаются доступными для действий после переключения на другой.";
 "Purple" = "Фиолетовый";
 "Quick Look" = "Быстрый просмотр";
-"Quick Look and Save All, and a clear note when a file is too big to send." = "Быстрый просмотр и «Сохранить все», а также понятное сообщение, когда файл слишком большой для отправки.";
 "Quick replies keep the simple editor. Needs a Mac with Apple silicon." = "Быстрые ответы остаются в простом редакторе. Нужен Mac с чипом Apple.";
 "Quick reply" = "Быстрый ответ";
 "Quick suggestions" = "Быстрые подсказки";
@@ -1004,13 +982,11 @@
 "Reactions" = "Реакции";
 "Read" = "Прочитано";
 "Read or unread" = "Прочитанное или непрочитанное";
-"Readable on every accent colour" = "Читается на любом акцентном цвете";
 "Reading %lld conversations…" = "Читаю переписки: %lld…";
 "Reading 1 conversation…" = "Читаю 1 переписку…";
 "Reading your mail…" = "Чтение вашей почты…";
 "Reading your sent mail…" = "Чтение ваших отправленных писем…";
 "Ready to paste the moment the email lands." = "Можно вставить, как только придёт письмо.";
-"Real labels for Gmail, and rules that keep running on your mail server when your Mac is off." = "Настоящие ярлыки для Gmail и правила, которые работают на почтовом сервере, даже когда ваш Mac выключен.";
 "Receipts" = "Чеки";
 "Recent activity" = "Недавняя активность";
 "Recent chats" = "Недавние чаты";
@@ -1097,7 +1073,6 @@
 "Scheduled mail" = "Запланированные письма";
 "Scheduled message sent" = "Запланированное сообщение отправлено";
 "Search" = "Поиск";
-"Search by sender, date or attachment, on the server too, and save searches you use often." = "Ищите по отправителю, дате или вложению, в том числе на сервере, и сохраняйте частые поиски.";
 "Search help" = "Поиск по справке";
 "Search looks through mail saved on this device first, then asks your mail servers." = "Поиск сначала смотрит сохранённую на устройстве почту, затем спрашивает серверы.";
 "Search mail for “%@”" = "Искать в почте «%@»";
@@ -1105,7 +1080,6 @@
 "Searches" = "Поиски";
 "Searching" = "Поиск";
 "Searching your mail…" = "Поиск в вашей почте…";
-"See when colleagues are busy or out of office, and when you're all free together." = "Смотрите, когда коллеги заняты или не на месте и когда все свободны.";
 "See when they're busy next to your own day. Only busy times are shared, never what." = "Смотрите, когда они заняты, рядом со своим днём. Видно только занятое время, но не чем.";
 "Select all conversations" = "Выбрать все беседы";
 "Select conversation" = "Выбрать беседу";
@@ -1115,7 +1089,6 @@
 "Send Report…" = "Отправить отчёт…";
 "Send at" = "Отправить в";
 "Send feedback" = "Отправить отзыв";
-"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "Отправляйте отзывы из Справки или Настроек, а после сбоя просмотрите отчёт перед отправкой.";
 "Send later" = "Отправить позже";
 "Send later is in the menu next to Send. Undo Send gives you a few seconds after Send; set how long in Settings → Writing." = "«Отправить позже» — в меню рядом с «Отправить». Отмена отправки даёт несколько секунд после отправки; длительность — в Настройках → Письма.";
 "Send now" = "Отправить сейчас";
@@ -1125,7 +1098,6 @@
 "Sending your answer to %@…" = "Отправка ответа: %@…";
 "Sending…" = "Отправка…";
 "Sends %@ a short reply" = "Отправляет %@ короткий ответ";
-"Sends from the address you pick" = "Отправляет с выбранного адреса";
 "Sends mail by itself: each new email that matches is forwarded with its formatting, never back to its sender." = "Отправляет письма сама: каждое подходящее новое письмо пересылается с оформлением, но не обратно отправителю.";
 "Sends mail by itself: each sender gets the answer at most once every 4 days, and mailing lists and no-reply addresses never do." = "Отправляет письма сама: каждый отправитель получает ответ не чаще раза в 4 дня, рассылки и адреса no-reply — никогда.";
 "Sent" = "Отправленные";
@@ -1142,7 +1114,6 @@
 "Set automatic replies on your provider's website." = "Настройте автоответ на сайте провайдера.";
 "Settings" = "Настройки";
 "Settings  ⌘," = "Настройки  ⌘,";
-"Settings → AI Apps → Answer while Margin is closed: turn it off and AI apps ask you to open Margin instead." = "Настройки → ИИ-приложения → Отвечать, когда Margin закрыт: выключите, и ИИ-приложения вместо этого попросят открыть Margin.";
 "Settings → Display & Brightness → Text Size." = "Настройки → Экран и яркость → Размер текста.";
 "Shared mailboxes" = "Общие почтовые ящики";
 "Short back-and-forth reads as bubbles instead of a stack of emails." = "Короткая переписка — пузырями, а не стопкой писем.";
@@ -1249,7 +1220,6 @@
 "Start Using Margin" = "Начать работу с Margin";
 "Start from the keys of" = "Начать с клавиш приложения";
 "Starts at %@" = "Начало в %@";
-"Stays closed when you quit" = "Остаётся закрытым после выхода";
 "Stop" = "Остановить";
 "Stop (%lld of %lld)" = "Стоп (%lld из %lld)";
 "Stop comparing" = "Не сравнивать";
@@ -1295,7 +1265,6 @@
 "Tentatively accepted: %@" = "Предварительно принято: %@";
 "Text" = "Текст";
 "Text color" = "Цвет текста";
-"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "Текст на кнопках и событиях в акцентном цвете легко читается, какой бы цвет вы ни выбрали.";
 "Text size" = "Размер текста";
 /* Name of a starter reply template */
 "Thanks" = "Спасибо";
@@ -1493,7 +1462,6 @@
 "Username" = "Имя пользователя";
 "VIPs" = "VIP";
 "Version %@" = "Версия %@";
-"Video calls and suggested times" = "Видеозвонки и предлагаемое время";
 "Violet" = "Фиолетовый";
 "Waiting for a connection" = "Ожидание сети";
 "Waiting for a reply" = "Ждут ответа";
@@ -1570,7 +1538,6 @@
 "You're not going" = "Вы не придёте";
 "You're not going · %@ has been told" = "Вы не придёте · %@ в курсе";
 "Your @icloud.com address" = "Ваш адрес @icloud.com";
-"Your choice when Margin is closed" = "Ваш выбор, когда Margin закрыт";
 "Your mail" = "Ваша почта";
 "Your mail and settings stay as they are. If your provider uses app passwords, enter one of those." = "Почта и настройки останутся как есть. Если ваш провайдер использует пароли приложений, введите один из них.";
 "Your mail goes straight to your provider." = "Почта идёт прямо к вашему провайдеру.";

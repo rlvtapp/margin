@@ -111,7 +111,6 @@
 "3 months" = "3 hónap";
 "99+" = "99+";
 "A calm mail app that works directly with your provider." = "Nyugodt levelezőalkalmazás, amely közvetlenül a szolgáltatóddal dolgozik.";
-"A full calendar" = "Teljes naptár";
 "A heads-up before meetings from your invitations." = "Figyelmeztetés a meghívóidban szereplő értekezletek előtt.";
 "A label, an answer and keeping quiet work only in Margin." = "A címke, a válasz és a némítás csak a Marginban működik.";
 "A mailbox that's in no workspace shows in all of them." = "Az a postafiók, amely egyik munkaterületen sincs, mindegyikben megjelenik.";
@@ -126,11 +125,9 @@
 "AI" = "MI";
 "AI Apps" = "MI-alkalmazások";
 "AI apps" = "MI-alkalmazások";
-"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "Az MI-appok a Margin megnyitása nélkül is olvashatják a leveleidet és a naptáradat, és módosíthatnak eseményeket. Amíg nem kérnek valamit, semmi sem fut.";
 "AI apps can read your mail and calendar without Margin open: a small helper starts when they ask and quits after 5 quiet minutes. Off, they ask you to open Margin." = "Az MI-alkalmazások a Margin megnyitása nélkül is olvashatják a leveleidet és a naptáradat: egy kis segéd elindul, amikor kérik, és 5 csendes perc után kilép. Kikapcsolva megkérnek, hogy nyisd meg a Margint.";
 "AI apps can't connect" = "Az MI-alkalmazások nem tudnak csatlakozni";
 "AI apps on your Mac can search your mail, sort it, save drafts and make rules through Margin once you turn it on." = "Bekapcsolás után a Mac MI-alkalmazásai a Marginon keresztül kereshetnek a leveleidben, rendezhetik őket, piszkozatot menthetnek és szabályokat hozhatnak létre.";
-"AI apps while Margin is closed" = "MI-appok, amikor a Margin zárva van";
 "AI is off" = "A MI ki van kapcsolva";
 "AI is on" = "A MI be van kapcsolva";
 "AI, or just mail" = "MI vagy csak levelezés";
@@ -194,7 +191,6 @@
 "All mail" = "Összes levél";
 "All mailboxes" = "Minden postafiók";
 "All new mail" = "Minden új levél";
-"All of Margin, bigger or smaller" = "Az egész Margin nagyobban vagy kisebben";
 "All of Margin. A size picked here is kept until you follow the system again." = "Az egész Margin. Az itt választott méret marad, amíg újra a rendszert nem követed.";
 "All of Margin. ⌘+ and ⌘− change it anywhere; ⌘0 follows the system again." = "Az egész Margin. A ⌘+ és ⌘− bárhol módosítja; a ⌘0 újra a rendszert követi.";
 "All your calendars" = "Az összes naptárad";
@@ -286,7 +282,6 @@
 "Bad upload address." = "Hibás feltöltési cím.";
 "Balanced" = "Kiegyensúlyozott";
 "Bcc" = "Titkos másolat";
-"Better search" = "Jobb keresés";
 "Bills to Pay" = "Fizetendő számlák";
 "Block" = "Letiltás";
 "Block %@" = "%@ letiltása";
@@ -367,7 +362,6 @@
 "Colors" = "Színek";
 "Command copied. Paste it in Terminal." = "A parancs kimásolva. Illeszd be a Terminálba.";
 "Command palette" = "Parancspaletta";
-"Compare calendars" = "Naptárak összehasonlítása";
 "Compare with a colleague" = "Összehasonlítás egy kollégával";
 "Confirm" = "Megerősítés";
 "Confirm in the browser" = "Megerősítés a böngészőben";
@@ -413,7 +407,6 @@
 "Dark mode for emails" = "Sötét mód az e-mailekhez";
 "Darker text and clearer lines." = "Sötétebb szöveg, tisztább vonalak.";
 "Day" = "Nap";
-"Day, Week and Month next to your invitations, with your Mac's calendars and reminders. Make, move and delete events right there." = "Nap, Hét és Hónap a meghívóid mellett, a Maced naptáraival és emlékeztetőivel. Eseményeket ott helyben hozhatsz létre, helyezhetsz át és törölhetsz.";
 "Decline" = "Elutasítás";
 "Decline and Delete" = "Elutasítás és törlés";
 "Declined" = "Elutasítva";
@@ -476,9 +469,7 @@
 "Everything on this page works. The switch on the AI page turns all of it off." = "Ezen az oldalon minden működik. A MI oldal kapcsolója az egészet kikapcsolja.";
 "Everything's handled. Enjoy the quiet." = "Minden elintézve. Élvezd a csendet.";
 "Expanded" = "Kibontva";
-"Faster at the bottom of the list" = "Gyorsabb a lista alján";
 "Fastest and cheapest" = "A leggyorsabb és legolcsóbb";
-"Feedback and crash reports" = "Visszajelzés és összeomlási jelentések";
 "Fill in at least one condition." = "Adj meg legalább egy feltételt.";
 "Filter" = "Szűrő";
 "Find a time and send it from your calendar" = "Keress időpontot, és küldd el a naptáradból";
@@ -583,7 +574,6 @@
 "If no reply by tomorrow" = "Ha holnapig nem válaszolnak";
 "If no reply in 3 days" = "Ha 3 napon belül nem válaszolnak";
 "If no reply in a week" = "Ha egy héten belül nem válaszolnak";
-"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "Ha a kapcsolat épp küldés közben szakad meg, az üzenet nem megy el újra: egy másolat vár a Piszkozatokban arra az esetre, ha nem érkezett meg.";
 "Important" = "Fontos";
 "In %@" = "%@ múlva";
 "In %@, the way you write in it." = "%@ nyelven, ahogy te írsz rajta.";
@@ -602,7 +592,6 @@
 "Insert template: %@" = "Sablon beszúrása: %@";
 "Install Proton Mail Bridge on this Mac and sign in to it." = "Telepítsd a Proton Mail Bridge-et erre a Macre, és jelentkezz be.";
 "Instant notifications" = "Azonnali értesítések";
-"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "Az Outlook és Exchange meghívói a helyes időpontban jelennek meg, bármelyik időzónából küldték őket.";
 "Invitations go out from %@." = "A meghívók innen mennek ki: %@.";
 "Invitations in your mail, and the calendars you connected." = "A leveleidben kapott meghívók és az általad csatlakoztatott naptárak.";
 "Invitations in your mail. Connect a mailbox to see its whole calendar." = "A leveleidben kapott meghívók. Csatlakoztass egy postafiókot, hogy lásd a teljes naptárát.";
@@ -636,7 +625,6 @@
 "Label “%@”" = "„%@” címke";
 "Label, archive, move, snooze, trash, folders, templates, newsletters and the outbox. Apps can undo their own last change." = "Címkézés, archiválás, áthelyezés, halasztás, törlés, mappák, sablonok, hírlevelek és a Kimenő. Az alkalmazások visszavonhatják a saját utolsó módosításukat.";
 "Labels" = "Címkék";
-"Labels and rules" = "Címkék és szabályok";
 "Labels and snoozes" = "Címkék és halasztások";
 "Label…" = "Címke…";
 "Language" = "Nyelv";
@@ -678,7 +666,6 @@
 /* A reaction to a message */
 "Love" = "Imádom";
 "Mail from Margin on your iPhone shows up here." = "A Margin iPhone-os verziójából küldött levelek itt jelennek meg.";
-"Mail from an Outlook address goes out from that address, not another one on the same account." = "Az Outlook-címről küldött levél erről a címről megy ki, nem ugyanannak a fióknak egy másik címéről.";
 "Mail goes straight between this device and your provider. No account to make, nothing tracked." = "A levelek közvetlenül az eszköz és a szolgáltató között mennek. Nincs regisztráció, nincs követés.";
 "Mail goes straight between this device and your provider. Passwords and tokens stay in this device's Keychain." = "A levelek közvetlenül a készüléked és a szolgáltatód között mozognak. A jelszavak és a tokenek a készüléked Kulcskarikáján maradnak.";
 "Mail in a language you don't read gets a Translate button. It's translated on this device." = "Az olyan nyelvű leveleknél, amelyet nem olvasol, megjelenik egy Fordítás gomb. A fordítás ezen az eszközön történik.";
@@ -709,15 +696,12 @@
 "Margin adds itself to %@'s settings file. Click Save to allow it." = "A Margin hozzáadja magát a(z) %@ beállításfájljához. A engedélyezéshez kattints a Mentés gombra.";
 "Margin doesn't have the email for that invitation." = "A Marginban nincs meg a meghívó levele.";
 "Margin doesn't open apps or scripts from email. It's shown in Finder." = "A Margin nem nyit meg e-mailből érkezett alkalmazást vagy szkriptet. A Finderben látható.";
-"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "A Margin követi a Mac szövegméretét, a ⌘+ és ⌘− pedig mindent nagyobbá vagy kisebbé tesz. Az e-mailek szövegéhez ⌥⌘+ és ⌥⌘− való.";
 "Margin is closed. Open Margin, or turn on Settings → AI Apps → Answer while Margin is closed." = "A Margin be van zárva. Nyisd meg a Margint, vagy kapcsold be: Beállítások → MI-alkalmazások → Válaszolás, amikor a Margin be van zárva.";
 "Margin isn't allowed to read Contacts. Turn it on in Settings → Apps → Margin." = "A Margin nem olvashatja a Névjegyeket. Engedélyezd: Beállítások → Appok → Margin.";
 "Margin isn't allowed to read Contacts. Turn it on in System Settings → Privacy & Security → Contacts." = "A Margin nem olvashatja a Névjegyeket. Engedélyezd: Rendszerbeállítások → Adatvédelem és biztonság → Névjegyek.";
 "Margin learns from the emails you send, on this device, and drafts replies the same way. Nothing is sent anywhere to learn it." = "A Margin ezen a készüléken tanul az általad küldött e-mailekből, és hasonló stílusban fogalmaz meg válaszokat. A tanuláshoz semmi sem kerül sehová elküldésre.";
 "Margin looks up the servers for your address. You can change them on the next step." = "A Margin megkeresi a címedhez tartozó szervereket. A következő lépésben módosíthatod őket.";
-"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "A Margin kilépés után már nem nyílik meg magától, és a kilépés is gyorsabb.";
 "Margin only interrupts you for what matters." = "A Margin csak a fontos dolgokkal zavar.";
-"Margin opens from the Dock as usual while Codex, Claude or another AI app uses it, with no extra icon bouncing in the Dock." = "A Margin a szokásos módon megnyílik a Dockból, miközben a Codex, a Claude vagy más MI-alkalmazás használja, és nem ugrál plusz ikon a Dockban.";
 "Margin quit unexpectedly" = "A Margin váratlanul kilépett";
 "Margin quit unexpectedly. What were you doing just before?" = "A Margin váratlanul kilépett. Mit csináltál közvetlenül előtte?";
 "Margin shows meetings from invitations in your mail. To see your whole calendar, turn on Calendar for an account in Settings." = "A Margin a leveleidben kapott meghívókból származó megbeszéléseket mutatja. A teljes naptárhoz kapcsold be a Naptárat egy fióknál a Beállításokban.";
@@ -742,7 +726,6 @@
 "Meeting" = "Megbeszélés";
 "Meeting link copied" = "Megbeszélés linkje másolva";
 "Meeting reminders" = "Megbeszélés-emlékeztetők";
-"Meeting times from Outlook" = "Értekezletidőpontok az Outlookból";
 "Meetings" = "Megbeszélések";
 "Meetings from invitations in your mail" = "Megbeszélések a leveleidben kapott meghívókból";
 "Menu bar" = "Menüsor";
@@ -789,7 +772,6 @@
 "Needs iOS 26 or later with Apple Intelligence." = "iOS 26 vagy újabb szükséges, Apple Intelligence-szel.";
 "Needs macOS 26 or later with Apple Intelligence." = "macOS 26 vagy újabb szükséges, Apple Intelligence-szel.";
 "Needs you" = "Rád vár";
-"Never sent twice" = "Soha nem megy el kétszer";
 "New Event" = "Új esemény";
 "New Meeting" = "Új megbeszélés";
 "New Message" = "Új üzenet";
@@ -799,7 +781,6 @@
 "New mail alerts" = "Új levél értesítések";
 "New mail from an inbox starts with its default signature, and replies and forwards with the one picked for them. Pick another one while writing from the signature menu." = "Egy postafiók új levelei az alapértelmezett aláírásával indulnak, a válaszok és továbbítások a nekik választottal. Írás közben az aláírás menüben választhatsz másikat.";
 "New meeting" = "Új megbeszélés";
-"New meetings get a call link, and Margin suggests times that work for everyone." = "Az új megbeszélések hívási linket kapnak, a Margin pedig mindenkinek megfelelő időpontokat javasol.";
 "New message" = "Új üzenet";
 "New message  C" = "Új üzenet  C";
 "New message  ⌘N" = "Új üzenet  ⌘N";
@@ -894,7 +875,6 @@
 "Offer to translate" = "Fordítás felajánlása";
 "Offline · showing saved mail" = "Offline · a mentett levelek láthatók";
 "Offline. Showing saved mail; it keeps trying." = "Offline. A mentett leveleket mutatja, és tovább próbálkozik.";
-"Older mail loads before you reach the end, straight from what's saved on your Mac." = "A régebbi levelek még azelőtt betöltődnek, hogy a végére érnél, közvetlenül abból, ami a Maceden van mentve.";
 "Older mail's senders, subjects and previews are downloaded in the background, so it can be searched and scrolled without a connection. The text of recent mail is saved too, without its files, so opening it doesn't wait; older texts and all files come when a mail is opened. On iPhone and iPad only on Wi-Fi, and while charging or above 20% battery." = "A régebbi levelek feladói, tárgyai és előnézetei a háttérben töltődnek le, így kapcsolat nélkül is kereshetők és görgethetők. A friss levelek szövege is mentésre kerül, fájlok nélkül, hogy megnyitáskor ne kelljen várni; a régebbi szövegek és minden fájl a levél megnyitásakor jön. iPhone-on és iPaden csak Wi-Fi-n, töltés közben vagy 20% feletti akkumulátorral.";
 "On" = "Be";
 "On the server" = "A szerveren";
@@ -934,7 +914,6 @@
 "Open in browser" = "Megnyitás böngészőben";
 "Open recent mail instantly" = "Friss levelek azonnali megnyitása";
 "Opens this message" = "Megnyitja ezt az üzenetet";
-"Opens while AI apps are connected" = "Megnyílik, amíg MI-alkalmazások kapcsolódnak";
 "Optional" = "Nem kötelező";
 "Opus: most capable, slowest" = "Opus: a legokosabb, a leglassabb";
 "Or write to %@." = "Vagy írj ide: %@.";
@@ -992,7 +971,6 @@
 "Providers you've set up and saved above stay available for actions after you switch to another." = "A fent beállított és mentett szolgáltatók műveletekhez akkor is elérhetők maradnak, ha másikra váltasz.";
 "Purple" = "Lila";
 "Quick Look" = "Gyorsnézet";
-"Quick Look and Save All, and a clear note when a file is too big to send." = "Gyorsnézet és Összes mentése, valamint egyértelmű üzenet, ha egy fájl túl nagy a küldéshez.";
 "Quick replies keep the simple editor. Needs a Mac with Apple silicon." = "A gyors válaszok az egyszerű szerkesztőben maradnak. Apple chipes Mac szükséges.";
 "Quick reply" = "Gyors válasz";
 "Quick suggestions" = "Gyors javaslatok";
@@ -1004,13 +982,11 @@
 "Reactions" = "Reakciók";
 "Read" = "Olvasott";
 "Read or unread" = "Olvasott vagy olvasatlan";
-"Readable on every accent colour" = "Minden kiemelőszínnel olvasható";
 "Reading %lld conversations…" = "%lld beszélgetés olvasása…";
 "Reading 1 conversation…" = "1 beszélgetés olvasása…";
 "Reading your mail…" = "A leveleid olvasása…";
 "Reading your sent mail…" = "Az elküldött leveleid olvasása…";
 "Ready to paste the moment the email lands." = "Beilleszthető, amint megérkezik a levél.";
-"Real labels for Gmail, and rules that keep running on your mail server when your Mac is off." = "Valódi címkék a Gmailhez, és szabályok, amelyek a levelezőszerveren akkor is futnak, ha a Maced ki van kapcsolva.";
 "Receipts" = "Nyugták";
 "Recent activity" = "Legutóbbi tevékenység";
 "Recent chats" = "Legutóbbi csevegések";
@@ -1097,7 +1073,6 @@
 "Scheduled mail" = "Ütemezett levelek";
 "Scheduled message sent" = "Ütemezett üzenet elküldve";
 "Search" = "Keresés";
-"Search by sender, date or attachment, on the server too, and save searches you use often." = "Keress feladó, dátum vagy melléklet szerint, a szerveren is, és mentsd el a gyakran használt kereséseket.";
 "Search help" = "Keresés a súgóban";
 "Search looks through mail saved on this device first, then asks your mail servers." = "A keresés először az eszközön mentett levelekben néz, aztán a levelezőszervereidet kérdezi.";
 "Search mail for “%@”" = "Keresés a levelekben: „%@”";
@@ -1105,7 +1080,6 @@
 "Searches" = "Keresések";
 "Searching" = "Keresés";
 "Searching your mail…" = "Keresés a leveleid között…";
-"See when colleagues are busy or out of office, and when you're all free together." = "Lásd, mikor foglaltak vagy vannak házon kívül a kollégáid, és mikor vagytok mind szabadok.";
 "See when they're busy next to your own day. Only busy times are shared, never what." = "Lásd a saját napod mellett, mikor foglaltak. Csak a foglalt időpontok látszanak, az nem, hogy mivel.";
 "Select all conversations" = "Összes beszélgetés kijelölése";
 "Select conversation" = "Beszélgetés kijelölése";
@@ -1115,7 +1089,6 @@
 "Send Report…" = "Jelentés küldése…";
 "Send at" = "Küldés ekkor";
 "Send feedback" = "Visszajelzés küldése";
-"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "Küldj visszajelzést a Súgóból vagy a Beállításokból, összeomlás után pedig nézd át a jelentést, mielőtt elküldöd.";
 "Send later" = "Küldés később";
 "Send later is in the menu next to Send. Undo Send gives you a few seconds after Send; set how long in Settings → Writing." = "A Küldés később a Küldés melletti menüben van. A küldés visszavonása néhány másodpercet ad; ennek hosszát a Beállítások → Írás alatt adhatod meg.";
 "Send now" = "Küldés most";
@@ -1125,7 +1098,6 @@
 "Sending your answer to %@…" = "Válasz küldése neki: %@…";
 "Sending…" = "Küldés…";
 "Sends %@ a short reply" = "Rövid választ küld neki: %@";
-"Sends from the address you pick" = "A választott címről küld";
 "Sends mail by itself: each new email that matches is forwarded with its formatting, never back to its sender." = "Magától küld levelet: minden illeszkedő új levél a formázásával megy tovább, a feladójához soha.";
 "Sends mail by itself: each sender gets the answer at most once every 4 days, and mailing lists and no-reply addresses never do." = "Magától küld levelet: minden feladó legfeljebb 4 naponta egyszer kapja meg a választ, levelezőlisták és no-reply címek soha.";
 "Sent" = "Elküldött";
@@ -1142,7 +1114,6 @@
 "Set automatic replies on your provider's website." = "Az automatikus válaszokat a szolgáltató webhelyén állítsd be.";
 "Settings" = "Beállítások";
 "Settings  ⌘," = "Beállítások  ⌘,";
-"Settings → AI Apps → Answer while Margin is closed: turn it off and AI apps ask you to open Margin instead." = "Beállítások → MI-alkalmazások → Válaszolás, amikor a Margin be van zárva: kapcsold ki, és az MI-alkalmazások inkább megkérnek, hogy nyisd meg a Margint.";
 "Settings → Display & Brightness → Text Size." = "Beállítások → Kijelző és fényerő → Szövegméret.";
 "Shared mailboxes" = "Megosztott postafiókok";
 "Short back-and-forth reads as bubbles instead of a stack of emails." = "A rövid oda-vissza buborékokként jelenik meg levélhalom helyett.";
@@ -1249,7 +1220,6 @@
 "Start Using Margin" = "Margin használatának kezdése";
 "Start from the keys of" = "Kiindulás a következő billentyűiből:";
 "Starts at %@" = "Kezdés: %@";
-"Stays closed when you quit" = "Kilépés után zárva marad";
 "Stop" = "Leállítás";
 "Stop (%lld of %lld)" = "Leállítás (%lld / %lld)";
 "Stop comparing" = "Összehasonlítás leállítása";
@@ -1295,7 +1265,6 @@
 "Tentatively accepted: %@" = "Feltételesen elfogadva: %@";
 "Text" = "Szöveg";
 "Text color" = "Szövegszín";
-"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "A kiemelőszínű gombok és események szövege jól olvasható marad, bármilyen színt választasz.";
 "Text size" = "Szövegméret";
 /* Name of a starter reply template */
 "Thanks" = "Köszönet";
@@ -1493,7 +1462,6 @@
 "Username" = "Felhasználónév";
 "VIPs" = "VIP-ek";
 "Version %@" = "Verzió: %@";
-"Video calls and suggested times" = "Videohívások és javasolt időpontok";
 "Violet" = "Ibolya";
 "Waiting for a connection" = "Kapcsolatra vár";
 "Waiting for a reply" = "Válaszra vár";
@@ -1570,7 +1538,6 @@
 "You're not going" = "Nem veszel részt";
 "You're not going · %@ has been told" = "Nem veszel részt · %@ értesítve";
 "Your @icloud.com address" = "A @icloud.com-os címed";
-"Your choice when Margin is closed" = "Te döntöd el, ha a Margin be van zárva";
 "Your mail" = "A leveleid";
 "Your mail and settings stay as they are. If your provider uses app passwords, enter one of those." = "A leveleid és a beállításaid változatlanok maradnak. Ha a szolgáltatód alkalmazásjelszavakat használ, egy olyat adj meg.";
 "Your mail goes straight to your provider." = "A leveleid egyenesen a szolgáltatódhoz mennek.";

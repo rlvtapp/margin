@@ -1,0 +1,17 @@
+/* Margin 2026.11.21.1 release titles and descriptions. */
+"AI apps can read your mail and calendar and change events without Margin open. Nothing runs until they ask." = "AI ऐप्स Margin खुला न होने पर भी आपका मेल और कैलेंडर पढ़ सकते हैं और इवेंट बदल सकते हैं। जब तक वे न पूछें, कुछ नहीं चलता।";
+"AI apps while Margin is closed" = "Margin बंद होने पर भी AI ऐप्स";
+"All of Margin, bigger or smaller" = "पूरा Margin, बड़ा या छोटा";
+"Feedback and crash reports" = "फ़ीडबैक और क्रैश रिपोर्ट";
+"If the connection drops just as a message goes out, it isn't sent again: a copy waits in Drafts in case it didn't arrive." = "अगर संदेश भेजते समय कनेक्शन टूट जाए, तो वह दोबारा नहीं भेजा जाता: अगर वह न पहुँचा हो, तो उसकी एक कॉपी ड्राफ़्ट में रहती है।";
+"Invitations from Outlook and Exchange show at the right hour, whatever time zone they were sent from." = "Outlook और Exchange के निमंत्रण सही समय पर दिखते हैं, चाहे वे किसी भी समय क्षेत्र से भेजे गए हों।";
+"Mail from an Outlook address goes out from that address, not another one on the same account." = "Outlook पते से भेजा गया मेल उसी पते से जाता है, उसी खाते के किसी दूसरे पते से नहीं।";
+"Margin follows your Mac's text size, and ⌘+ and ⌘− make everything bigger or smaller. Email text has ⌥⌘+ and ⌥⌘−." = "Margin आपके Mac के टेक्स्ट आकार का पालन करता है, और ⌘+ और ⌘− सब कुछ बड़ा या छोटा करते हैं। ईमेल टेक्स्ट के लिए ⌥⌘+ और ⌥⌘− हैं।";
+"Margin no longer opens again by itself after you quit it, and quitting is quicker." = "बंद करने के बाद Margin अपने आप दोबारा नहीं खुलता, और बंद होना भी तेज़ है।";
+"Meeting times from Outlook" = "Outlook से मीटिंग समय";
+"Never sent twice" = "कभी दो बार नहीं भेजा जाता";
+"Readable on every accent colour" = "हर एक्सेंट रंग पर पढ़ने में आसान";
+"Send feedback from Help or Settings, and after a crash, review a report before it's sent." = "सहायता या सेटिंग्स से फ़ीडबैक भेजें, और क्रैश के बाद रिपोर्ट भेजने से पहले उसे देख लें।";
+"Sends from the address you pick" = "आपके चुने पते से भेजता है";
+"Stays closed when you quit" = "बंद करने पर बंद ही रहता है";
+"Text on buttons and events in your accent colour stays easy to read, whichever colour you pick." = "आपके एक्सेंट रंग वाले बटन और इवेंट पर लिखा टेक्स्ट पढ़ने में आसान रहता है, चाहे आप कोई भी रंग चुनें।";

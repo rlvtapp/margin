@@ -16,6 +16,8 @@ feature requests and support.
 
 ## Crash reports (Mac)
 
+iPhone and iPad do not scan for system crash reports; Send Feedback is available there.
+
 When Margin quits unexpectedly, macOS writes a crash report to
 `~/Library/Logs/DiagnosticReports`. At the next launch Margin looks there for reports of its own
 written since it last looked (`MailModel.checkForCrash`; the time is kept in `crash.checkedAt`,

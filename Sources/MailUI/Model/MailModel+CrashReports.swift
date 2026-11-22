@@ -9,7 +9,8 @@ extension MailModel {
     static let crashCheckedKey = "crash.checkedAt"
 
     /// Looks for a report newer than the last look; the first launch only notes the time.
-    func checkForCrash(in folder: URL = MailModel.crashReportFolder, bundleID: String? = Bundle.main.bundleIdentifier, now: Date = Date()) {
+    func checkForCrash(in folder: URL? = MailModel.crashReportFolder, bundleID: String? = Bundle.main.bundleIdentifier, now: Date = Date()) {
+        guard let folder else { return }
         let defaults = environment.defaults
         let last = defaults.object(forKey: Self.crashCheckedKey) as? Date
         defaults.set(now, forKey: Self.crashCheckedKey)
@@ -42,9 +43,13 @@ extension MailModel {
         return header["bundleID"] as? String == bundleID
     }
 
-    /// Where macOS keeps the crash reports of your own apps.
-    static var crashReportFolder: URL {
-        FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library/Logs/DiagnosticReports")
+    /// iOS cannot read system crash reports; only macOS has a folder to check.
+    static var crashReportFolder: URL? {
+        #if os(macOS)
+        return FileManager.default.homeDirectoryForCurrentUser.appending(path: "Library/Logs/DiagnosticReports")
+        #else
+        return nil
+        #endif
     }
 
     /// The composer to Margin's inbox with the report attached and a line to say what happened.

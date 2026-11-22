@@ -3,6 +3,16 @@ import Testing
 @testable import MailUI
 
 @MainActor @Suite struct CrashReportTests {
+    /// Platforms without a readable report folder must not advance the last-check time.
+    @Test func unavailableReportFolderSkipsTheCheck() {
+        let model = MailModel(environment: .preview())
+        let last = Date(timeIntervalSince1970: 100)
+        model.environment.defaults.set(last, forKey: MailModel.crashCheckedKey)
+        model.checkForCrash(in: nil, bundleID: "app.relevate.margin")
+        #expect(model.environment.defaults.object(forKey: MailModel.crashCheckedKey) as? Date == last)
+        #expect(model.pendingCrashReport == nil)
+    }
+
     private func folder() throws -> URL {
         let url = FileManager.default.temporaryDirectory.appending(path: "crash-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)

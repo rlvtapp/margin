@@ -1,17 +1,20 @@
 # Languages
 
-Margin's interface is in 15 languages: US English (the source language), Canadian English,
+Margin's interface is in 19 locales: US English (the source language), Canadian English,
 Dutch, French, Canadian French, German, Spanish, Italian, Brazilian Portuguese, Russian,
-Hungarian, Japanese, Korean, Simplified Chinese and Hindi. Margin follows the language chosen for
+Hungarian, Japanese, Korean, Simplified Chinese, Traditional Chinese, Hindi, Turkish, Polish and
+Swedish. Margin follows the language chosen for
 it in the system (Settings → Margin on iPhone and iPad; System Settings → Language & Region →
 Applications on the Mac). Mail itself is never translated on its own; see "Translating mail"
 below.
 
 ## Where the strings live
 
-- `Apps/Shared/Localizable.xcstrings` is the one String Catalog, part of both the Mac and the
-  iPhone/iPad app. SwiftUI text in the `MailUI` and `MailCore` packages is looked up in the app's
-  main bundle, so the packages carry no catalogs of their own.
+- `Apps/Shared/<locale>.lproj/` holds general translations, one folder per language, shared by the
+  Mac, iPhone/iPad and Watch targets through Xcode variant groups.
+  SwiftUI text in the `MailUI` and `MailCore` packages is looked up in the app's main bundle.
+  These are native Apple resources; no generated catalog or extra build step is needed.
+- `Localizable.strings` holds the interface text and release notes. Keep entries sorted by key.
 - In the packages, write text the interface shows as a literal (`Text("Inbox")`,
   `Button("Archive")`), as `LocalizedStringKey`, or as `String(localized: "…")`. Use
   `Text(verbatim:)` for anything from the user or a server: names, subjects, folder names, labels.
@@ -28,10 +31,16 @@ swift build --build-path .build/loc -Xswiftc -emit-localized-strings -Xswiftc -e
 
 Each `.stringsdata` file in that folder is JSON with the keys of one source file. iOS-only views
 (`Sources/MailUI/Touch`) only appear when building the iOS app with the same flags in
-`OTHER_SWIFT_FLAGS`. New keys go into the catalog with a translation for each language. Keep every
-format specifier (`%@`, `%lld`); use positional forms (`%2$@`) when a language reorders them.
+`OTHER_SWIFT_FLAGS`. Add new keys to the appropriate English table and a translation to
+each language's matching table, keeping entries sorted by key. Each entry is one `"English key" = "Translation";`
+line; translator comments go directly above it. Escape quotes as `\"` and newlines as `\n`.
+Keep every format specifier (`%@`, `%lld`); use positional forms (`%2$@`) when a language reorders them.
 
 Canadian English only differs in spelling (colour, centre, cancelled), so it lists just those strings.
+
+Validate an edited file with `plutil -lint Apps/Shared/<locale>.lproj/Localizable.strings`.
+When adding a locale, also add it to every table's variant group and the project's
+known regions. `scripts/release-notes.py` reads `Localizable.strings` for translated update notes.
 
 ## Changing the language
 

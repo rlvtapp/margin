@@ -14,7 +14,17 @@ below.
   Mac, iPhone/iPad and Watch targets through Xcode variant groups.
   SwiftUI text in the `MailUI` and `MailCore` packages is looked up in the app's main bundle.
   These are native Apple resources; no generated catalog or extra build step is needed.
-- `Localizable.strings` holds the interface text and release notes. Keep entries sorted by key.
+- `Localizable.strings` holds general interface text and labels passed through shared controls.
+  `Settings.strings`, `Calendar.strings` and `Composer.strings` hold those features' text.
+  A key used by several features belongs in each table that looks it up. Keep its general-table
+  entry while any shared control or other screen still looks it up there.
+- Feature lookups specify their table: `String(localized: "…", table: "Calendar")` or
+  `Text("…", tableName: "Calendar")`. SwiftUI controls without a table argument can use a
+  localized String, such as `Button(String(localized: "Send", table: "Composer")) { … }`.
+  Keep `Text(verbatim:)` for text from the user or server.
+- Split further by feature when a feature has a substantial set of its own strings. Each table
+  needs an explicit lookup at its call sites (`table:` for Foundation, `tableName:` for SwiftUI)
+  and a variant group in all three app targets. Moving files alone does not change lookups.
 - In the packages, write text the interface shows as a literal (`Text("Inbox")`,
   `Button("Archive")`), as `LocalizedStringKey`, or as `String(localized: "…")`. Use
   `Text(verbatim:)` for anything from the user or a server: names, subjects, folder names, labels.

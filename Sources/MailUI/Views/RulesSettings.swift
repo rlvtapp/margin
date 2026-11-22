@@ -35,7 +35,7 @@ struct RulesSettings: View {
                 ForEach(model.accounts) { account in
                     if case .failed(let text) = book.states[account.id] {
                         LabeledContent {
-                            Button("Try Again") { Task { await book.load(account, model: model) } }.buttonStyle(.borderless)
+                            Button(String(localized: "Try Again", table: "Settings")) { Task { await book.load(account, model: model) } }.buttonStyle(.borderless)
                         } label: {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(verbatim: account.label)
@@ -51,16 +51,16 @@ struct RulesSettings: View {
                     }
                 }
             } header: {
-                Text("Rules")
+                Text("Rules", tableName: "Settings")
             } footer: {
-                Text("Rules kept on the server run even when your Mac is off. Rules in Margin run on new inbox mail while it's open, before you're alerted.")
+                Text("Rules kept on the server run even when your Mac is off. Rules in Margin run on new inbox mail while it's open, before you're alerted.", tableName: "Settings")
             }
             Section {
                 if let suggestion = model.ruleSuggestion, form.editing == nil {
                     LabeledContent {
                         HStack(spacing: Space.s) {
-                            Button("Use") { form = suggestion.form }.buttonStyle(.borderless)
-                            Button("Not Now") { model.dismissRuleSuggestion() }.buttonStyle(.borderless)
+                            Button(String(localized: "Use", table: "Settings")) { form = suggestion.form }.buttonStyle(.borderless)
+                            Button(String(localized: "Not Now", table: "Settings")) { model.dismissRuleSuggestion() }.buttonStyle(.borderless)
                         }
                     } label: {
                         Label(suggestion.text, systemImage: "lightbulb")
@@ -71,11 +71,11 @@ struct RulesSettings: View {
                     Button(saving ? "Saving…" : form.editing == nil ? "Add Rule" : "Save Rule") { Task { await save() } }
                         .disabled(saving || !form.isComplete)
                     if form.editing != nil {
-                        Button("Cancel") { form = RuleForm() }
+                        Button(String(localized: "Cancel", table: "Settings")) { form = RuleForm() }
                     }
                     Spacer()
                     if form.editing == nil {
-                        Menu("Start From") {
+                        Menu(String(localized: "Start From", table: "Settings")) {
                             ForEach(MailModel.starterRules, id: \.title) { starter in
                                 Button(starter.title) {
                                     var started = starter.form
@@ -93,14 +93,14 @@ struct RulesSettings: View {
             } header: {
                 Text(form.editing == nil ? "New rule" : "Change rule")
             } footer: {
-                Text("Or right-click a conversation and choose Create Rule… to start from its sender, domain or subject.")
+                Text("Or right-click a conversation and choose Create Rule… to start from its sender, domain or subject.", tableName: "Settings")
             }
             Section {
                 RuleActivityList(model: model)
             } header: {
-                Text("Recent activity")
+                Text("Recent activity", tableName: "Settings")
             } footer: {
-                Text("When a rule moves new mail, Margin says so and you can undo it for a few seconds.")
+                Text("When a rule moves new mail, Margin says so and you can undo it for a few seconds.", tableName: "Settings")
             }
             Section {
                 if model.blockedSenders.isEmpty {
@@ -108,31 +108,31 @@ struct RulesSettings: View {
                 }
                 ForEach(model.blockedSenders.sorted(), id: \.self) { address in
                     LabeledContent {
-                        Button("Unblock") { model.unblock(address) }.buttonStyle(.borderless)
+                        Button(String(localized: "Unblock", table: "Settings")) { model.unblock(address) }.buttonStyle(.borderless)
                     } label: { Text(verbatim: address) }
                 }
             } header: {
-                Text("Blocked senders")
+                Text("Blocked senders", tableName: "Settings")
             } footer: {
-                Text("Their mail goes straight to Trash.")
+                Text("Their mail goes straight to Trash.", tableName: "Settings")
             }
             Section {
                 LabeledContent {
-                    Button("Unmute All") { model.mutedThreads = [] }.disabled(model.mutedThreads.isEmpty)
+                    Button(String(localized: "Unmute All", table: "Settings")) { model.mutedThreads = [] }.disabled(model.mutedThreads.isEmpty)
                 } label: {
-                    Text("\(model.mutedThreads.count) muted conversations")
+                    Text("\(model.mutedThreads.count) muted conversations", tableName: "Settings")
                 }
             } header: {
-                Text("Muted conversations")
+                Text("Muted conversations", tableName: "Settings")
             } footer: {
-                Text("Replies to a muted conversation are archived and marked read. Mute one from its … menu.")
+                Text("Replies to a muted conversation are archived and marked read. Mute one from its … menu.", tableName: "Settings")
             }
         }
         .formStyle(.grouped)
         .task { await book.loadAll(model) }
-        .confirmationDialog("Remove this rule from the server?", isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
+        .confirmationDialog(String(localized: "Remove this rule from the server?", table: "Settings"), isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
                             presenting: removing) { row in
-            Button("Remove Rule", role: .destructive) { Task { await remove(row) } }
+            Button(String(localized: "Remove Rule", table: "Settings"), role: .destructive) { Task { await remove(row) } }
         } message: { row in
             Text(verbatim: row.rule.title)
         }
@@ -142,23 +142,23 @@ struct RulesSettings: View {
         LabeledContent {
             HStack(spacing: Space.s) {
                 if row.rule.isEditable {
-                    Button("Edit") { form = RuleForm(server: row.rule, accountID: row.account.id) }.buttonStyle(.borderless)
+                    Button(String(localized: "Edit", table: "Settings")) { form = RuleForm(server: row.rule, accountID: row.account.id) }.buttonStyle(.borderless)
                 }
-                Button("Remove") { removing = row }.buttonStyle(.borderless)
+                Button(String(localized: "Remove", table: "Settings")) { removing = row }.buttonStyle(.borderless)
             }
         } label: {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: Space.xs) {
                     Text(verbatim: row.rule.title)
                     if !row.rule.isEnabled {
-                        Text("Off").font(TypeScale.caption).foregroundStyle(.secondary)
+                        Text("Off", tableName: "Settings").font(TypeScale.caption).foregroundStyle(.secondary)
                     }
                 }
                 Text(verbatim: MailModel.summary(of: row.rule, folders: book.folders[row.account.id] ?? []))
                     .font(TypeScale.caption).foregroundStyle(.secondary)
-                place(String(localized: "On the server"), row.account.label)
+                place(String(localized: "On the server", table: "Settings"), row.account.label)
                 if !row.rule.isEditable {
-                    Text("Made elsewhere with parts Margin can't show. Change it there, or remove it here.")
+                    Text("Made elsewhere with parts Margin can't show. Change it there, or remove it here.", tableName: "Settings")
                         .font(TypeScale.caption).foregroundStyle(Ink.tertiary)
                 }
             }
@@ -168,8 +168,8 @@ struct RulesSettings: View {
     private func marginRow(_ rule: MailRule) -> some View {
         LabeledContent {
             HStack(spacing: Space.s) {
-                Button("Edit") { form = RuleForm(rule: rule) }.buttonStyle(.borderless)
-                Button("Remove") {
+                Button(String(localized: "Edit", table: "Settings")) { form = RuleForm(rule: rule) }.buttonStyle(.borderless)
+                Button(String(localized: "Remove", table: "Settings")) {
                     model.mailRules.removeAll { $0.id == rule.id }
                     if form.editing == .margin(rule.id) { form = RuleForm() }
                 }
@@ -180,7 +180,7 @@ struct RulesSettings: View {
                 Text(verbatim: rule.conditionTitle)
                 Text(verbatim: "→ " + rule.actions.map(\.title).joined(separator: ", "))
                     .font(TypeScale.caption).foregroundStyle(.secondary)
-                place(String(localized: "In Margin"), model.account(rule.accountID)?.label ?? String(localized: "All mailboxes"))
+                place(String(localized: "In Margin", table: "Settings"), model.account(rule.accountID)?.label ?? String(localized: "All mailboxes", table: "Settings"))
             }
         }
     }

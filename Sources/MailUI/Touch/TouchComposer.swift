@@ -40,11 +40,11 @@ struct TouchComposer: View {
                     line("To") {
                         RecipientField(model: model, input: toInput, text: $state.to, autofocus: state.to.isEmpty)
                         if !state.showsCc {
-                            Button("Cc") { opened = "cc"; state.showsCc = true }
+                            Button(String(localized: "Cc", table: "Composer")) { opened = "cc"; state.showsCc = true }
                                 .font(TypeScale.label).foregroundStyle(Ink.tertiary)
                         }
                         if !state.showsBcc {
-                            Button("Bcc") { opened = "bcc"; state.showsBcc = true }
+                            Button(String(localized: "Bcc", table: "Composer")) { opened = "bcc"; state.showsBcc = true }
                                 .font(TypeScale.label).foregroundStyle(Ink.tertiary)
                         }
                     }
@@ -90,16 +90,16 @@ struct TouchComposer: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     // Closing keeps what was written in Drafts.
-                    Button { model.closeComposer(state, isReply: isReply) } label: { Label("Close", systemImage: "xmark") }
+                    Button { model.closeComposer(state, isReply: isReply) } label: { Label(String(localized: "Close", table: "Composer"), systemImage: "xmark") }
                 }
                 // Down out of the way to search or read other mail; a chip at the top brings it back.
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
                         if isReply { model.isReplyPutAway = true } else { model.isComposePutAway = true }
-                    } label: { Label("Put Away", systemImage: "chevron.down") }
+                    } label: { Label(String(localized: "Put Away", table: "Composer"), systemImage: "chevron.down") }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button { send() } label: { Label("Send", systemImage: "arrow.up") }
+                    Button { send() } label: { Label(String(localized: "Send", table: "Composer"), systemImage: "arrow.up") }
                         .disabled([state.to, state.cc, state.bcc].allSatisfy { $0.trimmingCharacters(in: .whitespaces).isEmpty })
                 }
                 ToolbarItemGroup(placement: .keyboard) { tools }
@@ -114,28 +114,28 @@ struct TouchComposer: View {
         .sheet(isPresented: $picksDate) {
             DateChoiceSheet(title: "Send at", action: "Schedule") { date in model.schedule(state, at: date, isReply: isReply) }
         }
-        .alert("Did you mean to attach a file?", isPresented: $warnsAboutAttachment) {
-            Button("Attach a file") { picksFiles = true }
-            Button("Send anyway") { model.queueSend(state, isReply: isReply) }
-            Button("Cancel", role: .cancel) {}
+        .alert(String(localized: "Did you mean to attach a file?", table: "Composer"), isPresented: $warnsAboutAttachment) {
+            Button(String(localized: "Attach a file", table: "Composer")) { picksFiles = true }
+            Button(String(localized: "Send anyway", table: "Composer")) { model.queueSend(state, isReply: isReply) }
+            Button(String(localized: "Cancel", table: "Composer"), role: .cancel) {}
         } message: {
-            Text("The message mentions an attachment, but nothing is attached.")
+            Text("The message mentions an attachment, but nothing is attached.", tableName: "Composer")
         }
     }
 
     /// Attach, send later, templates and formatting: one row, above the keyboard or at the foot.
     @ViewBuilder
     private var tools: some View {
-        Button { picksFiles = true } label: { Label("Attach", systemImage: "paperclip") }
+        Button { picksFiles = true } label: { Label(String(localized: "Attach", table: "Composer"), systemImage: "paperclip") }
         Menu {
-            Button("Tomorrow · \(SnoozePreset.tomorrow.date().formatted(.dateTime.weekday(.abbreviated).hour().minute()))") {
+            Button(String(localized: "Tomorrow · \(SnoozePreset.tomorrow.date().formatted(.dateTime.weekday(.abbreviated).hour().minute()))", table: "Composer")) {
                 model.schedule(state, at: SnoozePreset.tomorrow.date(), isReply: isReply)
             }
-            Button("Monday · \(SnoozePreset.nextWeek.date().formatted(.dateTime.weekday(.abbreviated).hour().minute()))") {
+            Button(String(localized: "Monday · \(SnoozePreset.nextWeek.date().formatted(.dateTime.weekday(.abbreviated).hour().minute()))", table: "Composer")) {
                 model.schedule(state, at: SnoozePreset.nextWeek.date(), isReply: isReply)
             }
-            Button("Pick a date…") { picksDate = true }
-        } label: { Label("Send later", systemImage: "clock") }
+            Button(String(localized: "Pick a date…", table: "Composer")) { picksDate = true }
+        } label: { Label(String(localized: "Send later", table: "Composer"), systemImage: "clock") }
         Spacer()
         SignatureMenu(model: model, state: $state)
         ReplyReminderMenu(state: $state)
@@ -154,7 +154,7 @@ struct TouchComposer: View {
                 HStack(spacing: Space.s) {
                     Image(systemName: showsQuoted ? "chevron.down" : "chevron.right")
                         .font(.system(size: Look.size(11), weight: .semibold))
-                    Text("\(message.from.displayName) wrote \(RowDate.long(message.date))")
+                    Text("\(message.from.displayName) wrote \(RowDate.long(message.date))", tableName: "Composer")
                     Spacer()
                 }
                 .font(TypeScale.label)

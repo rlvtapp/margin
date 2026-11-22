@@ -30,16 +30,16 @@ struct NewMeetingView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Title", text: $title, prompt: Text("Meeting"))
+                    TextField(String(localized: "Title", table: "Calendar"), text: $title, prompt: Text("Meeting", tableName: "Calendar"))
                     if model.accounts.count > 1 {
-                        Picker("From", selection: Binding(get: { account?.id }, set: { accountID = $0 })) {
+                        Picker(String(localized: "From", table: "Calendar"), selection: Binding(get: { account?.id }, set: { accountID = $0 })) {
                             ForEach(model.accounts) { Text(verbatim: $0.address.address).tag(Optional($0.id)) }
                         }
                     }
                 }
                 Section {
-                    DatePicker("Starts", selection: $start, displayedComponents: [.date, .hourAndMinute])
-                    Picker("Length", selection: $minutes) {
+                    DatePicker(String(localized: "Starts", table: "Calendar"), selection: $start, displayedComponents: [.date, .hourAndMinute])
+                    Picker(String(localized: "Length", table: "Calendar"), selection: $minutes) {
                         ForEach([15, 30, 45, 60, 90, 120], id: \.self) { Text(Self.length($0)).tag($0) }
                     }
                     if !attendees.isEmpty {
@@ -48,32 +48,32 @@ struct NewMeetingView: View {
                     }
                 }
                 Section {
-                    TextField("People", text: $people, prompt: Text("Names or addresses"))
+                    TextField(String(localized: "People", table: "Calendar"), text: $people, prompt: Text("Names or addresses", tableName: "Calendar"))
                         .autocorrectionDisabled()
                     RecipientSuggestions(model: model, field: $people)
                     ForEach(attendees.filter { isBusy($0.address) }, id: \.address) { person in
-                        Label(String(localized: "\(person.displayName) is busy then"), systemImage: "exclamationmark.circle")
+                        Label(String(localized: "\(person.displayName) is busy then", table: "Calendar"), systemImage: "exclamationmark.circle")
                             .foregroundStyle(Status.danger)
                     }
                 } header: {
-                    Text("People")
+                    Text("People", tableName: "Calendar")
                 }
                 roomsSection
                 Section {
                     if rooms.isEmpty {
-                        TextField("Location", text: $location, prompt: Text("Place or video link"))
+                        TextField(String(localized: "Location", table: "Calendar"), text: $location, prompt: Text("Place or video link", tableName: "Calendar"))
                     }
                     TextEditor(text: $notes).frame(minHeight: 70)
                 } header: {
-                    Text("Notes")
+                    Text("Notes", tableName: "Calendar")
                 } footer: {
                     if let problem { Text(verbatim: problem).foregroundStyle(Status.danger) }
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle("New Meeting")
+            .navigationTitle(String(localized: "New Meeting", table: "Calendar"))
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(String(localized: "Cancel", table: "Calendar")) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(isSending ? "Sending…" : "Send") { Task { await send() } }
                         .disabled(isSending || attendees.isEmpty && rooms.isEmpty || account == nil)
@@ -99,23 +99,23 @@ struct NewMeetingView: View {
             Section {
                 ForEach(rooms) { room in
                     LabeledContent {
-                        Button("Remove") { rooms.removeAll { $0.id == room.id } }.buttonStyle(.borderless)
+                        Button(String(localized: "Remove", table: "Calendar")) { rooms.removeAll { $0.id == room.id } }.buttonStyle(.borderless)
                     } label: {
                         SettingLabel(verbatim: room.name)
                     }
                 }
                 if model.canListRooms(account) {
-                    Button("Add Room…") { choosingRoom = true }
+                    Button(String(localized: "Add Room…", table: "Calendar")) { choosingRoom = true }
                 } else if model.canAskForAccess(account) {
                     Button(model.usesAccountCalendar(account) ? "Show Rooms…" : "Connect Calendar and Rooms…") {
                         Task { await connect([.calendar, .rooms], account: account) }
                     }
                 }
             } header: {
-                Text("Room")
+                Text("Room", tableName: "Calendar")
             } footer: {
                 if !model.canListRooms(account) {
-                    Text("Margin asks your account for your calendar and your organization's rooms. Some organizations need an admin to allow room lists.")
+                    Text("Margin asks your account for your calendar and your organization's rooms. Some organizations need an admin to allow room lists.", tableName: "Calendar")
                 }
             }
         }
@@ -149,7 +149,7 @@ struct NewMeetingView: View {
         isSending = true
         defer { isSending = false }
         let meeting = MeetingRequest(
-            title: title.trimmingCharacters(in: .whitespaces).isEmpty ? String(localized: "Meeting") : title,
+            title: title.trimmingCharacters(in: .whitespaces).isEmpty ? String(localized: "Meeting", table: "Calendar") : title,
             start: start, end: end, location: location.isEmpty ? nil : location, notes: notes,
             organizer: account.address, attendees: attendees, rooms: rooms
         )
@@ -203,7 +203,7 @@ struct RoomPicker: View {
         NavigationStack {
             List {
                 if loading {
-                    HStack(spacing: Space.s) { ProgressView().controlSize(.small); Text("Finding rooms…").foregroundStyle(.secondary) }
+                    HStack(spacing: Space.s) { ProgressView().controlSize(.small); Text("Finding rooms…", tableName: "Calendar").foregroundStyle(.secondary) }
                 } else if let problem {
                     Text(verbatim: problem).foregroundStyle(Status.danger)
                 } else if shown.isEmpty {
@@ -211,10 +211,10 @@ struct RoomPicker: View {
                 }
                 Section {
                     HStack {
-                        TextField("Room address", text: $typed, prompt: Text("Add a room by its address"))
+                        TextField(String(localized: "Room address", table: "Calendar"), text: $typed, prompt: Text("Add a room by its address", tableName: "Calendar"))
                             .autocorrectionDisabled()
                             .onSubmit(addTyped)
-                        Button("Add", action: addTyped).disabled(!EmailAddress.isValid(typed.trimmingCharacters(in: .whitespaces)))
+                        Button(String(localized: "Add", table: "Calendar"), action: addTyped).disabled(!EmailAddress.isValid(typed.trimmingCharacters(in: .whitespaces)))
                     }
                 }
                 ForEach(shown) { room in
@@ -239,11 +239,11 @@ struct RoomPicker: View {
                     .buttonStyle(.plain)
                 }
             }
-            .searchable(text: $search, prompt: Text("Search rooms"))
-            .navigationTitle("Rooms")
+            .searchable(text: $search, prompt: Text("Search rooms", tableName: "Calendar"))
+            .navigationTitle(String(localized: "Rooms", table: "Calendar"))
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .primaryAction) { Toggle("Free only", isOn: $freeOnly) }
+                ToolbarItem(placement: .cancellationAction) { Button(String(localized: "Cancel", table: "Calendar")) { dismiss() } }
+                ToolbarItem(placement: .primaryAction) { Toggle(String(localized: "Free only", table: "Calendar"), isOn: $freeOnly) }
             }
             .task { await load() }
         }
@@ -267,7 +267,7 @@ struct RoomPicker: View {
         var parts: [String] = []
         if let building = room.building { parts.append(building) }
         if let floor = room.floor { parts.append(floor) }
-        if let capacity = room.capacity { parts.append(String(localized: "\(capacity) seats")) }
+        if let capacity = room.capacity { parts.append(String(localized: "\(capacity) seats", table: "Calendar")) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 

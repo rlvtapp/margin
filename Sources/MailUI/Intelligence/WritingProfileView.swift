@@ -27,7 +27,7 @@ struct WritingProfileView: View {
                              detail: "Three quick answers under mail from people. Tap one to write it out.")
             }
         } header: {
-            Text("Your writing")
+            Text("Your writing", tableName: "Settings")
         }
         // Read from disk the first time something needs it; this page needs it at once.
         .onAppear { model.loadWritingProfileIfNeeded() }
@@ -39,7 +39,7 @@ struct WritingProfileView: View {
                 if profile.isEmpty {
                     SettingsEmptyRow(model.isLearningWriting ? "Reading your sent mail…" : "Nothing learned yet.")
                 } else {
-                    habits(profile.overall, title: Text("Usually"))
+                    habits(profile.overall, title: Text("Usually", tableName: "Settings"))
                     if profile.languages.count > 1 {
                         LabeledContent("Languages") {
                             Text(verbatim: profile.languages.sorted { $0.value.messages > $1.value.messages }
@@ -49,11 +49,11 @@ struct WritingProfileView: View {
                         }
                     }
                     if !profile.frequentPeople.isEmpty {
-                        Text("With people you write to most").font(TypeScale.caption.weight(.semibold)).foregroundStyle(.secondary)
+                        Text("With people you write to most", tableName: "Settings").font(TypeScale.caption.weight(.semibold)).foregroundStyle(.secondary)
                     }
                     ForEach(Array(profile.frequentPeople.prefix(8)), id: \.address) { person in
                         LabeledContent {
-                            Button("Forget") { model.forgetWriting(to: person.address) }
+                            Button(String(localized: "Forget", table: "Settings")) { model.forgetWriting(to: person.address) }
                         } label: {
                             habits(person.habits, title: Text(verbatim: person.name))
                         }
@@ -65,7 +65,7 @@ struct WritingProfileView: View {
                     }
                     .disabled(model.isLearningWriting)
                     if !profile.isEmpty {
-                        Button("Start over") { model.resetWritingProfile() }
+                        Button(String(localized: "Start over", table: "Settings")) { model.resetWritingProfile() }
                     }
                 }
             }
@@ -92,13 +92,13 @@ struct WritingProfileView: View {
                         .font(.callout)
                         .textSelection(.enabled)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("Studied by \(voice.by) from \(voice.emails) emails, \(voice.date.formatted(date: .abbreviated, time: .omitted)).")
+                    Text("Studied by \(voice.by) from \(voice.emails) emails, \(voice.date.formatted(date: .abbreviated, time: .omitted)).", tableName: "Settings")
                         .font(TypeScale.caption).foregroundStyle(.secondary)
                 }
                 .padding(.vertical, 2)
             }
             HStack {
-                Button(isStudying ? String(localized: "Studying…") : voices.isEmpty ? String(localized: "Study My Writing") : String(localized: "Study Again")) {
+                Button(isStudying ? String(localized: "Studying…", table: "Settings") : voices.isEmpty ? String(localized: "Study My Writing", table: "Settings") : String(localized: "Study Again", table: "Settings")) {
                     isStudying = true
                     studyError = nil
                     Task {
@@ -108,7 +108,7 @@ struct WritingProfileView: View {
                 }
                 .disabled(isStudying)
                 if !voices.isEmpty && !isStudying {
-                    Button("Forget") { model.forgetStudiedVoice() }
+                    Button(String(localized: "Forget", table: "Settings")) { model.forgetStudiedVoice() }
                 }
                 if isStudying { ProgressView().controlSize(.small) }
             }
@@ -116,9 +116,9 @@ struct WritingProfileView: View {
                 Text(verbatim: studyError).font(TypeScale.caption).foregroundStyle(.red)
             }
         } header: {
-            Text("Your voice")
+            Text("Your voice", tableName: "Settings")
         } footer: {
-            Text("\(assistant) reads up to 40 of your recent sent emails per language, once, and describes how you write: tone, sentence length, words you use. Only the description is kept, and every draft follows it.")
+            Text("\(assistant) reads up to 40 of your recent sent emails per language, once, and describes how you write: tone, sentence length, words you use. Only the description is kept, and every draft follows it.", tableName: "Settings")
         }
     }
 
@@ -126,10 +126,10 @@ struct WritingProfileView: View {
     @ViewBuilder
     private var tryItSection: some View {
         Section {
-            TextField("From (name or address, optional)", text: $trySender)
-            TextField("Paste an email to answer", text: $tryText, axis: .vertical)
+            TextField(String(localized: "From (name or address, optional)", table: "Settings"), text: $trySender)
+            TextField(String(localized: "Paste an email to answer", table: "Settings"), text: $tryText, axis: .vertical)
                 .lineLimit(4...10)
-            TextField("What should the reply say? (optional)", text: $tryNote)
+            TextField(String(localized: "What should the reply say? (optional)", table: "Settings"), text: $tryNote)
             HStack {
                 Button(isTrying ? "Writing…" : "Write my reply") {
                     isTrying = true
@@ -143,7 +143,7 @@ struct WritingProfileView: View {
                 }
                 .disabled(isTrying || tryText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !model.isAssistantOn)
                 if !model.isAssistantOn {
-                    Text("Turn on the assistant to try this.").font(TypeScale.caption).foregroundStyle(.secondary)
+                    Text("Turn on the assistant to try this.", tableName: "Settings").font(TypeScale.caption).foregroundStyle(.secondary)
                 }
             }
             if let tryError {
@@ -153,7 +153,7 @@ struct WritingProfileView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(verbatim: tryResult.reply).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
                     Text(verbatim: tryResult.about).font(TypeScale.caption).foregroundStyle(.secondary)
-                    DisclosureGroup("What Margin told the assistant") {
+                    DisclosureGroup(String(localized: "What Margin told the assistant", table: "Settings")) {
                         Text(verbatim: tryResult.instructions)
                             .font(.caption.monospaced())
                             .foregroundStyle(.secondary)
@@ -165,9 +165,9 @@ struct WritingProfileView: View {
                 .padding(.vertical, 4)
             }
         } header: {
-            Text("Try it")
+            Text("Try it", tableName: "Settings")
         } footer: {
-            Text("Nothing is sent or saved. The reply uses the assistant you chose, in the email's language.")
+            Text("Nothing is sent or saved. The reply uses the assistant you chose, in the email's language.", tableName: "Settings")
         }
     }
 
@@ -176,12 +176,12 @@ struct WritingProfileView: View {
         var parts: [String] = []
         if let greeting = habits.usualGreeting { parts.append("“\(greeting.replacingOccurrences(of: "{name}", with: "…"))”") }
         if let signOff = habits.usualSignOff { parts.append("“\(signOff)”") }
-        if let length = habits.typicalLength { parts.append(String(localized: "about \(length) words")) }
-        if let sentence = habits.typicalSentence { parts.append(String(localized: "sentences of about \(sentence) words")) }
-        if let formal = habits.addressesFormally { parts.append(formal ? String(localized: "formal") : String(localized: "informal")) }
+        if let length = habits.typicalLength { parts.append(String(localized: "about \(length) words", table: "Settings")) }
+        if let sentence = habits.typicalSentence { parts.append(String(localized: "sentences of about \(sentence) words", table: "Settings")) }
+        if let formal = habits.addressesFormally { parts.append(formal ? String(localized: "formal", table: "Settings") : String(localized: "informal", table: "Settings")) }
         // Formal or informal address says it better where a language has it.
-        if habits.addressesFormally == nil { parts.append(habits.isCasual ? String(localized: "casual") : String(localized: "polished")) }
-        parts.append(habits.messages == 1 ? String(localized: "1 email") : String(localized: "\(habits.messages) emails"))
+        if habits.addressesFormally == nil { parts.append(habits.isCasual ? String(localized: "casual", table: "Settings") : String(localized: "polished", table: "Settings")) }
+        parts.append(habits.messages == 1 ? String(localized: "1 email", table: "Settings") : String(localized: "\(habits.messages) emails", table: "Settings"))
         return VStack(alignment: .leading, spacing: 2) {
             title
             Text(verbatim: parts.joined(separator: " · "))

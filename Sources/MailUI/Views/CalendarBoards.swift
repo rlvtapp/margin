@@ -222,7 +222,7 @@ struct CalendarTimeline: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .tip("Show this day")
+                .tip(String(localized: "Show this day", table: "Calendar"))
             }
         }
         .fixedSize(horizontal: false, vertical: true)
@@ -237,10 +237,10 @@ struct CalendarTimeline: View {
         let isToday = days.first.map(Calendar.current.isDateInToday) ?? false
         return HStack(alignment: .top, spacing: 0) {
             Color.clear.frame(width: gutter, height: 1)
-            PersonHeading(title: String(localized: "You"), address: nil, colorIndex: nil, detail: nil)
+            PersonHeading(title: String(localized: "You", table: "Calendar"), address: nil, colorIndex: nil, detail: nil)
             ForEach(people) { person in
                 PersonHeading(title: person.address.displayName, address: person.address, colorIndex: person.colorIndex,
-                              detail: model.colleaguesHidden.contains(person.id) ? String(localized: "Not shared")
+                              detail: model.colleaguesHidden.contains(person.id) ? String(localized: "Not shared", table: "Calendar")
                                   : isToday ? model.availability(of: person, now: now) : nil)
             }
         }
@@ -259,7 +259,7 @@ struct CalendarTimeline: View {
         let allDay = days.map { day in (day, items.filter { $0.isAllDay && Self.covers($0, day) }, model.reminders(on: day)) }
         let rows = allDayRows(items)
         return HStack(alignment: .top, spacing: 0) {
-            Text("All day")
+            Text("All day", tableName: "Calendar")
                 .font(.system(size: Look.size(10), weight: .medium))
                 .foregroundStyle(Ink.quaternary)
                 .frame(width: gutter - 8, alignment: .trailing)
@@ -274,7 +274,7 @@ struct CalendarTimeline: View {
                         ReminderChip(model: model, reminder: reminder)
                     }
                     if total > room {
-                        Text("\(total - room) more").font(TypeScale.caption).foregroundStyle(Ink.tertiary).padding(.leading, 4)
+                        Text("\(total - room) more", tableName: "Calendar").font(TypeScale.caption).foregroundStyle(Ink.tertiary).padding(.leading, 4)
                     }
                 }
                 .padding(.horizontal, 2)
@@ -284,7 +284,7 @@ struct CalendarTimeline: View {
                 ForEach(people) { person in
                     // Away the whole day: said once at the top, where it's always in view.
                     if model.busyTimes(of: person, on: day).contains(where: { $0.kind == .outOfOffice && $0.end.timeIntervalSince($0.start) >= 86_399 }) {
-                        Label("Out of office", systemImage: "airplane")
+                        Label(String(localized: "Out of office", table: "Calendar"), systemImage: "airplane")
                             .font(.system(size: Look.size(11.5), weight: .semibold))
                             .foregroundStyle(Ink.primary)
                             .lineLimit(1)
@@ -427,7 +427,7 @@ struct CalendarTimeline: View {
                             .fill(Palette.account(person.colorIndex).opacity(busy.kind == .outOfOffice ? 0.3 : busy.kind == .workingElsewhere ? 0.15 : 0.7))
                             .frame(width: 3, height: max(offset(of: busy.end, on: day) - top, 4))
                             .offset(y: top)
-                            .help(Text("\(person.address.displayName) is busy \(busy.start.formatted(date: .omitted, time: .shortened)) – \(busy.end.formatted(date: .omitted, time: .shortened))"))
+                            .help(Text("\(person.address.displayName) is busy \(busy.start.formatted(date: .omitted, time: .shortened)) – \(busy.end.formatted(date: .omitted, time: .shortened))", tableName: "Calendar"))
                     }
                 }
                 .frame(width: 3, alignment: .top)
@@ -745,7 +745,7 @@ private struct ReminderChip: View {
         .padding(.horizontal, 5)
         .frame(maxWidth: .infinity, minHeight: Look.gap(19), alignment: .leading)
         .contentShape(Rectangle())
-        .contextMenu { Button("Open in Reminders") { model.openInReminders(reminder) } }
+        .contextMenu { Button(String(localized: "Open in Reminders", table: "Calendar")) { model.openInReminders(reminder) } }
     }
 }
 
@@ -773,7 +773,7 @@ struct EventDetail: View {
             }
             let guests = item.attendees.filter { $0.kind != .room }
             if !guests.isEmpty {
-                Text("\(guests.count) invited · \(guests.filter { $0.response == .accepted }.count) going")
+                Text("\(guests.count) invited · \(guests.filter { $0.response == .accepted }.count) going", tableName: "Calendar")
                     .font(TypeScale.caption)
                     .foregroundStyle(Ink.tertiary)
             }
@@ -782,14 +782,14 @@ struct EventDetail: View {
             }
             HStack(spacing: 8) {
                 if let url = item.joinURL {
-                    Link(destination: url) { Text("Join") }
+                    Link(destination: url) { Text("Join", tableName: "Calendar") }
                         .buttonStyle(JoinButtonStyle(prominent: item.start.timeIntervalSinceNow < 15 * 60 && item.end > Date()))
                 }
                 if model.canChange(item), let editor {
-                    Button("Edit…") { editor.edit(item) }.buttonStyle(PillButtonStyle())
+                    Button(String(localized: "Edit…", table: "Calendar")) { editor.edit(item) }.buttonStyle(PillButtonStyle())
                 }
                 if item.invitationThreadID != nil {
-                    Button("Show Invitation") { EventMenu.open(item, in: model) }.buttonStyle(PillButtonStyle())
+                    Button(String(localized: "Show Invitation", table: "Calendar")) { EventMenu.open(item, in: model) }.buttonStyle(PillButtonStyle())
                 }
             }
         }
@@ -798,7 +798,7 @@ struct EventDetail: View {
         // Backspace (or Delete) deletes the event that's open, as in the grid's own selection.
         .background {
             if model.canDelete(item), let editor {
-                Button("Delete") {
+                Button(String(localized: "Delete", table: "Calendar")) {
                     dismiss()
                     editor.delete(item)
                 }
@@ -810,7 +810,7 @@ struct EventDetail: View {
 
     private var when: String {
         let day = item.start.formatted(.dateTime.weekday(.wide).day().month(.wide))
-        if item.isAllDay { return day + " · " + String(localized: "All day") }
+        if item.isAllDay { return day + " · " + String(localized: "All day", table: "Calendar") }
         return day + " · " + item.start.formatted(date: .omitted, time: .shortened) + " – " + item.end.formatted(date: .omitted, time: .shortened)
     }
 
@@ -821,9 +821,9 @@ struct EventDetail: View {
         } else if let url = item.joinURL, let service = AgendaRow.service(url) {
             lines.append(service)
         }
-        if let organizer = item.organizer, !item.isMine { lines.append(String(localized: "Invited by \(organizer)")) }
+        if let organizer = item.organizer, !item.isMine { lines.append(String(localized: "Invited by \(organizer)", table: "Calendar")) }
         if let calendar = item.calendarName { lines.append(calendar) }
-        if item.repeats { lines.append(String(localized: "Repeats")) }
+        if item.repeats { lines.append(String(localized: "Repeats", table: "Calendar")) }
         return lines
     }
 }
@@ -1034,7 +1034,7 @@ private struct MonthDayBox: View {
                     .frame(height: lineHeight)
                 }
                 if total > shown {
-                    Text("\(total - shown) more")
+                    Text("\(total - shown) more", tableName: "Calendar")
                         .font(.system(size: Look.size(11), weight: .medium))
                         .foregroundStyle(Ink.tertiary)
                         .frame(height: lineHeight)
@@ -1051,13 +1051,13 @@ private struct MonthDayBox: View {
         .onHover { isHovered = $0 }
         .contextMenu {
             if let editor, editor.canAdd {
-                Button("New Event") { editor.newEvent(start: CalendarPage.newEventStart(on: day)) }
+                Button(String(localized: "New Event", table: "Calendar")) { editor.newEvent(start: CalendarPage.newEventStart(on: day)) }
             }
         }
         .overlay(alignment: .bottom) { Rectangle().fill(Line.hairline).frame(height: 1) }
         .overlay(alignment: .trailing) { Rectangle().fill(Line.hairline).frame(width: 1) }
         .accessibilityLabel(Text(verbatim: day.formatted(date: .complete, time: .omitted)))
-        .accessibilityHint(Text("\(total) on this day"))
+        .accessibilityHint(Text("\(total) on this day", tableName: "Calendar"))
     }
 
     @ViewBuilder
@@ -1133,7 +1133,7 @@ private struct ColleagueColumn: View {
                         .overlay {
                             VStack(spacing: 6) {
                                 Image(systemName: "eye.slash").font(.system(size: Look.size(13))).foregroundStyle(Ink.tertiary)
-                                Text("Their calendar isn't shared with you")
+                                Text("Their calendar isn't shared with you", tableName: "Calendar")
                                     .font(TypeScale.caption)
                                     .foregroundStyle(Ink.tertiary)
                                     .multilineTextAlignment(.center)
@@ -1171,7 +1171,7 @@ private struct ColleagueColumn: View {
                         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                         .offset(x: 3, y: top + 1)
                         .accessibilityElement(children: .ignore)
-                        .accessibilityLabel(Text("\(person.address.displayName) is busy \(busy.start.formatted(date: .omitted, time: .shortened)) – \(busy.end.formatted(date: .omitted, time: .shortened))"))
+                        .accessibilityLabel(Text("\(person.address.displayName) is busy \(busy.start.formatted(date: .omitted, time: .shortened)) – \(busy.end.formatted(date: .omitted, time: .shortened))", tableName: "Calendar"))
                     }
                 }
             }
@@ -1186,9 +1186,9 @@ private struct ColleagueColumn: View {
     static func label(_ busy: BusyTime) -> String {
         let time = busy.start.formatted(date: .omitted, time: .shortened) + " – " + busy.end.formatted(date: .omitted, time: .shortened)
         return switch busy.kind {
-        case .outOfOffice: String(localized: "Out of office")
-        case .workingElsewhere: String(localized: "Working elsewhere") + " · " + time
-        case .tentative: String(localized: "Maybe busy") + " · " + time
+        case .outOfOffice: String(localized: "Out of office", table: "Calendar")
+        case .workingElsewhere: String(localized: "Working elsewhere", table: "Calendar") + " · " + time
+        case .tentative: String(localized: "Maybe busy", table: "Calendar") + " · " + time
         case .busy: time
         }
     }
@@ -1266,11 +1266,11 @@ private struct FreeTogetherBand: View {
             .allowsHitTesting(false)
             .overlay(alignment: .topTrailing) {
                 HStack(spacing: 8) {
-                    Text("Everyone's free · \(Countdown.length(minutes: Int(slot.duration / 60)))")
+                    Text("Everyone's free · \(Countdown.length(minutes: Int(slot.duration / 60)))", tableName: "Calendar")
                         .font(.system(size: Look.size(11), weight: .semibold))
                         .foregroundStyle(Status.done)
                     if let editor, editor.canAdd, height >= 30 {
-                        Button("Meet") {
+                        Button(String(localized: "Meet", table: "Calendar")) {
                             editor.newEvent(start: slot.start, end: min(slot.end, slot.start.addingTimeInterval(1800)),
                                             invitees: people.map(\.address))
                         }
@@ -1280,7 +1280,7 @@ private struct FreeTogetherBand: View {
                         .padding(.horizontal, 10)
                         .frame(height: Look.gap(20))
                         .background(Status.done, in: Capsule())
-                        .tip("Make a meeting with everyone then")
+                        .tip(String(localized: "Make a meeting with everyone then", table: "Calendar"))
                     }
                 }
                 .padding(5)

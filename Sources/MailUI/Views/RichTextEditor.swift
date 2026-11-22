@@ -485,27 +485,27 @@ struct FormattingBar: View {
     /// Relevate's named colours (the same set as its web editor), in shades that read on white
     /// and on dark: what most people open mail on.
     static var colors: [(name: String, value: NSColor)] {
-        [(String(localized: "Gray"), NSColor(srgbRed: 0.45, green: 0.45, blue: 0.48, alpha: 1)),
-         (String(localized: "Brown"), NSColor(srgbRed: 0.55, green: 0.36, blue: 0.22, alpha: 1)),
-         (String(localized: "Orange"), NSColor(srgbRed: 0.85, green: 0.45, blue: 0.0, alpha: 1)),
-         (String(localized: "Yellow"), NSColor(srgbRed: 0.72, green: 0.56, blue: 0.0, alpha: 1)),
-         (String(localized: "Green"), NSColor(srgbRed: 0.10, green: 0.55, blue: 0.25, alpha: 1)),
-         (String(localized: "Blue"), NSColor(srgbRed: 0.10, green: 0.35, blue: 0.85, alpha: 1)),
-         (String(localized: "Purple"), NSColor(srgbRed: 0.45, green: 0.25, blue: 0.80, alpha: 1)),
-         (String(localized: "Pink"), NSColor(srgbRed: 0.85, green: 0.20, blue: 0.55, alpha: 1)),
-         (String(localized: "Red"), NSColor(srgbRed: 0.80, green: 0.15, blue: 0.15, alpha: 1))]
+        [(String(localized: "Gray", table: "Composer"), NSColor(srgbRed: 0.45, green: 0.45, blue: 0.48, alpha: 1)),
+         (String(localized: "Brown", table: "Composer"), NSColor(srgbRed: 0.55, green: 0.36, blue: 0.22, alpha: 1)),
+         (String(localized: "Orange", table: "Composer"), NSColor(srgbRed: 0.85, green: 0.45, blue: 0.0, alpha: 1)),
+         (String(localized: "Yellow", table: "Composer"), NSColor(srgbRed: 0.72, green: 0.56, blue: 0.0, alpha: 1)),
+         (String(localized: "Green", table: "Composer"), NSColor(srgbRed: 0.10, green: 0.55, blue: 0.25, alpha: 1)),
+         (String(localized: "Blue", table: "Composer"), NSColor(srgbRed: 0.10, green: 0.35, blue: 0.85, alpha: 1)),
+         (String(localized: "Purple", table: "Composer"), NSColor(srgbRed: 0.45, green: 0.25, blue: 0.80, alpha: 1)),
+         (String(localized: "Pink", table: "Composer"), NSColor(srgbRed: 0.85, green: 0.20, blue: 0.55, alpha: 1)),
+         (String(localized: "Red", table: "Composer"), NSColor(srgbRed: 0.80, green: 0.15, blue: 0.15, alpha: 1))]
     }
 
     static var highlights: [(name: String, value: NSColor)] {
-        [(String(localized: "Gray"), NSColor(srgbRed: 0.90, green: 0.90, blue: 0.91, alpha: 1)),
-         (String(localized: "Brown"), NSColor(srgbRed: 0.93, green: 0.87, blue: 0.80, alpha: 1)),
-         (String(localized: "Orange"), NSColor(srgbRed: 1.0, green: 0.86, blue: 0.70, alpha: 1)),
-         (String(localized: "Yellow"), NSColor(srgbRed: 1.0, green: 0.93, blue: 0.45, alpha: 1)),
-         (String(localized: "Green"), NSColor(srgbRed: 0.75, green: 0.95, blue: 0.70, alpha: 1)),
-         (String(localized: "Blue"), NSColor(srgbRed: 0.75, green: 0.87, blue: 1.0, alpha: 1)),
-         (String(localized: "Purple"), NSColor(srgbRed: 0.87, green: 0.80, blue: 1.0, alpha: 1)),
-         (String(localized: "Pink"), NSColor(srgbRed: 1.0, green: 0.80, blue: 0.88, alpha: 1)),
-         (String(localized: "Red"), NSColor(srgbRed: 1.0, green: 0.80, blue: 0.78, alpha: 1))]
+        [(String(localized: "Gray", table: "Composer"), NSColor(srgbRed: 0.90, green: 0.90, blue: 0.91, alpha: 1)),
+         (String(localized: "Brown", table: "Composer"), NSColor(srgbRed: 0.93, green: 0.87, blue: 0.80, alpha: 1)),
+         (String(localized: "Orange", table: "Composer"), NSColor(srgbRed: 1.0, green: 0.86, blue: 0.70, alpha: 1)),
+         (String(localized: "Yellow", table: "Composer"), NSColor(srgbRed: 1.0, green: 0.93, blue: 0.45, alpha: 1)),
+         (String(localized: "Green", table: "Composer"), NSColor(srgbRed: 0.75, green: 0.95, blue: 0.70, alpha: 1)),
+         (String(localized: "Blue", table: "Composer"), NSColor(srgbRed: 0.75, green: 0.87, blue: 1.0, alpha: 1)),
+         (String(localized: "Purple", table: "Composer"), NSColor(srgbRed: 0.87, green: 0.80, blue: 1.0, alpha: 1)),
+         (String(localized: "Pink", table: "Composer"), NSColor(srgbRed: 1.0, green: 0.80, blue: 0.88, alpha: 1)),
+         (String(localized: "Red", table: "Composer"), NSColor(srgbRed: 1.0, green: 0.80, blue: 0.78, alpha: 1))]
     }
 
     /// Fonts that look the same on the reader's device, most of them on every one.
@@ -534,18 +534,18 @@ struct FormattingBar: View {
             IconButton("arrow.uturn.forward", help: "Redo  ⇧⌘Z") { controller.redo() }
             divider
             menu("textformat", help: "Font") {
-                Button("Normal") { controller.setFont(nil) }
+                Button(String(localized: "Normal", table: "Composer")) { controller.setFont(nil) }
                 Divider()
                 ForEach(Self.fonts, id: \.self) { name in
                     Button { controller.setFont(name) } label: { Text(verbatim: name).font(.custom(name, size: 13)) }
                 }
                 Divider()
-                Button("Show Fonts…") { controller.showFonts() }
+                Button(String(localized: "Show Fonts…", table: "Composer")) { controller.showFonts() }
             }
             menu("textformat.size", help: "Text size") {
                 ForEach(Self.sizes, id: \.self) { size in
                     Button { controller.setSize(size) } label: {
-                        size == EmailHTMLWriter.baseSize ? Text("\(Int(size)) (Normal)") : Text(verbatim: "\(Int(size))")
+                        size == EmailHTMLWriter.baseSize ? Text("\(Int(size)) (Normal)", tableName: "Composer") : Text(verbatim: "\(Int(size))")
                     }
                 }
             }
@@ -555,32 +555,32 @@ struct FormattingBar: View {
             IconButton("underline", help: "Underline  ⌘U") { controller.toggleUnderline() }
             IconButton("strikethrough", help: "Strikethrough") { controller.toggleStrikethrough() }
             menu("paintpalette", help: "Text color") {
-                Button("Default") { controller.setColor(nil) }
+                Button(String(localized: "Default", table: "Composer")) { controller.setColor(nil) }
                 ForEach(Self.colors, id: \.name) { color in
                     Button(color.name) { controller.setColor(color.value) }
                 }
             }
             menu("highlighter", help: "Highlight") {
-                Button("None") { controller.setHighlight(nil) }
+                Button(String(localized: "None", table: "Composer")) { controller.setHighlight(nil) }
                 ForEach(Self.highlights, id: \.name) { color in
                     Button(color.name) { controller.setHighlight(color.value) }
                 }
             }
             divider
             menu("text.alignleft", help: "Alignment") {
-                Button { controller.setAlignment(.left) } label: { Label("Align Left", systemImage: "text.alignleft") }
-                Button { controller.setAlignment(.center) } label: { Label("Center", systemImage: "text.aligncenter") }
-                Button { controller.setAlignment(.right) } label: { Label("Align Right", systemImage: "text.alignright") }
+                Button { controller.setAlignment(.left) } label: { Label(String(localized: "Align Left", table: "Composer"), systemImage: "text.alignleft") }
+                Button { controller.setAlignment(.center) } label: { Label(String(localized: "Center", table: "Composer"), systemImage: "text.aligncenter") }
+                Button { controller.setAlignment(.right) } label: { Label(String(localized: "Align Right", table: "Composer"), systemImage: "text.alignright") }
             }
             IconButton("list.bullet", help: "Bulleted list") { controller.toggleBullets() }
             IconButton("list.number", help: "Numbered list") { controller.toggleNumbers() }
             IconButton("decrease.indent", help: "Decrease indent") { controller.indent(-1) }
             IconButton("increase.indent", help: "Increase indent") { controller.indent(1) }
             menu("arrow.up.and.down.text.horizontal", help: "Line spacing") {
-                Button("Single") { controller.setLineSpacing(1) }
+                Button(String(localized: "Single", table: "Composer")) { controller.setLineSpacing(1) }
                 Button { controller.setLineSpacing(1.15) } label: { Text(verbatim: "1.15") }
                 Button { controller.setLineSpacing(1.5) } label: { Text(verbatim: "1.5") }
-                Button("Double") { controller.setLineSpacing(2) }
+                Button(String(localized: "Double", table: "Composer")) { controller.setLineSpacing(2) }
             }
             divider
             IconButton("link", help: "Add a link") { asksForLink = true }
@@ -588,10 +588,10 @@ struct FormattingBar: View {
             IconButton("face.smiling", help: "Emoji") { controller.showEmoji() }
             IconButton("eraser", help: "Clear formatting") { controller.clearFormatting() }
         }
-        .alert("Add a link", isPresented: $asksForLink) {
-            TextField("https://", text: $link)
-            Button("Cancel", role: .cancel) {}
-            Button("Add") {
+        .alert(String(localized: "Add a link", table: "Composer"), isPresented: $asksForLink) {
+            TextField(String(localized: "https://", table: "Composer"), text: $link)
+            Button(String(localized: "Cancel", table: "Composer"), role: .cancel) {}
+            Button(String(localized: "Add", table: "Composer")) {
                 if let url = URL(string: link), url.scheme != nil { controller.addLink(url) }
                 link = "https://"
             }

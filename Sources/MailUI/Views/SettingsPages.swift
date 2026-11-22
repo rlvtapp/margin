@@ -61,11 +61,11 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
     /// is driven, everything AI, then your data. A page split off a long one follows it.
     static var groups: [Group] {
         [Group(id: "margin", title: nil, pages: [.general, .mailboxes, .workspaces, .contacts]),
-         Group(id: "mail", title: String(localized: "Mail"),
+         Group(id: "mail", title: String(localized: "Mail", table: "Settings"),
                pages: [.notifications, .signInCodes, .vips, .reading, .writing, .signatures, .templates, .sorting, .rules]),
-         Group(id: "look", title: String(localized: "Look and feel"), pages: [.appearance, .layout, .shortcuts]),
-         Group(id: "ai", title: String(localized: "AI"), pages: [.assistant, .ask, .permissions, .writingStyle, .connections]),
-         Group(id: "data", title: String(localized: "Your data"), pages: [.backup, .backupFiles, .restore, .experimental, .changelog, .about])]
+         Group(id: "look", title: String(localized: "Look and feel", table: "Settings"), pages: [.appearance, .layout, .shortcuts]),
+         Group(id: "ai", title: String(localized: "AI", table: "Settings"), pages: [.assistant, .ask, .permissions, .writingStyle, .connections]),
+         Group(id: "data", title: String(localized: "Your data", table: "Settings"), pages: [.backup, .backupFiles, .restore, .experimental, .changelog, .about])]
             .map { Group(id: $0.id, title: $0.title, pages: $0.pages.filter(available.contains)) }
     }
 
@@ -80,38 +80,38 @@ enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
 
     var title: String {
         switch self {
-        case .general: String(localized: "General")
-        case .mailboxes: String(localized: "Mailboxes")
-        case .contacts: String(localized: "Contacts")
-        case .workspaces: String(localized: "Workspaces")
-        case .notifications: String(localized: "Notifications")
-        case .reading: String(localized: "Reading")
-        case .writing: String(localized: "Writing")
-        case .signatures: String(localized: "Signatures")
-        case .appearance: String(localized: "Appearance")
-        case .layout: String(localized: "Layout")
-        case .sorting: String(localized: "Sorting")
-        case .templates: String(localized: "Templates")
+        case .general: String(localized: "General", table: "Settings")
+        case .mailboxes: String(localized: "Mailboxes", table: "Settings")
+        case .contacts: String(localized: "Contacts", table: "Settings")
+        case .workspaces: String(localized: "Workspaces", table: "Settings")
+        case .notifications: String(localized: "Notifications", table: "Settings")
+        case .reading: String(localized: "Reading", table: "Settings")
+        case .writing: String(localized: "Writing", table: "Settings")
+        case .signatures: String(localized: "Signatures", table: "Settings")
+        case .appearance: String(localized: "Appearance", table: "Settings")
+        case .layout: String(localized: "Layout", table: "Settings")
+        case .sorting: String(localized: "Sorting", table: "Settings")
+        case .templates: String(localized: "Templates", table: "Settings")
         case .shortcuts:
             #if os(macOS)
-            String(localized: "Shortcuts and Swipes")
+            String(localized: "Shortcuts and Swipes", table: "Settings")
             #else
-            String(localized: "Swipes")
+            String(localized: "Swipes", table: "Settings")
             #endif
-        case .assistant: String(localized: "AI")
-        case .ask: String(localized: "Ask")
-        case .permissions: String(localized: "Permissions")
-        case .signInCodes: String(localized: "Sign-in codes")
-        case .vips: String(localized: "VIPs")
-        case .backupFiles: String(localized: "Backup")
-        case .restore: String(localized: "Restore")
-        case .writingStyle: String(localized: "Writing Style")
-        case .rules: String(localized: "Rules")
-        case .connections: String(localized: "AI Apps")
-        case .backup: String(localized: "Backup and Devices")
-        case .experimental: String(localized: "Experimental")
-        case .changelog: String(localized: "What's New")
-        case .about: String(localized: "About")
+        case .assistant: String(localized: "AI", table: "Settings")
+        case .ask: String(localized: "Ask", table: "Settings")
+        case .permissions: String(localized: "Permissions", table: "Settings")
+        case .signInCodes: String(localized: "Sign-in codes", table: "Settings")
+        case .vips: String(localized: "VIPs", table: "Settings")
+        case .backupFiles: String(localized: "Backup", table: "Settings")
+        case .restore: String(localized: "Restore", table: "Settings")
+        case .writingStyle: String(localized: "Writing Style", table: "Settings")
+        case .rules: String(localized: "Rules", table: "Settings")
+        case .connections: String(localized: "AI Apps", table: "Settings")
+        case .backup: String(localized: "Backup and Devices", table: "Settings")
+        case .experimental: String(localized: "Experimental", table: "Settings")
+        case .changelog: String(localized: "What's New", table: "Settings")
+        case .about: String(localized: "About", table: "Settings")
         }
     }
 
@@ -254,38 +254,38 @@ extension SettingsPage {
     /// One friendly line under the page's title.
     var blurb: String {
         switch self {
-        case .general: String(localized: "Language, privacy and what Margin keeps on this device.")
-        case .mailboxes: String(localized: "Your accounts, their names, servers and the addresses you send from.")
-        case .contacts: String(localized: "Address books Margin suggests people from.")
-        case .workspaces: String(localized: "Groups of mailboxes, like Work and Personal.")
-        case .notifications: String(localized: "Alerts for new mail, sign-in codes and meetings.")
-        case .reading: String(localized: "How the mail you open is shown.")
-        case .writing: String(localized: "Undo Send and the reminder for forgotten attachments.")
-        case .signatures: String(localized: "Signatures for all inboxes, a workspace or one inbox, with formatting and pictures.")
-        case .appearance: String(localized: "Theme, size, colors and the app icon.")
-        case .layout: String(localized: "How the window is arranged, and how much each row shows.")
-        case .sorting: String(localized: "The groups Home sorts your inbox into.")
-        case .templates: String(localized: "Text you can insert into any message.")
+        case .general: String(localized: "Language, privacy and what Margin keeps on this device.", table: "Settings")
+        case .mailboxes: String(localized: "Your accounts, their names, servers and the addresses you send from.", table: "Settings")
+        case .contacts: String(localized: "Address books Margin suggests people from.", table: "Settings")
+        case .workspaces: String(localized: "Groups of mailboxes, like Work and Personal.", table: "Settings")
+        case .notifications: String(localized: "Alerts for new mail, sign-in codes and meetings.", table: "Settings")
+        case .reading: String(localized: "How the mail you open is shown.", table: "Settings")
+        case .writing: String(localized: "Undo Send and the reminder for forgotten attachments.", table: "Settings")
+        case .signatures: String(localized: "Signatures for all inboxes, a workspace or one inbox, with formatting and pictures.", table: "Settings")
+        case .appearance: String(localized: "Theme, size, colors and the app icon.", table: "Settings")
+        case .layout: String(localized: "How the window is arranged, and how much each row shows.", table: "Settings")
+        case .sorting: String(localized: "The groups Home sorts your inbox into.", table: "Settings")
+        case .templates: String(localized: "Text you can insert into any message.", table: "Settings")
         case .shortcuts:
             #if os(macOS)
-            String(localized: "Single keys and swipes for the message list.")
+            String(localized: "Single keys and swipes for the message list.", table: "Settings")
             #else
-            String(localized: "What a swipe on a conversation does.")
+            String(localized: "What a swipe on a conversation does.", table: "Settings")
             #endif
-        case .assistant: String(localized: "One switch for everything AI, and the assistants that do the work.")
-        case .ask: String(localized: "How Ask answers, and what it looks through.")
-        case .permissions: String(localized: "What the assistant and AI apps may change or send.")
-        case .signInCodes: String(localized: "Copying and typing the codes that arrive by mail.")
-        case .vips: String(localized: "The people whose mail always gets through.")
-        case .backupFiles: String(localized: "A file now, automatic backups and the recovery key.")
-        case .restore: String(localized: "Bring back mailboxes, settings and more from a backup file.")
-        case .writingStyle: String(localized: "How the assistant writes for you: your rules, and what it learned from your mail.")
-        case .rules: String(localized: "What happens to new mail, blocked senders and muted conversations.")
-        case .connections: String(localized: "Let AI apps on this Mac use your mail over MCP.")
-        case .backup: String(localized: "Keep your setup the same on every device, or move it to another one.")
-        case .experimental: String(localized: "Early features to try. They may change or go away.")
-        case .changelog: String(localized: "What changed in each version of Margin.")
-        case .about: String(localized: "Version \(Changelog.currentVersion)")
+        case .assistant: String(localized: "One switch for everything AI, and the assistants that do the work.", table: "Settings")
+        case .ask: String(localized: "How Ask answers, and what it looks through.", table: "Settings")
+        case .permissions: String(localized: "What the assistant and AI apps may change or send.", table: "Settings")
+        case .signInCodes: String(localized: "Copying and typing the codes that arrive by mail.", table: "Settings")
+        case .vips: String(localized: "The people whose mail always gets through.", table: "Settings")
+        case .backupFiles: String(localized: "A file now, automatic backups and the recovery key.", table: "Settings")
+        case .restore: String(localized: "Bring back mailboxes, settings and more from a backup file.", table: "Settings")
+        case .writingStyle: String(localized: "How the assistant writes for you: your rules, and what it learned from your mail.", table: "Settings")
+        case .rules: String(localized: "What happens to new mail, blocked senders and muted conversations.", table: "Settings")
+        case .connections: String(localized: "Let AI apps on this Mac use your mail over MCP.", table: "Settings")
+        case .backup: String(localized: "Keep your setup the same on every device, or move it to another one.", table: "Settings")
+        case .experimental: String(localized: "Early features to try. They may change or go away.", table: "Settings")
+        case .changelog: String(localized: "What changed in each version of Margin.", table: "Settings")
+        case .about: String(localized: "Version \(Changelog.currentVersion)", table: "Settings")
         }
     }
 
@@ -294,106 +294,106 @@ extension SettingsPage {
     var settings: [String] {
         switch self {
         case .general:
-            var names = [String(localized: "Language"), String(localized: "Block trackers, even when pictures are loaded"),
-                         String(localized: "Keep on this device"), String(localized: "Open recent mail instantly"), String(localized: "Clear Downloaded Mail")]
+            var names = [String(localized: "Language", table: "Settings"), String(localized: "Block trackers, even when pictures are loaded", table: "Settings"),
+                         String(localized: "Keep on this device", table: "Settings"), String(localized: "Open recent mail instantly", table: "Settings"), String(localized: "Clear Downloaded Mail", table: "Settings")]
             #if os(macOS)
-            names += [String(localized: "Email links"), String(localized: "Make Margin the default mail app"), String(localized: "Open at login"),
-                      String(localized: "Hide Margin from screen sharing and recordings")]
+            names += [String(localized: "Email links", table: "Settings"), String(localized: "Make Margin the default mail app", table: "Settings"), String(localized: "Open at login", table: "Settings"),
+                      String(localized: "Hide Margin from screen sharing and recordings", table: "Settings")]
             #endif
             return names
         case .mailboxes:
-            return [String(localized: "Add Mailbox…"), String(localized: "Edit…"), String(localized: "Sign In Again…"), String(localized: "Remove"),
-                    String(localized: "Mailbox name"), String(localized: "Sender name"), String(localized: "Notify me about"),
-                    String(localized: "Show in All Inboxes"), String(localized: "Picture"), String(localized: "Server and sign-in"),
-                    String(localized: "Send as"), String(localized: "Signatures")]
+            return [String(localized: "Add Mailbox…", table: "Settings"), String(localized: "Edit…", table: "Settings"), String(localized: "Sign In Again…", table: "Settings"), String(localized: "Remove", table: "Settings"),
+                    String(localized: "Mailbox name", table: "Settings"), String(localized: "Sender name", table: "Settings"), String(localized: "Notify me about", table: "Settings"),
+                    String(localized: "Show in All Inboxes", table: "Settings"), String(localized: "Picture", table: "Settings"), String(localized: "Server and sign-in", table: "Settings"),
+                    String(localized: "Send as", table: "Settings"), String(localized: "Signatures", table: "Settings")]
         case .workspaces:
-            return [String(localized: "Make Workspaces…"), String(localized: "Edit Workspaces…")]
+            return [String(localized: "Make Workspaces…", table: "Settings"), String(localized: "Edit Workspaces…", table: "Settings")]
         case .contacts:
             #if os(macOS)
-            let system = String(localized: "Contacts on this Mac")
+            let system = String(localized: "Contacts on this Mac", table: "Settings")
             #else
-            let system = String(localized: "Contacts on this device")
+            let system = String(localized: "Contacts on this device", table: "Settings")
             #endif
-            return [system, String(localized: "Accounts"), String(localized: "Add Address Book…"), "CardDAV", String(localized: "Refresh Now")]
+            return [system, String(localized: "Accounts", table: "Settings"), String(localized: "Add Address Book…", table: "Settings"), "CardDAV", String(localized: "Refresh Now", table: "Settings")]
         case .notifications:
-            var names = [String(localized: "Notify me about"), String(localized: "People you know"), String(localized: "All new mail"),
-                         String(localized: "Only VIPs"), String(localized: "Nothing"), String(localized: "Sound"),
-                         String(localized: "Meeting reminders"), String(localized: "Reminder sound")]
+            var names = [String(localized: "Notify me about", table: "Settings"), String(localized: "People you know", table: "Settings"), String(localized: "All new mail", table: "Settings"),
+                         String(localized: "Only VIPs", table: "Settings"), String(localized: "Nothing", table: "Settings"), String(localized: "Sound", table: "Settings"),
+                         String(localized: "Meeting reminders", table: "Settings"), String(localized: "Reminder sound", table: "Settings")]
             #if os(macOS)
-            names += [String(localized: "Drop-down alerts"), String(localized: "Menu bar"), String(localized: "Unread count on the Dock icon")]
+            names += [String(localized: "Drop-down alerts", table: "Settings"), String(localized: "Menu bar", table: "Settings"), String(localized: "Unread count on the Dock icon", table: "Settings")]
             #else
-            names += [String(localized: "Instant notifications")]
+            names += [String(localized: "Instant notifications", table: "Settings")]
             #endif
             return names
         case .signInCodes:
-            var names = [String(localized: "Copy sign-in codes when they arrive")]
+            var names = [String(localized: "Copy sign-in codes when they arrive", table: "Settings")]
             #if os(macOS)
-            names += [String(localized: "Type new codes into the field you're in")]
+            names += [String(localized: "Type new codes into the field you're in", table: "Settings")]
             #endif
             return names
         case .vips:
-            return [String(localized: "VIPs"), String(localized: "Remove")]
+            return [String(localized: "VIPs", table: "Settings"), String(localized: "Remove", table: "Settings")]
         case .reading:
-            return [String(localized: "Text size"), String(localized: "Show mail as"), String(localized: "Original layout"), String(localized: "Plain text"),
-                    String(localized: "Show conversations as a chat"), String(localized: "Offer to translate"),
-                    String(localized: "Dark mode for emails"), String(localized: "Waiting for reply after")]
+            return [String(localized: "Text size", table: "Settings"), String(localized: "Show mail as", table: "Settings"), String(localized: "Original layout", table: "Settings"), String(localized: "Plain text", table: "Settings"),
+                    String(localized: "Show conversations as a chat", table: "Settings"), String(localized: "Offer to translate", table: "Settings"),
+                    String(localized: "Dark mode for emails", table: "Settings"), String(localized: "Waiting for reply after", table: "Settings")]
         case .writing:
-            return [String(localized: "Undo send"), String(localized: "Forgotten attachment reminder")]
+            return [String(localized: "Undo send", table: "Settings"), String(localized: "Forgotten attachment reminder", table: "Settings")]
         case .signatures:
-            return [String(localized: "Add a Signature…"), String(localized: "For replies and forwards"), String(localized: "Sent from Margin")]
+            return [String(localized: "Add a Signature…", table: "Settings"), String(localized: "For replies and forwards", table: "Settings"), String(localized: "Sent from Margin", table: "Settings")]
         case .templates:
-            return [String(localized: "New template")]
+            return [String(localized: "New template", table: "Settings")]
         case .sorting:
-            return [String(localized: "Sort new mail as it arrives"), String(localized: "Sort Now"), String(localized: "Add Group"), String(localized: "Start Over")]
+            return [String(localized: "Sort new mail as it arrives", table: "Settings"), String(localized: "Sort Now", table: "Settings"), String(localized: "Add Group", table: "Settings"), String(localized: "Start Over", table: "Settings")]
         case .rules:
-            return [String(localized: "Add Rule"), String(localized: "New rule"), String(localized: "Recent activity"),
-                    String(localized: "Blocked senders"), String(localized: "Muted conversations"), String(localized: "Unmute All")]
+            return [String(localized: "Add Rule", table: "Settings"), String(localized: "New rule", table: "Settings"), String(localized: "Recent activity", table: "Settings"),
+                    String(localized: "Blocked senders", table: "Settings"), String(localized: "Muted conversations", table: "Settings"), String(localized: "Unmute All", table: "Settings")]
         case .appearance:
-            return [String(localized: "Theme"), String(localized: "Accent"), String(localized: "Size"), String(localized: "Roomy"), String(localized: "Compact"),
-                    String(localized: "App icon"), String(localized: "Color-blind safe"), String(localized: "Increase contrast"),
-                    String(localized: "Underline links in mail"), String(localized: "Reduce motion")]
+            return [String(localized: "Theme", table: "Settings"), String(localized: "Accent", table: "Settings"), String(localized: "Size", table: "Settings"), String(localized: "Roomy", table: "Settings"), String(localized: "Compact", table: "Settings"),
+                    String(localized: "App icon", table: "Settings"), String(localized: "Color-blind safe", table: "Settings"), String(localized: "Increase contrast", table: "Settings"),
+                    String(localized: "Underline links in mail", table: "Settings"), String(localized: "Reduce motion", table: "Settings")]
         case .layout:
-            var names = [String(localized: "Layout"), String(localized: "Rows"), String(localized: "One line"), String(localized: "Three lines")]
+            var names = [String(localized: "Layout", table: "Settings"), String(localized: "Rows", table: "Settings"), String(localized: "One line", table: "Settings"), String(localized: "Three lines", table: "Settings")]
             #if os(macOS)
-            names += [String(localized: "Inset panel"), String(localized: "Edge to edge"), String(localized: "Account column"), String(localized: "Show button names")]
+            names += [String(localized: "Inset panel", table: "Settings"), String(localized: "Edge to edge", table: "Settings"), String(localized: "Account column", table: "Settings"), String(localized: "Show button names", table: "Settings")]
             #endif
             return names
         case .shortcuts:
-            var names = [String(localized: "Swipe right"), String(localized: "Swipe left"), String(localized: "Second action")]
+            var names = [String(localized: "Swipe right", table: "Settings"), String(localized: "Swipe left", table: "Settings"), String(localized: "Second action", table: "Settings")]
             #if os(macOS)
-            names += [String(localized: "Single-key shortcuts (E, R, J, K…)"), String(localized: "Start from the keys of"),
-                      String(localized: "Restore the original keys"), String(localized: "Buttons on hover")]
+            names += [String(localized: "Single-key shortcuts (E, R, J, K…)", table: "Settings"), String(localized: "Start from the keys of", table: "Settings"),
+                      String(localized: "Restore the original keys", table: "Settings"), String(localized: "Buttons on hover", table: "Settings")]
             #endif
             return names
         case .assistant:
-            return [String(localized: "Use AI"), String(localized: "Add Assistant"), String(localized: "Ask and writing"),
-                    String(localized: "Quick suggestions"), String(localized: "Sorting into groups"), String(localized: "For actions, use")]
+            return [String(localized: "Use AI", table: "Settings"), String(localized: "Add Assistant", table: "Settings"), String(localized: "Ask and writing", table: "Settings"),
+                    String(localized: "Quick suggestions", table: "Settings"), String(localized: "Sorting into groups", table: "Settings"), String(localized: "For actions, use", table: "Settings")]
         case .ask:
-            return [String(localized: "Answer length"), String(localized: "Your instructions"), String(localized: "Only the mailbox in view"),
-                    String(localized: "Suggested questions to start")]
+            return [String(localized: "Answer length", table: "Settings"), String(localized: "Your instructions", table: "Settings"), String(localized: "Only the mailbox in view", table: "Settings"),
+                    String(localized: "Suggested questions to start", table: "Settings")]
         case .permissions:
-            return [String(localized: "Allow changes"), String(localized: "Allow settings changes"), String(localized: "Allow sending"),
-                    String(localized: "Recent activity")]
+            return [String(localized: "Allow changes", table: "Settings"), String(localized: "Allow settings changes", table: "Settings"), String(localized: "Allow sending", table: "Settings"),
+                    String(localized: "Recent activity", table: "Settings")]
         case .writingStyle:
-            return [String(localized: "Instructions for the assistant"), String(localized: "Learn how I write"),
-                    String(localized: "Suggest short replies"), String(localized: "Your voice"), String(localized: "Try it")]
+            return [String(localized: "Instructions for the assistant", table: "Settings"), String(localized: "Learn how I write", table: "Settings"),
+                    String(localized: "Suggest short replies", table: "Settings"), String(localized: "Your voice", table: "Settings"), String(localized: "Try it", table: "Settings")]
         case .connections:
-            return [String(localized: "Let AI apps use Margin"), String(localized: "Allow changes"), String(localized: "Allow settings changes"),
-                    String(localized: "Allow sending"), String(localized: "Mailboxes AI apps can see"), String(localized: "New token")]
+            return [String(localized: "Let AI apps use Margin", table: "Settings"), String(localized: "Allow changes", table: "Settings"), String(localized: "Allow settings changes", table: "Settings"),
+                    String(localized: "Allow sending", table: "Settings"), String(localized: "Mailboxes AI apps can see", table: "Settings"), String(localized: "New token", table: "Settings")]
         case .backup:
-            return [String(localized: "Sync with iCloud"), String(localized: "Sync Now"), String(localized: "Link Another Device…")]
+            return [String(localized: "Sync with iCloud", table: "Settings"), String(localized: "Sync Now", table: "Settings"), String(localized: "Link Another Device…", table: "Settings")]
         case .backupFiles:
-            return [String(localized: "Export Backup…"), String(localized: "Include mail passwords and API keys"),
-                    String(localized: "Automatic backups"), String(localized: "Back Up Now"), String(localized: "Recovery key")]
+            return [String(localized: "Export Backup…", table: "Settings"), String(localized: "Include mail passwords and API keys", table: "Settings"),
+                    String(localized: "Automatic backups", table: "Settings"), String(localized: "Back Up Now", table: "Settings"), String(localized: "Recovery key", table: "Settings")]
         case .restore:
-            return [String(localized: "Restore from Backup…"), String(localized: "Undo Restore")]
+            return [String(localized: "Restore from Backup…", table: "Settings"), String(localized: "Undo Restore", table: "Settings")]
         case .experimental:
-            return [String(localized: "Hold Space to dictate")]
+            return [String(localized: "Hold Space to dictate", table: "Settings")]
         case .changelog:
             return Changelog.releases.flatMap { $0.changes.map(\.title) }
         case .about:
-            return [String(localized: "Show Welcome"), String(localized: "Something broken?"), String(localized: "Check for Updates…"),
-                    String(localized: "Check for updates automatically"), String(localized: "Download and install updates")]
+            return [String(localized: "Show Welcome", table: "Settings"), String(localized: "Something broken?", table: "Settings"), String(localized: "Check for Updates…", table: "Settings"),
+                    String(localized: "Check for updates automatically", table: "Settings"), String(localized: "Download and install updates", table: "Settings")]
         }
     }
 }
@@ -489,11 +489,11 @@ struct AIOffNotice: View {
                 }
                 Spacer(minLength: Space.s)
                 ZStack(alignment: .trailing) {
-                    Button("Turn On AI") { model.usesAI = true }
+                    Button(String(localized: "Turn On AI", table: "Settings")) { model.usesAI = true }
                         .opacity(model.usesAI ? 0 : 1)
                         .disabled(model.usesAI)
                         .accessibilityHidden(model.usesAI)
-                    Button("Open") { model.settingsPageRequest = SettingsPage.assistant.rawValue }
+                    Button(String(localized: "Open", table: "Settings")) { model.settingsPageRequest = SettingsPage.assistant.rawValue }
                         .opacity(model.usesAI ? 1 : 0)
                         .disabled(!model.usesAI)
                         .accessibilityHidden(!model.usesAI)
@@ -561,19 +561,19 @@ struct NotificationSettings: View {
 
     static func title(_ alerts: NewMailAlerts) -> String {
         switch alerts {
-        case .people: String(localized: "People you know")
-        case .all: String(localized: "All new mail")
-        case .vips: String(localized: "Only VIPs")
-        case .none: String(localized: "Nothing")
+        case .people: String(localized: "People you know", table: "Settings")
+        case .all: String(localized: "All new mail", table: "Settings")
+        case .vips: String(localized: "Only VIPs", table: "Settings")
+        case .none: String(localized: "Nothing", table: "Settings")
         }
     }
 
     static func detail(_ alerts: NewMailAlerts) -> String {
         switch alerts {
-        case .people: String(localized: "Contacts, VIPs and people you've written to, plus sign-in codes. Newsletters and updates stay quiet.")
-        case .all: String(localized: "Every message that lands in your inboxes.")
-        case .vips: String(localized: "Just the people you marked as VIP, plus sign-in codes.")
-        case .none: String(localized: "No notifications. The badge still counts unread mail.")
+        case .people: String(localized: "Contacts, VIPs and people you've written to, plus sign-in codes. Newsletters and updates stay quiet.", table: "Settings")
+        case .all: String(localized: "Every message that lands in your inboxes.", table: "Settings")
+        case .vips: String(localized: "Just the people you marked as VIP, plus sign-in codes.", table: "Settings")
+        case .none: String(localized: "No notifications. The badge still counts unread mail.", table: "Settings")
         }
     }
 
@@ -584,15 +584,15 @@ struct NotificationSettings: View {
                 ChoiceList(options: [NewMailAlerts.people, .all, .vips, .none], selection: $model.newMailAlerts,
                            symbol: Self.symbol, title: Self.title, detail: Self.detail)
             } header: {
-                Text("Notify me about")
+                Text("Notify me about", tableName: "Settings")
             }
             Section {
                 Picker(selection: Binding(get: { model.alertSound }, set: { model.alertSound = $0 })) {
                     ForEach(AlertSound.choices) { Text(verbatim: $0.title).tag($0) }
                 } label: { SettingLabel("Sound", detail: "Played with each notification.") }
                 Picker(selection: Binding(get: { model.eventReminderMinutes }, set: { model.eventReminderMinutes = $0 })) {
-                    Text("Off").tag(0)
-                    ForEach([5, 10, 15, 30], id: \.self) { Text("\($0) minutes before").tag($0) }
+                    Text("Off", tableName: "Settings").tag(0)
+                    ForEach([5, 10, 15, 30], id: \.self) { Text("\($0) minutes before", tableName: "Settings").tag($0) }
                 } label: { SettingLabel("Meeting reminders", detail: "A heads-up before meetings from your invitations.") }
                 if model.eventReminderMinutes > 0 {
                     Picker(selection: Binding(get: { model.reminderSound }, set: { model.reminderSound = $0 })) {
@@ -600,19 +600,19 @@ struct NotificationSettings: View {
                     } label: { SettingLabel("Reminder sound", detail: "Its own sound, so a meeting doesn't sound like an email.") }
                 }
             } footer: {
-                Text("Each mailbox can have its own setting: Mailboxes → Edit…. Workspaces you're not in stay quiet.")
+                Text("Each mailbox can have its own setting: Mailboxes → Edit…. Workspaces you're not in stay quiet.", tableName: "Settings")
             }
             #if os(iOS)
             if model.hasPushRelay {
                 Section {
-                    Toggle("Instant notifications", isOn: Binding(get: { model.usesPushRelay }, set: { model.usesPushRelay = $0 }))
+                    Toggle(String(localized: "Instant notifications", table: "Settings"), isOn: Binding(get: { model.usesPushRelay }, set: { model.usesPushRelay = $0 }))
                 } footer: {
-                    Text("For Gmail, Outlook and Fastmail, your provider tells Margin's relay that new mail arrived, and the relay wakes this device. The relay never sees your mail. Off, this device is removed from the relay and checks for mail in the background instead, which iOS may only allow every so often.")
+                    Text("For Gmail, Outlook and Fastmail, your provider tells Margin's relay that new mail arrived, and the relay wakes this device. The relay never sees your mail. Off, this device is removed from the relay and checks for mail in the background instead, which iOS may only allow every so often.", tableName: "Settings")
                 }
             }
             #endif
             #if os(macOS)
-            Section("At the top of the screen") {
+            Section(String(localized: "At the top of the screen", table: "Settings")) {
                 Toggle(isOn: Binding(get: { model.showsDropDownAlerts }, set: { model.showsDropDownAlerts = $0 })) {
                     SettingLabel("Drop-down alerts", detail: "Slide down from the top of the screen with sign-in codes, links and Reply.")
                 }
@@ -649,14 +649,14 @@ struct SignInCodeSettings: View {
                         SettingLabel("Type new codes into the field you're in", detail: "No pasting: the code appears where your cursor is.")
                     }
                 } else {
-                    LabeledContent("Type codes for you") { Text("Needs the direct download of Margin").foregroundStyle(Ink.tertiary) }
+                    LabeledContent("Type codes for you") { Text("Needs the direct download of Margin", tableName: "Settings").foregroundStyle(Ink.tertiary) }
                 }
                 #endif
             } header: {
-                Text("Sign-in codes")
+                Text("Sign-in codes", tableName: "Settings")
             } footer: {
                 #if os(macOS)
-                Text("Typing codes in needs Accessibility permission. macOS doesn't let App Store apps type into other apps.")
+                Text("Typing codes in needs Accessibility permission. macOS doesn't let App Store apps type into other apps.", tableName: "Settings")
                 #endif
             }
         }
@@ -677,13 +677,13 @@ struct VIPSettings: View {
                 }
                 ForEach(model.vipAddresses.sorted(), id: \.self) { address in
                     LabeledContent {
-                        Button("Remove") { model.vipAddresses.remove(address) }.buttonStyle(.borderless)
+                        Button(String(localized: "Remove", table: "Settings")) { model.vipAddresses.remove(address) }.buttonStyle(.borderless)
                     } label: {
                         Text(verbatim: address)
                     }
                 }
             } header: {
-                Text("VIPs")
+                Text("VIPs", tableName: "Settings")
             }
         }
         .formStyle(.grouped)
@@ -731,7 +731,7 @@ struct ReadingSettings: View {
                         Image(systemName: "textformat.size.smaller").foregroundStyle(.secondary)
                         Slider(value: $model.textScale, in: 0.8...2).frame(maxWidth: 180)
                         Image(systemName: "textformat.size.larger").foregroundStyle(.secondary)
-                        Text("\(Int((model.textScale * 100).rounded()))%").monospacedDigit().foregroundStyle(.secondary)
+                        Text("\(Int((model.textScale * 100).rounded()))%", tableName: "Settings").monospacedDigit().foregroundStyle(.secondary)
                             .frame(width: 44, alignment: .trailing)
                     }
                 } label: {
@@ -742,21 +742,21 @@ struct ReadingSettings: View {
                     #endif
                 }
                 // A line of mail at the chosen size.
-                Text("Hi Alex, the flat by the river is free in May. Shall I book it?")
+                Text("Hi Alex, the flat by the river is free in May. Shall I book it?", tableName: "Settings")
                     .font(.system(size: Look.size(15) * model.textScale))
                     .foregroundStyle(Ink.secondary)
                     .padding(.vertical, 2)
             } header: {
-                Text("Text")
+                Text("Text", tableName: "Settings")
             }
             Section {
                 ChoiceList(options: [false, true], selection: $model.prefersPlainText,
                            symbol: { $0 ? "text.alignleft" : "photo.on.rectangle" },
-                           title: { $0 ? String(localized: "Plain text") : String(localized: "Original layout") },
-                           detail: { $0 ? String(localized: "Just the words, in Margin's own font. Fastest and calmest.")
-                                        : String(localized: "As the sender designed it, without scripts. Pictures from the web wait until you allow them.") })
+                           title: { $0 ? String(localized: "Plain text", table: "Settings") : String(localized: "Original layout", table: "Settings") },
+                           detail: { $0 ? String(localized: "Just the words, in Margin's own font. Fastest and calmest.", table: "Settings")
+                                        : String(localized: "As the sender designed it, without scripts. Pictures from the web wait until you allow them.", table: "Settings") })
             } header: {
-                Text("Show mail as")
+                Text("Show mail as", tableName: "Settings")
             }
             Section {
                 Toggle(isOn: Binding(get: { model.showsAsChat }, set: { model.showsAsChat = $0 })) {
@@ -769,14 +769,14 @@ struct ReadingSettings: View {
                     SettingLabel("Dark mode for emails", detail: "Light emails without pictures turn dark with Margin. Emails with pictures sit on a white sheet.")
                 }
             } header: {
-                Text("Conversations")
+                Text("Conversations", tableName: "Settings")
             }
             Section {
                 Picker(selection: $model.followUpDays) {
-                    ForEach([2, 3, 5, 7], id: \.self) { Text("\($0) days").tag($0) }
+                    ForEach([2, 3, 5, 7], id: \.self) { Text("\($0) days", tableName: "Settings").tag($0) }
                 } label: { SettingLabel("Waiting for reply after", detail: "When mail you sent counts as unanswered.") }
             } header: {
-                Text("Follow-ups")
+                Text("Follow-ups", tableName: "Settings")
             }
         }
         .formStyle(.grouped)
@@ -792,14 +792,14 @@ struct WritingSettings: View {
             SettingsHeader(.writing)
             Section {
                 Picker(selection: $model.undoSendDelay) {
-                    Text("Off").tag(0)
-                    ForEach([5, 10, 20, 30], id: \.self) { Text("\($0) seconds").tag($0) }
+                    Text("Off", tableName: "Settings").tag(0)
+                    ForEach([5, 10, 20, 30], id: \.self) { Text("\($0) seconds", tableName: "Settings").tag($0) }
                 } label: { SettingLabel("Undo send", detail: "How long you have to take a message back after Send.") }
                 Toggle(isOn: Binding(get: { model.remindsAboutAttachments }, set: { model.remindsAboutAttachments = $0 })) {
                     SettingLabel("Forgotten attachment reminder", detail: "Asks before sending when a message mentions an attachment but has none.")
                 }
             } header: {
-                Text("Sending")
+                Text("Sending", tableName: "Settings")
             }
         }
         .formStyle(.grouped)
@@ -819,9 +819,9 @@ struct GeneralSettings: View {
                 LabeledContent {
                     let _ = model.defaultAppRevision
                     if model.isDefaultMailApp {
-                        Text("Open in Margin").foregroundStyle(Ink.secondary)
+                        Text("Open in Margin", tableName: "Settings").foregroundStyle(Ink.secondary)
                     } else {
-                        Button("Make Margin the default mail app") { Task { await model.becomeDefaultMailApp() } }
+                        Button(String(localized: "Make Margin the default mail app", table: "Settings")) { Task { await model.becomeDefaultMailApp() } }
                     }
                 } label: { SettingLabel("Email links", detail: "What opens when you click an email address anywhere on this Mac.") }
                 OpenAtLoginSetting()
@@ -837,9 +837,9 @@ struct GeneralSettings: View {
                 }
                 #endif
             } header: {
-                Text("Privacy")
+                Text("Privacy", tableName: "Settings")
             } footer: {
-                Text("Tracker blocking removes the hidden pictures that report when you open mail, and takes the tracking out of links.")
+                Text("Tracker blocking removes the hidden pictures that report when you open mail, and takes the tracking out of links.", tableName: "Settings")
             }
             SavedMailSection(model: model)
         }
@@ -863,9 +863,9 @@ struct WritingStyleSettings: View {
                         .frame(minHeight: 90)
                         .onChange(of: instructions) { _, value in model.writingInstructions = value }
                 } header: {
-                    Text("Instructions for the assistant")
+                    Text("Instructions for the assistant", tableName: "Settings")
                 } footer: {
-                    Text("Followed in every draft and suggested reply, for example: “No exclamation marks. Sign off with just my first name.”")
+                    Text("Followed in every draft and suggested reply, for example: “No exclamation marks. Sign off with just my first name.”", tableName: "Settings")
                 }
                 WritingProfileView(model: model)
             }
@@ -898,7 +898,7 @@ struct WorkspacesSettings: View {
                     }
                 }
             } footer: {
-                Text("Switch from the top of the sidebar, or with ⌥⌘1, ⌥⌘2…. Workspaces you're not in check mail quietly: no alerts except sign-in codes.")
+                Text("Switch from the top of the sidebar, or with ⌥⌘1, ⌥⌘2…. Workspaces you're not in check mail quietly: no alerts except sign-in codes.", tableName: "Settings")
             }
             Section {
                 Button(model.workspaces.isEmpty ? LocalizedStringKey("Make Workspaces…") : LocalizedStringKey("Edit Workspaces…")) { editing = true }
@@ -945,8 +945,8 @@ private struct OpenAtLoginSetting: View {
             }
             if status == .requiresApproval {
                 HStack(spacing: 6) {
-                    Text("Allow Margin in System Settings to finish.").font(TypeScale.caption).foregroundStyle(Ink.secondary)
-                    Button("Open Login Items") { SMAppService.openSystemSettingsLoginItems() }
+                    Text("Allow Margin in System Settings to finish.", tableName: "Settings").font(TypeScale.caption).foregroundStyle(Ink.secondary)
+                    Button(String(localized: "Open Login Items", table: "Settings")) { SMAppService.openSystemSettingsLoginItems() }
                         .buttonStyle(.link)
                         .font(TypeScale.caption)
                 }

@@ -11,8 +11,8 @@ public struct ServerRuleEditorSnapshot: View {
     public init(model: MailModel) {
         self.model = model
         let accountID = model.accounts.first?.id ?? UUID()
-        _form = State(initialValue: RuleForm(server: ServerRule(id: "1", name: String(localized: "Receipts"), from: "billing@",
-                                                                subject: String(localized: "receipt"), hasAttachment: true,
+        _form = State(initialValue: RuleForm(server: ServerRule(id: "1", name: String(localized: "Receipts", table: "Settings"), from: "billing@",
+                                                                subject: String(localized: "receipt", table: "Settings"), hasAttachment: true,
                                                                 moveTo: "receipts", markRead: true, flag: true),
                                              accountID: accountID))
     }
@@ -22,7 +22,7 @@ public struct ServerRuleEditorSnapshot: View {
             Section {
                 RuleEditor(model: model, book: book, form: $form)
             } header: {
-                Text("Change rule")
+                Text("Change rule", tableName: "Settings")
             }
         }
         .formStyle(.grouped)

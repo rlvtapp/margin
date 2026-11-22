@@ -58,10 +58,10 @@ struct SignatureEditor: View {
                     Section {
                     } footer: {
                         Picker("", selection: $tab) {
-                            Text("General").tag(Tab.general)
-                            Text("Sending").tag(Tab.sending)
-                            Text("Signatures").tag(Tab.signatures)
-                            if case .imap = account.wrappedValue.connection { Text("Server").tag(Tab.server) }
+                            Text("General", tableName: "Settings").tag(Tab.general)
+                            Text("Sending", tableName: "Settings").tag(Tab.sending)
+                            Text("Signatures", tableName: "Settings").tag(Tab.signatures)
+                            if case .imap = account.wrappedValue.connection { Text("Server", tableName: "Settings").tag(Tab.server) }
                         }
                         .pickerStyle(.segmented)
                         .labelsHidden()
@@ -70,12 +70,12 @@ struct SignatureEditor: View {
                     }
                     if tab == .general {
                         Section {
-                            TextField("Mailbox name", text: Binding(
+                            TextField(String(localized: "Mailbox name", table: "Settings"), text: Binding(
                                 get: { account.wrappedValue.label },
                                 set: { account.wrappedValue.label = $0 }
                             ), prompt: Text(verbatim: account.wrappedValue.address.address))
                         } footer: {
-                            Text("What Margin calls this mailbox, like Work or Personal. Only you see it.")
+                            Text("What Margin calls this mailbox, like Work or Personal. Only you see it.", tableName: "Settings")
                         }
 
                         Section {
@@ -88,33 +88,33 @@ struct SignatureEditor: View {
                                         account.wrappedValue.picture = model.account(accountID)?.picture
                                         return true
                                     }
-                                    .help(Text("Drop a picture here, or choose one"))
-                                Button("Choose Picture…") { choosingPicture = true }
+                                    .help(Text("Drop a picture here, or choose one", tableName: "Settings"))
+                                Button(String(localized: "Choose Picture…", table: "Settings")) { choosingPicture = true }
                                 if account.wrappedValue.picture != nil {
-                                    Button("Remove", role: .destructive) {
+                                    Button(String(localized: "Remove", table: "Settings"), role: .destructive) {
                                         model.setPicture(nil, for: accountID)
                                         account.wrappedValue.picture = nil
                                     }
                                 }
                             }
                         } header: {
-                            Text("Picture")
+                            Text("Picture", tableName: "Settings")
                         }
 
                         Section {
-                            Picker("Notify me about", selection: Binding(
+                            Picker(String(localized: "Notify me about", table: "Settings"), selection: Binding(
                                 get: { model.alerts(for: accountID) },
                                 set: { model.setAlerts($0, for: accountID) }
                             )) {
-                                Text("Same as other mailboxes").tag(NewMailAlerts?.none)
+                                Text("Same as other mailboxes", tableName: "Settings").tag(NewMailAlerts?.none)
                                 ForEach(NewMailAlerts.allCases, id: \.self) { Text($0.title).tag(NewMailAlerts?.some($0)) }
                             }
-                            Toggle("Show in All Inboxes", isOn: Binding(
+                            Toggle(String(localized: "Show in All Inboxes", table: "Settings"), isOn: Binding(
                                 get: { account.wrappedValue.inAllInboxes != false },
                                 set: { account.wrappedValue.inAllInboxes = $0 ? nil : false }
                             ))
                         } header: {
-                            Text("Notifications")
+                            Text("Notifications", tableName: "Settings")
                         }
 
                         // A shared mailbox's automatic reply is its owners' to set.
@@ -129,12 +129,12 @@ struct SignatureEditor: View {
                     }
                     if tab == .sending {
                         Section {
-                            TextField("Sender name", text: Binding(
+                            TextField(String(localized: "Sender name", table: "Settings"), text: Binding(
                                 get: { account.wrappedValue.address.name ?? "" },
                                 set: { account.wrappedValue.address.name = $0.isEmpty ? nil : $0 }
                             ))
                         } footer: {
-                            Text("What people see as the sender, like “Alex from Northwind”. Every address in this mailbox uses it unless you give one its own name under Send as.")
+                            Text("What people see as the sender, like “Alex from Northwind”. Every address in this mailbox uses it unless you give one its own name under Send as.", tableName: "Settings")
                         }
 
                         Section {
@@ -154,12 +154,12 @@ struct SignatureEditor: View {
                                             guard account.wrappedValue.aliases?.indices.contains(index) == true else { return }
                                             account.wrappedValue.aliases?[index].name = value.trimmingCharacters(in: .whitespaces).isEmpty ? nil : value
                                         }
-                                    ), prompt: senderName.map { Text(verbatim: $0) } ?? Text("Name"))
+                                    ), prompt: senderName.map { Text(verbatim: $0) } ?? Text("Name", tableName: "Settings"))
                                     .labelsHidden()
                                     .multilineTextAlignment(.trailing)
                                     .textFieldStyle(.plain)
                                     .frame(maxWidth: 170)
-                                    .accessibilityLabel(Text("Name for \(alias.address)"))
+                                    .accessibilityLabel(Text("Name for \(alias.address)", tableName: "Settings"))
                                     AliasSignatureButton(signature: Binding(
                                         get: { account.wrappedValue.aliasSignatures?[alias.address.lowercased()] ?? "" },
                                         set: { value in
@@ -179,7 +179,7 @@ struct SignatureEditor: View {
                                         Image(systemName: "minus.circle")
                                     }
                                     .buttonStyle(.plain)
-                                    .accessibilityLabel("Remove")
+                                    .accessibilityLabel(String(localized: "Remove", table: "Settings"))
                                 }
                             }
                             let known = Set(([account.wrappedValue.address] + (account.wrappedValue.aliases ?? [])).map { $0.address.lowercased() })
@@ -187,10 +187,10 @@ struct SignatureEditor: View {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(verbatim: suggestion.address)
-                                        Text("Mail sent to it arrives here").font(TypeScale.caption).foregroundStyle(.secondary)
+                                        Text("Mail sent to it arrives here", tableName: "Settings").font(TypeScale.caption).foregroundStyle(.secondary)
                                     }
                                     Spacer()
-                                    Button("Add") { account.wrappedValue.aliases = (account.wrappedValue.aliases ?? []) + [suggestion] }
+                                    Button(String(localized: "Add", table: "Settings")) { account.wrappedValue.aliases = (account.wrappedValue.aliases ?? []) + [suggestion] }
                                     Button {
                                         model.dismissAliasSuggestion(suggestion, for: account.wrappedValue)
                                         suggestions.removeAll { $0.address == suggestion.address }
@@ -198,14 +198,14 @@ struct SignatureEditor: View {
                                         Image(systemName: "xmark")
                                     }
                                     .buttonStyle(.borderless)
-                                    .tip("Not mine")
+                                    .tip(String(localized: "Not mine", table: "Settings"))
                                 }
                             }
                             AliasAddRow(address: $newAliasAddress, name: $newAliasName) { addAlias(to: account) }
                         } header: {
-                            Text("Send as")
+                            Text("Send as", tableName: "Settings")
                         } footer: {
-                            Text("Other addresses this mailbox can send from. Your provider has to allow them. Replies to mail sent to one go out from it. Leave a name empty to use the sender name.")
+                            Text("Other addresses this mailbox can send from. Your provider has to allow them. Replies to mail sent to one go out from it. Leave a name empty to use the sender name.", tableName: "Settings")
                         }
                         .task(id: accountID) {
                             if let current = model.account(accountID) { suggestions = await model.aliasSuggestions(for: current) }
@@ -222,26 +222,26 @@ struct SignatureEditor: View {
                                     remove(signature, from: account)
                                 }
                             }
-                            Button("Add a Signature…") {
+                            Button(String(localized: "Add a Signature…", table: "Settings")) {
                                 editing = SignatureEditing(original: nil, signature: account.wrappedValue.newSignature())
                             }
-                            Picker("For replies and forwards", selection: Binding(
+                            Picker(String(localized: "For replies and forwards", table: "Settings"), selection: Binding(
                                 get: { account.wrappedValue.replySignature ?? NamedSignature.defaultName },
                                 set: { account.wrappedValue.replySignature = $0 == NamedSignature.defaultName ? nil : $0 }
                             )) {
-                                Text("Default").tag(NamedSignature.defaultName)
+                                Text("Default", tableName: "Settings").tag(NamedSignature.defaultName)
                                 ForEach(account.wrappedValue.moreSignatures ?? []) { Text(verbatim: $0.name).tag($0.name) }
-                                Text("None").tag("")
+                                Text("None", tableName: "Settings").tag("")
                             }
                         } header: {
-                            Text("Signatures")
+                            Text("Signatures", tableName: "Settings")
                         } footer: {
-                            Text("Signatures can have formatting, links and pictures, and go out the way you see them. Pick another one while writing from the signature menu.")
+                            Text("Signatures can have formatting, links and pictures, and go out the way you see them. Pick another one while writing from the signature menu.", tableName: "Settings")
                         }
 
                         Section {
                             HStack {
-                                Button("Make One for Me…") {
+                                Button(String(localized: "Make One for Me…", table: "Settings")) {
                                     details.name = account.wrappedValue.address.displayName
                                     makingSignature = true
                                 }
@@ -250,9 +250,9 @@ struct SignatureEditor: View {
                                     Task {
                                         if let found = await model.findSignatureInSentMail(accountID) {
                                             account.wrappedValue.setSignature(NamedSignature(name: NamedSignature.defaultName, text: found))
-                                            signatureNote = String(localized: "Found it in your sent mail.")
+                                            signatureNote = String(localized: "Found it in your sent mail.", table: "Settings")
                                         } else {
-                                            signatureNote = String(localized: "No signature showed up in enough sent messages.")
+                                            signatureNote = String(localized: "No signature showed up in enough sent messages.", table: "Settings")
                                         }
                                         findingSignature = false
                                     }
@@ -261,21 +261,21 @@ struct SignatureEditor: View {
                             }
                             Text(verbatim: signatureNote ?? " ").font(TypeScale.label).foregroundStyle(Ink.tertiary)
                         } header: {
-                            Text("Signature tools")
+                            Text("Signature tools", tableName: "Settings")
                         } footer: {
-                            Text("Both fill in the default signature, to change as you like.")
+                            Text("Both fill in the default signature, to change as you like.", tableName: "Settings")
                         }
                     }
                     if tab == .server {
                         if case .imap = account.wrappedValue.connection {
                             Section {
-                                TextField("Incoming server (IMAP)", text: $server.incomingHost)
-                                TextField("Port", value: $server.incomingPort, format: .number.grouping(.never))
-                                TextField("Outgoing server (SMTP)", text: $server.outgoingHost)
-                                TextField("Port", value: $server.outgoingPort, format: .number.grouping(.never))
+                                TextField(String(localized: "Incoming server (IMAP)", table: "Settings"), text: $server.incomingHost)
+                                TextField(String(localized: "Port", table: "Settings"), value: $server.incomingPort, format: .number.grouping(.never))
+                                TextField(String(localized: "Outgoing server (SMTP)", table: "Settings"), text: $server.outgoingHost)
+                                TextField(String(localized: "Port", table: "Settings"), value: $server.outgoingPort, format: .number.grouping(.never))
                                 if case .password = account.wrappedValue.auth {
-                                    TextField("Username", text: $server.username)
-                                    SecureField("New password (leave empty to keep)", text: $server.password)
+                                    TextField(String(localized: "Username", table: "Settings"), text: $server.username)
+                                    SecureField(String(localized: "New password (leave empty to keep)", table: "Settings"), text: $server.password)
                                 }
                                 HStack {
                                     Text(verbatim: serverStatus ?? " ").font(TypeScale.label).foregroundStyle(Ink.tertiary)
@@ -283,9 +283,9 @@ struct SignatureEditor: View {
                                     Button(checking ? "Checking…" : "Check and Save") { checkServer(account.wrappedValue) }.disabled(checking)
                                 }
                             } header: {
-                                Text("Server and sign-in")
+                                Text("Server and sign-in", tableName: "Settings")
                             } footer: {
-                                Text("Margin tries the new settings first. If they don't work, nothing changes.")
+                                Text("Margin tries the new settings first. If they don't work, nothing changes.", tableName: "Settings")
                             }
                         }
 
@@ -296,8 +296,8 @@ struct SignatureEditor: View {
             .navigationTitle(Text(verbatim: account?.label ?? ""))
             .toolbar {
                 if !isEmbedded {
-                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                    ToolbarItem(placement: .confirmationAction) { Button("Save") { save(); dismiss() } }
+                    ToolbarItem(placement: .cancellationAction) { Button(String(localized: "Cancel", table: "Settings")) { dismiss() } }
+                    ToolbarItem(placement: .confirmationAction) { Button(String(localized: "Save", table: "Settings")) { save(); dismiss() } }
                 }
             }
             // In the Settings window: Revert and Save under the page, always there, lit once
@@ -306,11 +306,11 @@ struct SignatureEditor: View {
                 if isEmbedded {
                     let changed = account != model.account(accountID)
                     HStack(spacing: Space.s) {
-                        Text("Changes to this mailbox are kept when you save.")
+                        Text("Changes to this mailbox are kept when you save.", tableName: "Settings")
                             .font(TypeScale.caption).foregroundStyle(Ink.tertiary)
                         Spacer()
-                        Button("Revert") { account = model.account(accountID) }.disabled(!changed)
-                        Button("Save") { save() }.buttonStyle(.borderedProminent).disabled(!changed)
+                        Button(String(localized: "Revert", table: "Settings")) { account = model.account(accountID) }.disabled(!changed)
+                        Button(String(localized: "Save", table: "Settings")) { save() }.buttonStyle(.borderedProminent).disabled(!changed)
                             .keyboardShortcut("s", modifiers: .command)
                     }
                     .padding(.horizontal, Space.xl)
@@ -363,21 +363,21 @@ struct SignatureEditor: View {
     private var makeSignatureSheet: some View {
         NavigationStack {
             Form {
-                TextField("Name", text: $details.name)
-                TextField("Role", text: $details.role)
-                TextField("Company", text: $details.company)
-                TextField("Phone", text: $details.phone)
-                TextField("Website", text: $details.website)
-                Section("Preview") {
+                TextField(String(localized: "Name", table: "Settings"), text: $details.name)
+                TextField(String(localized: "Role", table: "Settings"), text: $details.role)
+                TextField(String(localized: "Company", table: "Settings"), text: $details.company)
+                TextField(String(localized: "Phone", table: "Settings"), text: $details.phone)
+                TextField(String(localized: "Website", table: "Settings"), text: $details.website)
+                Section(String(localized: "Preview", table: "Settings")) {
                     HTMLMessageView(html: HTMLSanitizer.sanitize(SignatureTools.make(details).html), allowsRemote: false).frame(minHeight: 60)
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle("Make a signature")
+            .navigationTitle(String(localized: "Make a signature", table: "Settings"))
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { makingSignature = false } }
+                ToolbarItem(placement: .cancellationAction) { Button(String(localized: "Cancel", table: "Settings")) { makingSignature = false } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Use It") {
+                    Button(String(localized: "Use It", table: "Settings")) {
                         let made = SignatureTools.make(details)
                         #if canImport(AppKit)
                         let signature = SignatureText.fromHTML(made.html).map { SignatureText.signature(named: NamedSignature.defaultName, from: $0) }
@@ -412,7 +412,7 @@ struct SignatureEditor: View {
                 account?.connection = changed.connection
                 account?.auth = changed.auth
                 server.password = ""
-                serverStatus = String(localized: "Connected and saved.")
+                serverStatus = String(localized: "Connected and saved.", table: "Settings")
             } catch {
                 serverStatus = error.localizedDescription
             }
@@ -447,14 +447,14 @@ private struct AliasAddRow: View {
             addressField
             HStack {
                 nameField
-                Button("Add", action: add).disabled(!isValid)
+                Button(String(localized: "Add", table: "Settings"), action: add).disabled(!isValid)
             }
         }
         #else
         HStack {
             addressField
             nameField.frame(maxWidth: 170)
-            Button("Add", action: add).disabled(!isValid)
+            Button(String(localized: "Add", table: "Settings"), action: add).disabled(!isValid)
         }
         #endif
     }
@@ -463,7 +463,7 @@ private struct AliasAddRow: View {
         TextField("", text: $address, prompt: Text(verbatim: "sales@yourdomain.com"))
             .labelsHidden()
             .textFieldStyle(.roundedBorder)
-            .accessibilityLabel(Text("Email address"))
+            .accessibilityLabel(Text("Email address", tableName: "Settings"))
             #if os(iOS)
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
@@ -474,10 +474,10 @@ private struct AliasAddRow: View {
     }
 
     private var nameField: some View {
-        TextField("", text: $name, prompt: Text("Name (optional)"))
+        TextField("", text: $name, prompt: Text("Name (optional)", tableName: "Settings"))
             .labelsHidden()
             .textFieldStyle(.roundedBorder)
-            .accessibilityLabel(Text("Name (optional)"))
+            .accessibilityLabel(Text("Name (optional)", tableName: "Settings"))
             .onSubmit { if isValid { add() } }
     }
 }
@@ -491,18 +491,18 @@ struct SignatureMenu: View {
         if let account = model.account(state.accountID), account.availableSignatures.count > 1 {
             Menu {
                 ForEach(account.availableSignatures) { signature in
-                    Button(signature.name == NamedSignature.defaultName ? String(localized: "Default") : signature.name) {
+                    Button(signature.name == NamedSignature.defaultName ? String(localized: "Default", table: "Settings") : signature.name) {
                         state.useSignature(signature)
                     }
                 }
                 Divider()
-                Button("No signature") { state.use(signature: nil) }
+                Button(String(localized: "No signature", table: "Settings")) { state.use(signature: nil) }
             } label: {
                 Image(systemName: "signature")
                     .font(.system(size: Look.size(12.5)))
                     .foregroundStyle(Ink.tertiary)
                     .frame(width: 28, height: 28)
-                    .accessibilityLabel(Text("Signature"))
+                    .accessibilityLabel(Text("Signature", tableName: "Settings"))
             }
             #if os(macOS)
             .menuStyle(.button)
@@ -510,7 +510,7 @@ struct SignatureMenu: View {
             .menuIndicator(.hidden)
             .fixedSize()
             #endif
-            .tip("Signature")
+            .tip(String(localized: "Signature", table: "Settings"))
         }
     }
 }

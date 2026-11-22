@@ -104,9 +104,9 @@ private struct CalendarEditingModifier: ViewModifier {
                 Button(question.isDelete ? "Delete All Events" : "All Events", role: question.isDelete ? .destructive : nil) {
                     question.perform(.allEvents)
                 }
-                Button("Cancel", role: .cancel) {}
+                Button(String(localized: "Cancel", table: "Calendar"), role: .cancel) {}
             } message: { question in
-                Text("“\(question.title)” repeats. Change only this one, or every one?")
+                Text("“\(question.title)” repeats. Change only this one, or every one?", tableName: "Calendar")
             }
     }
 }
@@ -166,7 +166,7 @@ private struct EventEditorView: View {
             HStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    TextField("Title", text: $draft.title, prompt: Text("Title"))
+                    TextField(String(localized: "Title", table: "Calendar"), text: $draft.title, prompt: Text("Title", tableName: "Calendar"))
                         .textFieldStyle(.plain)
                         .font(.system(size: Look.size(20), weight: .semibold))
                         .focused($focus, equals: .title)
@@ -182,14 +182,14 @@ private struct EventEditorView: View {
                     }
                     row("video") { videoRow }
                     row("mappin") {
-                        TextField("Location", text: Binding(get: { draft.location ?? "" }, set: { draft.location = $0 }),
-                                  prompt: Text("Add a place"))
+                        TextField(String(localized: "Location", table: "Calendar"), text: Binding(get: { draft.location ?? "" }, set: { draft.location = $0 }),
+                                  prompt: Text("Add a place", tableName: "Calendar"))
                             .textFieldStyle(.plain)
                             .font(TypeScale.row)
                     }
                     row("text.alignleft") {
-                        TextField("Notes", text: Binding(get: { draft.notes ?? "" }, set: { draft.notes = $0 }),
-                                  prompt: Text("Add notes"), axis: .vertical)
+                        TextField(String(localized: "Notes", table: "Calendar"), text: Binding(get: { draft.notes ?? "" }, set: { draft.notes = $0 }),
+                                  prompt: Text("Add notes", tableName: "Calendar"), axis: .vertical)
                             .textFieldStyle(.plain)
                             .font(TypeScale.row)
                             .lineLimit(3...10)
@@ -211,7 +211,7 @@ private struct EventEditorView: View {
             Rectangle().fill(Line.hairline).frame(height: 1)
             HStack(spacing: 8) {
                 if let item = sheet.item {
-                    Button("Delete Event", role: .destructive) {
+                    Button(String(localized: "Delete Event", table: "Calendar"), role: .destructive) {
                         dismiss()
                         editor.delete(item)
                     }
@@ -220,7 +220,7 @@ private struct EventEditorView: View {
                     .foregroundStyle(Status.danger)
                 }
                 Spacer()
-                Button("Cancel") { dismiss() }
+                Button(String(localized: "Cancel", table: "Calendar")) { dismiss() }
                     .buttonStyle(QuietButtonStyle())
                     .keyboardShortcut(.cancelAction)
                 Button { save() } label: {
@@ -269,10 +269,10 @@ private struct EventEditorView: View {
         let device = model.eventDestinations.filter { if case .device = $0 { true } else { false } }
         return Menu {
             if !accounts.isEmpty {
-                Section("Mailboxes") { ForEach(accounts) { option($0) } }
+                Section(String(localized: "Mailboxes", table: "Calendar")) { ForEach(accounts) { option($0) } }
             }
             if !device.isEmpty {
-                Section("On this Mac") { ForEach(device) { option($0) } }
+                Section(String(localized: "On this Mac", table: "Calendar")) { ForEach(device) { option($0) } }
             }
         } label: {
             HStack(spacing: 7) {
@@ -312,14 +312,14 @@ private struct EventEditorView: View {
     private var timeFields: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                DatePicker("Starts", selection: startBinding, displayedComponents: draft.isAllDay ? [.date] : [.date, .hourAndMinute])
+                DatePicker(String(localized: "Starts", table: "Calendar"), selection: startBinding, displayedComponents: draft.isAllDay ? [.date] : [.date, .hourAndMinute])
                     .labelsHidden()
-                Text("to").font(TypeScale.row).foregroundStyle(Ink.tertiary)
-                DatePicker("Ends", selection: endBinding, in: draft.start..., displayedComponents: draft.isAllDay ? [.date] : [.date, .hourAndMinute])
+                Text("to", tableName: "Calendar").font(TypeScale.row).foregroundStyle(Ink.tertiary)
+                DatePicker(String(localized: "Ends", table: "Calendar"), selection: endBinding, in: draft.start..., displayedComponents: draft.isAllDay ? [.date] : [.date, .hourAndMinute])
                     .labelsHidden()
             }
             HStack(spacing: 12) {
-                Toggle("All day", isOn: $draft.isAllDay)
+                Toggle(String(localized: "All day", table: "Calendar"), isOn: $draft.isAllDay)
                     #if os(macOS)
                     .toggleStyle(.checkbox)
                     #endif
@@ -364,7 +364,7 @@ private struct EventEditorView: View {
                         invitees.removeAll { $0.address == person.address }
                     }
                 }
-                TextField("People", text: $typing, prompt: Text(invitees.isEmpty ? "Invite people" : "Add"))
+                TextField(String(localized: "People", table: "Calendar"), text: $typing, prompt: Text(invitees.isEmpty ? "Invite people" : "Add"))
                     .textFieldStyle(.plain)
                     .font(TypeScale.row)
                     .autocorrectionDisabled()
@@ -379,7 +379,7 @@ private struct EventEditorView: View {
                     }
             }
             if !isAccount, !invitees.isEmpty, let mailboxCalendar {
-                Text("Invitations go out from \(model.title(of: mailboxCalendar)).")
+                Text("Invitations go out from \(model.title(of: mailboxCalendar)).", tableName: "Calendar")
                     .font(TypeScale.caption)
                     .foregroundStyle(Ink.tertiary)
             }
@@ -426,7 +426,7 @@ private struct EventEditorView: View {
                     withAnimation(Motion.quick) { showsTimes.toggle() }
                 } label: {
                     HStack(spacing: 5) {
-                        Text("Suggest a time").font(TypeScale.row).foregroundStyle(Ink.primary)
+                        Text("Suggest a time", tableName: "Calendar").font(TypeScale.row).foregroundStyle(Ink.primary)
                         Image(systemName: "chevron.right")
                             .font(.system(size: Look.scaled(8.5), weight: .bold))
                             .foregroundStyle(Ink.quaternary)
@@ -459,7 +459,7 @@ private struct EventEditorView: View {
     /// Which of your calendars count as busy when suggesting times; remembered for next time.
     private var countingList: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Count me busy in").font(TypeScale.label.weight(.semibold)).foregroundStyle(Ink.secondary)
+            Text("Count me busy in", tableName: "Calendar").font(TypeScale.label.weight(.semibold)).foregroundStyle(Ink.secondary)
             ForEach(model.busyCalendarChoices) { choice in
                 Toggle(isOn: Binding(get: { !skips.contains(choice.id) }, set: { on in
                     if on { skips.remove(choice.id) } else { skips.insert(choice.id) }
@@ -489,10 +489,10 @@ private struct EventEditorView: View {
     @ViewBuilder
     private var videoRow: some View {
         if let url = sheet.item?.joinURL {
-            Link(destination: url) { Text("Join \(videoService ?? AgendaRow.service(url) ?? "")") }
+            Link(destination: url) { Text("Join \(videoService ?? AgendaRow.service(url) ?? "")", tableName: "Calendar") }
                 .font(TypeScale.row)
         } else if let videoService {
-            Toggle(isOn: $draft.videoCall) { Text("Add a \(videoService) call").font(TypeScale.row) }
+            Toggle(isOn: $draft.videoCall) { Text("Add a \(videoService) call", tableName: "Calendar").font(TypeScale.row) }
                 #if os(macOS)
                 .toggleStyle(.checkbox)
                 #endif
@@ -502,13 +502,13 @@ private struct EventEditorView: View {
                 destination = mailboxCalendar
                 draft.videoCall = true
             } label: {
-                Text("Add a video call").font(TypeScale.row)
+                Text("Add a video call", tableName: "Calendar").font(TypeScale.row)
             }
             .buttonStyle(.plain)
             .foregroundStyle(accent)
-            .help(Text("Moves the event to \(model.title(of: mailboxCalendar))"))
+            .help(Text("Moves the event to \(model.title(of: mailboxCalendar))", tableName: "Calendar"))
         } else {
-            Text("No video calls in this calendar").font(TypeScale.row).foregroundStyle(Ink.quaternary)
+            Text("No video calls in this calendar", tableName: "Calendar").font(TypeScale.row).foregroundStyle(Ink.quaternary)
         }
     }
 
@@ -551,7 +551,7 @@ private struct InviteeChip: View {
             }
             .buttonStyle(.plain)
             .opacity(isHovered ? 1 : 0.45)
-            .accessibilityLabel(Text("Remove \(person.displayName)"))
+            .accessibilityLabel(Text("Remove \(person.displayName)", tableName: "Calendar"))
         }
         .padding(.leading, 3)
         .padding(.trailing, 8)
@@ -560,7 +560,7 @@ private struct InviteeChip: View {
         .overlay(alignment: .topTrailing) {
             if seesCalendar {
                 Circle().fill(Status.done).frame(width: 6, height: 6).offset(x: -2, y: 1)
-                    .help(Text("Their busy times can be seen"))
+                    .help(Text("Their busy times can be seen", tableName: "Calendar"))
             }
         }
         .onHover { isHovered = $0 }
@@ -587,11 +587,11 @@ private struct InviteeSuggestions: View {
                         .lineLimit(1)
                         Spacer(minLength: 8)
                         if suggestion.seesCalendar {
-                            Label("Calendar", systemImage: "calendar")
+                            Label(String(localized: "Calendar", table: "Calendar"), systemImage: "calendar")
                                 .labelStyle(.iconOnly)
                                 .font(.system(size: Look.scaled(11)))
                                 .foregroundStyle(Status.done)
-                                .help(Text("Their busy times can be seen"))
+                                .help(Text("Their busy times can be seen", tableName: "Calendar"))
                         }
                     }
                     .padding(.horizontal, 10)
@@ -699,12 +699,12 @@ private struct DayPeek: View {
                                     .fill(Palette.account(index + 3).opacity(time.kind == .tentative ? 0.35 : 0.7))
                                     .frame(width: 4, height: max(height(time.start, time.end), 4))
                                     .offset(x: gutter + width - CGFloat(index) * 6, y: y(time.start))
-                                    .help(Text("\(person.displayName) is busy \(time.start.formatted(date: .omitted, time: .shortened)) – \(time.end.formatted(date: .omitted, time: .shortened))"))
+                                    .help(Text("\(person.displayName) is busy \(time.start.formatted(date: .omitted, time: .shortened)) – \(time.end.formatted(date: .omitted, time: .shortened))", tableName: "Calendar"))
                             }
                         }
                         if !isAllDay {
                             let shownEnd = end.addingTimeInterval(Double(snapped(stretch)) * 60)
-                            block(title.isEmpty ? String(localized: "New Event") : title, from: start, to: shownEnd,
+                            block(title.isEmpty ? String(localized: "New Event", table: "Calendar") : title, from: start, to: shownEnd,
                                   tint: Palette.account(destination.map(model.colorIndex(of:)) ?? 0), strong: true)
                                 .frame(width: width * 0.62, height: max(height(start, end) + stretch, hour / 4 - 1))
                                 // The bottom edge: drag it to make the event longer or shorter.
@@ -726,7 +726,7 @@ private struct DayPeek: View {
                                                 stretch = 0
                                                 end = max(end.addingTimeInterval(Double(minutes) * 60), start.addingTimeInterval(15 * 60))
                                             })
-                                        .help(Text("Drag to change how long it is"))
+                                        .help(Text("Drag to change how long it is", tableName: "Calendar"))
                                 }
                                 .offset(x: gutter + width * 0.3, y: y(start) + drag)
                                 .gesture(DragGesture(minimumDistance: 2)
@@ -736,7 +736,7 @@ private struct DayPeek: View {
                                         drag = 0
                                         move(minutes: minutes)
                                     })
-                                .help(Text("Drag to change the time"))
+                                .help(Text("Drag to change the time", tableName: "Calendar"))
                         }
                     }
                 }
@@ -760,12 +760,12 @@ private struct DayPeek: View {
             (busy[person.address.lowercased()] ?? []).contains { $0.kind != .workingElsewhere && $0.start < end && $0.end > start }
         }
         if isAllDay {
-            Text("All day").font(TypeScale.label).foregroundStyle(Ink.tertiary)
+            Text("All day", tableName: "Calendar").font(TypeScale.label).foregroundStyle(Ink.tertiary)
         } else if let first = clashes.first {
-            Label(String(localized: "Clashes with \(first.title)"), systemImage: "exclamationmark.triangle.fill")
+            Label(String(localized: "Clashes with \(first.title)", table: "Calendar"), systemImage: "exclamationmark.triangle.fill")
                 .font(TypeScale.label).foregroundStyle(Status.star).lineLimit(1)
         } else if let person = peopleBusy.first {
-            Label(String(localized: "\(person.displayName) is busy then"), systemImage: "exclamationmark.circle")
+            Label(String(localized: "\(person.displayName) is busy then", table: "Calendar"), systemImage: "exclamationmark.circle")
                 .font(TypeScale.label).foregroundStyle(Status.star).lineLimit(1)
         } else {
             Label(people.isEmpty ? "You're free then" : "Everyone's free then", systemImage: "checkmark.circle.fill")

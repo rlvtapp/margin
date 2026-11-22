@@ -52,7 +52,7 @@ extension MailModel {
         entry.attendees = meeting.attendees.map { MeetingAttendee(address: $0) }
             + meeting.rooms.map { MeetingAttendee(address: EmailAddress(name: $0.name, address: $0.email), kind: .room) }
         saveCalendar(calendarEntries + [entry])
-        notice = Notice(text: String(localized: "Invitation sent"))
+        notice = Notice(text: String(localized: "Invitation sent", table: "Calendar"))
     }
 
     /// Opens a meeting: its message, or for one sent from here, the meeting on its own.

@@ -115,7 +115,7 @@ struct CalendarPage: View {
                 HStack(spacing: 0) {
                     GlassIconButton("chevron.left", help: "Previous") { step(mode, by: -1) }
                     Button { go(to: Date(), mode: mode) } label: {
-                        Text("Today")
+                        Text("Today", tableName: "Calendar")
                             .fixedSize()
                             .font(TypeScale.label.weight(.medium))
                             .foregroundStyle(Ink.primary)
@@ -430,11 +430,11 @@ private struct AgendaList: View {
         return VStack(alignment: .leading, spacing: 0) {
             if days.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Nothing on your calendar for the next two weeks.")
+                    Text("Nothing on your calendar for the next two weeks.", tableName: "Calendar")
                         .font(TypeScale.row)
                         .foregroundStyle(Ink.secondary)
                     if !model.readsAccountCalendars && !model.showsDeviceCalendar {
-                        Text("Margin shows meetings from invitations in your mail. Connect a mailbox to see its whole calendar.")
+                        Text("Margin shows meetings from invitations in your mail. Connect a mailbox to see its whole calendar.", tableName: "Calendar")
                             .font(TypeScale.label)
                             .foregroundStyle(Ink.tertiary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -488,8 +488,8 @@ private struct AgendaList: View {
 
     static func title(for day: Date) -> String {
         let calendar = Calendar.current
-        if calendar.isDateInToday(day) { return String(localized: "Today") }
-        if calendar.isDateInTomorrow(day) { return String(localized: "Tomorrow") }
+        if calendar.isDateInToday(day) { return String(localized: "Today", table: "Calendar") }
+        if calendar.isDateInTomorrow(day) { return String(localized: "Tomorrow", table: "Calendar") }
         return day.formatted(.dateTime.weekday(.wide).day().month(.wide))
     }
 
@@ -541,29 +541,29 @@ enum Countdown {
         let calendar = Calendar.current
         if item.start <= now {
             let left = Int(ceil(item.end.timeIntervalSince(now) / 60))
-            return String(localized: "Now · \(Self.length(minutes: left)) left")
+            return String(localized: "Now · \(Self.length(minutes: left)) left", table: "Calendar")
         }
         let minutes = Int(ceil(item.start.timeIntervalSince(now) / 60))
-        if minutes < 120 { return String(localized: "In \(Self.length(minutes: minutes))") }
+        if minutes < 120 { return String(localized: "In \(Self.length(minutes: minutes))", table: "Calendar") }
         let time = item.start.formatted(date: .omitted, time: .shortened)
-        if calendar.isDateInToday(item.start) { return String(localized: "Today at \(time)") }
-        if calendar.isDateInTomorrow(item.start) { return String(localized: "Tomorrow at \(time)") }
+        if calendar.isDateInToday(item.start) { return String(localized: "Today at \(time)", table: "Calendar") }
+        if calendar.isDateInTomorrow(item.start) { return String(localized: "Tomorrow at \(time)", table: "Calendar") }
         return item.start.formatted(.dateTime.weekday(.wide).day().month(.abbreviated)) + " · " + time
     }
 
     /// Beside the next meeting's time: "now", "in 25 min", "in 3 h"; nil when it's days away.
     static func short(for item: AgendaItem, now: Date) -> String? {
-        if item.start <= now { return String(localized: "now") }
+        if item.start <= now { return String(localized: "now", table: "Calendar") }
         let minutes = Int(ceil(item.start.timeIntervalSince(now) / 60))
         guard minutes < 24 * 60 else { return nil }
-        return String(localized: "in \(Self.length(minutes: minutes < 120 ? minutes : (minutes / 60) * 60))")
+        return String(localized: "in \(Self.length(minutes: minutes < 120 ? minutes : (minutes / 60) * 60))", table: "Calendar")
     }
 
     /// "25 min", "1 h", "1 h 30".
     static func length(minutes: Int) -> String {
-        if minutes < 60 { return String(localized: "\(minutes) min") }
+        if minutes < 60 { return String(localized: "\(minutes) min", table: "Calendar") }
         let hours = minutes / 60, rest = minutes % 60
-        return rest == 0 ? String(localized: "\(hours) h") : String(localized: "\(hours) h \(rest)")
+        return rest == 0 ? String(localized: "\(hours) h", table: "Calendar") : String(localized: "\(hours) h \(rest)", table: "Calendar")
     }
 }
 
@@ -584,7 +584,7 @@ private struct NowLine: View {
         .padding(.leading, 9)
         .padding(.vertical, 4)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Now"))
+        .accessibilityLabel(Text("Now", tableName: "Calendar"))
     }
 }
 
@@ -618,7 +618,7 @@ struct AgendaRow: View {
                         .foregroundStyle(Ink.secondary)
                     if item.repeats {
                         Image(systemName: "repeat").font(.system(size: Look.size(9), weight: .semibold)).foregroundStyle(Ink.quaternary)
-                            .tip("Repeats")
+                            .tip(String(localized: "Repeats", table: "Calendar"))
                     }
                 }
                 if let startsIn {
@@ -638,14 +638,14 @@ struct AgendaRow: View {
                         Text(verbatim: place).font(TypeScale.label).foregroundStyle(Ink.tertiary).lineLimit(1)
                     }
                     if let overlaps {
-                        Text("Overlaps with \(overlaps)").font(TypeScale.label).foregroundStyle(Status.star).lineLimit(1)
+                        Text("Overlaps with \(overlaps)", tableName: "Calendar").font(TypeScale.label).foregroundStyle(Status.star).lineLimit(1)
                     }
                 }
                 if item.canAnswer { GoingPicker(response: item.response, isSending: model.isAnswering(item)) { model.respond(to: item, with: $0) } }
             }
             Spacer(minLength: Space.m)
             if let url = item.joinURL {
-                Link(destination: url) { Text("Join") }
+                Link(destination: url) { Text("Join", tableName: "Calendar") }
                     .buttonStyle(JoinButtonStyle(prominent: isSoon && !declined))
             }
         }
@@ -657,14 +657,14 @@ struct AgendaRow: View {
         .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .onTapGesture { open() }
         .onHover { isHovered = $0 }
-        .accessibilityAction(named: Text("Show Invitation")) { open() }
+        .accessibilityAction(named: Text("Show Invitation", tableName: "Calendar")) { open() }
         .contextMenu { EventMenu(model: model, item: item) }
     }
 
     private func open() { EventMenu.open(item, in: model, editor: editor) }
 
     private var time: String {
-        if item.isAllDay { return String(localized: "All day") }
+        if item.isAllDay { return String(localized: "All day", table: "Calendar") }
         return item.start.formatted(date: .omitted, time: .shortened) + " – " + item.end.formatted(date: .omitted, time: .shortened)
     }
 
@@ -682,7 +682,7 @@ struct AgendaRow: View {
         if host.contains("meet.google") { return "Google Meet" }
         if host.contains("zoom.us") { return "Zoom" }
         if host.contains("webex") { return "Webex" }
-        return String(localized: "Video call")
+        return String(localized: "Video call", table: "Calendar")
     }
 }
 
@@ -715,7 +715,7 @@ struct GoingPicker: View {
             }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("Going?"))
+        .accessibilityLabel(Text("Going?", tableName: "Calendar"))
     }
 }
 
@@ -809,7 +809,7 @@ struct CalendarSources: View {
                                      isOn: model.isCalendarShown(key)) { model.setCalendarShown(key, $0) } trailing: { EmptyView() }
                 }
                 if model.deviceCalendars.isEmpty {
-                    Text("No calendars on this device.").font(TypeScale.caption).foregroundStyle(Ink.quaternary)
+                    Text("No calendars on this device.", tableName: "Calendar").font(TypeScale.caption).foregroundStyle(Ink.quaternary)
                 }
             } else {
                 showRow("The calendars on this device: iCloud, work accounts, holidays.", id: "device") {
@@ -824,7 +824,7 @@ struct CalendarSources: View {
                 }
             } content: {
             if model.showsReminders {
-                CalendarCheckRow(title: String(localized: "Reminders with a due date"), colorIndex: nil,
+                CalendarCheckRow(title: String(localized: "Reminders with a due date", table: "Calendar"), colorIndex: nil,
                                  isOn: model.isCalendarShown(MailModel.remindersKey)) {
                     model.setCalendarShown(MailModel.remindersKey, $0)
                 } trailing: { EmptyView() }
@@ -860,11 +860,11 @@ struct CalendarSources: View {
             Spacer(minLength: 4)
             ZStack {
                 // Room for the word, so nothing moves while it's asking.
-                Text("Show").font(TypeScale.label.weight(.semibold)).hidden()
+                Text("Show", tableName: "Calendar").font(TypeScale.label.weight(.semibold)).hidden()
                 if working == id {
                     ProgressView().controlSize(.mini)
                 } else {
-                    Button("Show") {
+                    Button(String(localized: "Show", table: "Calendar")) {
                         working = id
                         Task {
                             await turnOn()
@@ -881,7 +881,7 @@ struct CalendarSources: View {
 
     private func stopMenu(_ stop: @escaping () async -> Void) -> some View {
         Menu {
-            Button("Stop Showing") { Task { await stop() } }
+            Button(String(localized: "Stop Showing", table: "Calendar")) { Task { await stop() } }
         } label: {
             Image(systemName: "ellipsis").font(.system(size: Look.size(11), weight: .semibold)).foregroundStyle(Ink.tertiary)
                 .frame(width: 20, height: 20)
@@ -899,8 +899,8 @@ struct CalendarSources: View {
             EmptyView()
         } else if model.usesAccountCalendar(account) {
             Menu {
-                Button("Connect Again…") { Task { await reconnect(account) } }
-                Button("Disconnect", role: .destructive) { disconnect(account) }
+                Button(String(localized: "Connect Again…", table: "Calendar")) { Task { await reconnect(account) } }
+                Button(String(localized: "Disconnect", table: "Calendar"), role: .destructive) { disconnect(account) }
             } label: {
                 Image(systemName: "ellipsis").font(.system(size: Look.size(11), weight: .semibold)).foregroundStyle(Ink.tertiary)
                     .frame(width: 20, height: 20)
@@ -910,15 +910,15 @@ struct CalendarSources: View {
             .buttonStyle(.plain)
             .menuIndicatorHidden()
             .fixedSize()
-            .tip("Showing this mailbox's whole calendar")
+            .tip(String(localized: "Showing this mailbox's whole calendar", table: "Calendar"))
         } else if connecting == account.id {
             ProgressView().controlSize(.mini)
         } else {
-            Button("Connect") { Task { await connect(account) } }
+            Button(String(localized: "Connect", table: "Calendar")) { Task { await connect(account) } }
                 .buttonStyle(.plain)
                 .font(TypeScale.label.weight(.semibold))
                 .foregroundStyle(accent)
-                .tip("Show this mailbox's whole calendar")
+                .tip(String(localized: "Show this mailbox's whole calendar", table: "Calendar"))
         }
     }
 
@@ -1084,7 +1084,7 @@ struct ReminderRow: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
         .contentShape(Rectangle())
-        .contextMenu { Button("Open in Reminders") { model.openInReminders(reminder) } }
+        .contextMenu { Button(String(localized: "Open in Reminders", table: "Calendar")) { model.openInReminders(reminder) } }
     }
 
     static func isOverdue(_ reminder: DueReminder) -> Bool {
@@ -1095,9 +1095,9 @@ struct ReminderRow: View {
     static func detail(_ reminder: DueReminder) -> String {
         var parts: [String] = []
         if isOverdue(reminder) && !Calendar.current.isDateInToday(reminder.due) {
-            parts.append(String(localized: "Overdue since \(reminder.due.formatted(.dateTime.day().month(.abbreviated)))"))
+            parts.append(String(localized: "Overdue since \(reminder.due.formatted(.dateTime.day().month(.abbreviated)))", table: "Calendar"))
         } else {
-            parts.append(reminder.hasTime ? reminder.due.formatted(date: .omitted, time: .shortened) : String(localized: "Reminder"))
+            parts.append(reminder.hasTime ? reminder.due.formatted(date: .omitted, time: .shortened) : String(localized: "Reminder", table: "Calendar"))
         }
         if let list = reminder.list { parts.append(list) }
         return parts.joined(separator: " · ")
@@ -1136,15 +1136,15 @@ struct EventMenu: View {
 
     var body: some View {
         if let editor, model.canDelete(item) {
-            if model.canChange(item) { Button("Edit…") { editor.edit(item) } }
+            if model.canChange(item) { Button(String(localized: "Edit…", table: "Calendar")) { editor.edit(item) } }
             Button(model.canChange(item) ? "Delete" : "Decline and Delete", role: .destructive) { editor.delete(item) }
             Divider()
         }
         if item.invitationThreadID != nil {
-            Button("Show Invitation") { model.showInvitation(threadID: item.invitationThreadID ?? "", title: item.title) }
+            Button(String(localized: "Show Invitation", table: "Calendar")) { model.showInvitation(threadID: item.invitationThreadID ?? "", title: item.title) }
         }
         if let url = item.joinURL {
-            Button("Copy Meeting Link") { model.copy(url.absoluteString, announce: "Meeting link copied") }
+            Button(String(localized: "Copy Meeting Link", table: "Calendar")) { model.copy(url.absoluteString, announce: "Meeting link copied") }
         }
     }
 
@@ -1171,7 +1171,7 @@ private struct ColleagueList: View {
         if model.canCompareCalendars || !model.comparedPeople.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 4) {
-                    Text("Compare with")
+                    Text("Compare with", tableName: "Calendar")
                         .font(.system(size: Look.size(12), weight: .semibold))
                         .foregroundStyle(Ink.secondary)
                     Spacer(minLength: 0)
@@ -1208,7 +1208,7 @@ private struct ColleagueList: View {
     @ViewBuilder private var adding: some View {
         let suggestions = model.colleagueSuggestions(for: field)
         VStack(alignment: .leading, spacing: 4) {
-            TextField("Add a colleague", text: $field, prompt: Text("Name or address"))
+            TextField(String(localized: "Add a colleague", table: "Calendar"), text: $field, prompt: Text("Name or address", tableName: "Calendar"))
                 .textFieldStyle(.plain)
                 .font(TypeScale.label)
                 .autocorrectionDisabled()
@@ -1271,17 +1271,17 @@ private struct ColleagueRow: View {
                     .foregroundStyle(Ink.primary)
                     .lineLimit(1)
                 if model.colleaguesHidden.contains(person.id) {
-                    Text("Not shared with you")
+                    Text("Not shared with you", tableName: "Calendar")
                         .font(TypeScale.caption)
                         .foregroundStyle(Ink.tertiary)
                         .lineLimit(1)
                 }
                 if let away = model.outOfOffice(person) {
-                    Label("Out of office", systemImage: "airplane")
+                    Label(String(localized: "Out of office", table: "Calendar"), systemImage: "airplane")
                         .font(TypeScale.caption)
                         .foregroundStyle(Status.star)
                         .lineLimit(1)
-                        .help(Text(verbatim: String(localized: "Out of office until \(MailModel.untilText(away.end, from: Date()))")))
+                        .help(Text(verbatim: String(localized: "Out of office until \(MailModel.untilText(away.end, from: Date()))", table: "Calendar")))
                 }
             }
             Spacer(minLength: 4)
@@ -1293,7 +1293,7 @@ private struct ColleagueRow: View {
         .frame(minHeight: Look.gap(28))
         .contentShape(Rectangle())
         .onHover { isHovered = $0 }
-        .contextMenu { Button("Stop comparing") { model.removeColleague(person) } }
+        .contextMenu { Button(String(localized: "Stop comparing", table: "Calendar")) { model.removeColleague(person) } }
     }
 }
 
@@ -1332,7 +1332,7 @@ private struct CalendarModeSwitcher: View {
         .padding(2)
         .glassCapsule(tint: nil)
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("View"))
+        .accessibilityLabel(Text("View", tableName: "Calendar"))
     }
 }
 

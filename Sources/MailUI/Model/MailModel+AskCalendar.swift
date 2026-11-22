@@ -280,7 +280,7 @@ extension MailModel {
             setState(.failed, of: action)
             // The calendar's own words when it said why; otherwise Margin's.
             if notice?.id == before || notice?.isError != true {
-                notice = Notice(text: String(localized: "Couldn't change “\(action.title)” in your calendar."), isError: true)
+                notice = Notice(text: String(localized: "Couldn't change “\(action.title)” in your calendar.", table: "Calendar"), isError: true)
             }
         }
     }

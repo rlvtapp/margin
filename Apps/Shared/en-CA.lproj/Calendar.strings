@@ -1,0 +1,4 @@
+/* Margin calendar translations. Keep format specifiers and escaped newlines intact. */
+"Cancelled by %@" = "Cancelled by %@";
+"Couldn't answer “%@”: its account isn't in Margin anymore." = "Couldn't answer “%@”: its account isn't in Margin anymore.";
+"Couldn't answer “%@”: the account's calendar can't be reached." = "Couldn't answer “%@”: the account's calendar can't be reached.";

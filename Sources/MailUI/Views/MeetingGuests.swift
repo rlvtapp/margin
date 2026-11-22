@@ -38,7 +38,7 @@ struct MeetingGuests: View {
                             }
                             Text(verbatim: guest.address.displayName).font(TypeScale.row).foregroundStyle(Ink.primary).lineLimit(1)
                             if guest.kind == .optional {
-                                Text("Optional").font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                                Text("Optional", tableName: "Calendar").font(TypeScale.label).foregroundStyle(Ink.tertiary)
                             }
                             Spacer(minLength: Space.s)
                             Self.answer(guest.response)
@@ -53,19 +53,19 @@ struct MeetingGuests: View {
     static func summary(_ attendees: [MeetingAttendee]) -> String {
         let tally = attendees.tally
         var parts: [String] = []
-        if tally.yes > 0 { parts.append(String(localized: "\(tally.yes) yes")) }
-        if tally.maybe > 0 { parts.append(String(localized: "\(tally.maybe) maybe")) }
-        if tally.no > 0 { parts.append(String(localized: "\(tally.no) no")) }
-        if tally.waiting > 0 { parts.append(String(localized: "\(tally.waiting) no answer")) }
+        if tally.yes > 0 { parts.append(String(localized: "\(tally.yes) yes", table: "Calendar")) }
+        if tally.maybe > 0 { parts.append(String(localized: "\(tally.maybe) maybe", table: "Calendar")) }
+        if tally.no > 0 { parts.append(String(localized: "\(tally.no) no", table: "Calendar")) }
+        if tally.waiting > 0 { parts.append(String(localized: "\(tally.waiting) no answer", table: "Calendar")) }
         return parts.joined(separator: " · ")
     }
 
     static func answer(_ response: CalendarInvite.Response?) -> some View {
         let (text, symbol, color): (String, String, Color) = switch response {
-        case .accepted: (String(localized: "Going"), "checkmark.circle.fill", Status.done)
-        case .tentative: (String(localized: "Maybe"), "questionmark.circle.fill", Ink.secondary)
-        case .declined: (String(localized: "Not going"), "xmark.circle.fill", Status.danger)
-        case nil: (String(localized: "No answer"), "circle.dotted", Ink.tertiary)
+        case .accepted: (String(localized: "Going", table: "Calendar"), "checkmark.circle.fill", Status.done)
+        case .tentative: (String(localized: "Maybe", table: "Calendar"), "questionmark.circle.fill", Ink.secondary)
+        case .declined: (String(localized: "Not going", table: "Calendar"), "xmark.circle.fill", Status.danger)
+        case nil: (String(localized: "No answer", table: "Calendar"), "circle.dotted", Ink.tertiary)
         }
         return Label(text, systemImage: symbol).font(TypeScale.label).foregroundStyle(color).labelStyle(.titleAndIcon)
     }
@@ -88,21 +88,21 @@ struct MeetingDetail: View {
                         }
                         if let place = entry.location, !place.isEmpty { LabeledContent("Where") { Text(verbatim: place) } }
                         if let join = entry.joinURL {
-                            Button("Join") { HTMLWebCoordinator.openInBrowser(join) }
+                            Button(String(localized: "Join", table: "Calendar")) { HTMLWebCoordinator.openInBrowser(join) }
                         }
                     }
                     Section {
                         MeetingGuests(attendees: entry.attendees, startsOpen: true)
                     } header: {
-                        Text("Guests")
+                        Text("Guests", tableName: "Calendar")
                     } footer: {
-                        Text("Answers come in as people reply, and straight from Microsoft 365 or Google when the account's calendar is connected.")
+                        Text("Answers come in as people reply, and straight from Microsoft 365 or Google when the account's calendar is connected.", tableName: "Calendar")
                     }
                 }
             }
             .formStyle(.grouped)
             .navigationTitle(Text(verbatim: model.calendarEntries.first { $0.id == id }?.title ?? ""))
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button(String(localized: "Done", table: "Calendar")) { dismiss() } } }
             .task { await model.refreshAnswers(id) }
         }
         #if os(macOS)

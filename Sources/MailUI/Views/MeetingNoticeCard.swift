@@ -27,7 +27,7 @@ struct MeetingNoticeCard: View {
                         .buttonStyle(PillButtonStyle())
                 }
             }
-            Button("Show message", action: showText)
+            Button(String(localized: "Show message", table: "Calendar"), action: showText)
                 .buttonStyle(.plain)
                 .font(TypeScale.label)
                 .foregroundStyle(Ink.tertiary)
@@ -38,10 +38,10 @@ struct MeetingNoticeCard: View {
 
     private var line: String {
         switch notice.kind {
-        case .accepted: String(localized: "\(who) accepted")
-        case .tentative: String(localized: "\(who) might come")
-        case .declined: String(localized: "\(who) declined")
-        case .cancelled: String(localized: "Cancelled by \(who)")
+        case .accepted: String(localized: "\(who) accepted", table: "Calendar")
+        case .tentative: String(localized: "\(who) might come", table: "Calendar")
+        case .declined: String(localized: "\(who) declined", table: "Calendar")
+        case .cancelled: String(localized: "Cancelled by \(who)", table: "Calendar")
         }
     }
 

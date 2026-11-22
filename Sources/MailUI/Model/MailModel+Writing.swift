@@ -207,7 +207,7 @@ extension MailModel {
     /// A reply to a pasted email, written the way the person would: for trying out what Margin
     /// learned. Nothing is sent or saved. Also says which language and whose habits it used.
     public func tryReply(to text: String, from sender: String, note: String) async throws -> (reply: String, about: String, instructions: String) {
-        guard let intelligence else { throw MailError.notSupported(String(localized: "Turn on the assistant to try this.")) }
+        guard let intelligence else { throw MailError.notSupported(String(localized: "Turn on the assistant to try this.", table: "Composer")) }
         let account = currentAccount
         // Without a sender, the name the email is signed with; without that, no name at all.
         let typedSender = sender.trimmingCharacters(in: .whitespaces)
@@ -229,15 +229,15 @@ extension MailModel {
         let languageName = language.flatMap { Locale.current.localizedString(forLanguageCode: $0) }
         let known = language.flatMap { writingProfile.languages[$0]?.messages } ?? 0
         let about: String = if style == nil {
-            String(localized: "Not enough learned yet, so this is a plain reply.")
+            String(localized: "Not enough learned yet, so this is a plain reply.", table: "Composer")
         } else if let languageName, known >= 3 {
-            String(localized: "In \(languageName), the way you write in it.")
+            String(localized: "In \(languageName), the way you write in it.", table: "Composer")
         } else if let languageName {
-            String(localized: "In \(languageName). Margin hasn't seen enough of your \(languageName) yet, so only your general style is used.")
+            String(localized: "In \(languageName). Margin hasn't seen enough of your \(languageName) yet, so only your general style is used.", table: "Composer")
         } else {
-            String(localized: "Using your general style.")
+            String(localized: "Using your general style.", table: "Composer")
         }
-        return (reply, about, style ?? String(localized: "Nothing learned yet."))
+        return (reply, about, style ?? String(localized: "Nothing learned yet.", table: "Composer"))
     }
 
     /// The name an email is signed with: a short last line that looks like a name ("Sam", "Noor Haddad").
@@ -255,6 +255,6 @@ enum WritingStudyError: LocalizedError {
     case tooLittle
 
     var errorDescription: String? {
-        String(localized: "There isn't enough sent mail to study yet: Margin needs at least 5 emails of a few sentences each.")
+        String(localized: "There isn't enough sent mail to study yet: Margin needs at least 5 emails of a few sentences each.", table: "Composer")
     }
 }

@@ -1,0 +1,15 @@
+/* Margin settings translations. Keep format specifiers and escaped newlines intact. */
+"%@ reads up to 40 of your recent sent emails per language, once, and describes how you write: tone, sentence length, words you use. Only the description is kept, and every draft follows it." = "%@ reads up to 40 of your recent sent emails per language, once, and describes how you write: tone, sentence length, words you use. Only the description is kept, and every draft follows it.";
+"%lld messages, %@ on disk" = "%lld messages, %@ on disk";
+"A palette that stays clear with red–green and blue–yellow color blindness. Mailboxes also always show their letter, and unread mail is bold as well as marked." = "A palette that stays clear with red–green and blue–yellow colour blindness. Mailboxes also always show their letter, and unread mail is bold as well as marked.";
+"All white, no gray." = "All white, no grey.";
+"Clear Downloaded Mail" = "Clear Downloaded Mail";
+"Color-blind safe" = "Colour-blind safe";
+"Colors" = "Colours";
+"Dark gray, easy at night." = "Dark grey, easy at night.";
+"Downloading older mail…" = "Downloading older mail…";
+"Keep on this device" = "Keep on this device";
+"Older mail's senders, subjects and previews are downloaded in the background, so it can be searched and scrolled without a connection. The text of recent mail is saved too, without its files, so opening it doesn't wait; older texts and all files come when a mail is opened. On iPhone and iPad only on Wi-Fi, and while charging or above 20% battery." = "Older mail's senders, subjects and previews are downloaded in the background, so it can be searched and scrolled without a connection. The text of recent mail is saved too, without its files, so opening it doesn't wait; older texts and all files come when a mail is opened. On iPhone and iPad only on Wi-Fi, and while charging or above 20% battery.";
+"Soft gray sidebar, white mail." = "Soft grey sidebar, white mail.";
+"Studied by %@ from %lld emails, %@." = "Studied by %@ from %lld emails, %@.";
+"sentences of about %lld words" = "sentences of about %lld words";

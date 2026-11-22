@@ -14,13 +14,13 @@ struct NextEventBar: View {
             HStack(spacing: Space.s) {
                 Image(systemName: "calendar").foregroundStyle(happening ? Status.done : Ink.tertiary)
                 Text(verbatim: event.title).font(TypeScale.rowStrong).foregroundStyle(Ink.primary).lineLimit(1)
-                Text(happening ? String(localized: "Now") : event.start.formatted(date: .omitted, time: .shortened))
+                Text(happening ? String(localized: "Now", table: "Calendar") : event.start.formatted(date: .omitted, time: .shortened))
                     .font(TypeScale.label.monospacedDigit()).foregroundStyle(Ink.tertiary)
                 Spacer(minLength: 0)
                 if let join = event.joinURL, happening || close {
-                    Button("Join") { openURL(join) }.buttonStyle(QuietButtonStyle())
+                    Button(String(localized: "Join", table: "Calendar")) { openURL(join) }.buttonStyle(QuietButtonStyle())
                 } else {
-                    Button("Open") { model.open(event) }.buttonStyle(QuietButtonStyle())
+                    Button(String(localized: "Open", table: "Calendar")) { model.open(event) }.buttonStyle(QuietButtonStyle())
                 }
             }
             .padding(.horizontal, Space.m)
@@ -51,13 +51,13 @@ struct NextEventChip: View {
                         Image(systemName: "calendar").font(.system(size: Look.size(11), weight: .semibold))
                             .foregroundStyle(happening ? Status.done : Ink.tertiary)
                         Text(verbatim: event.title).font(TypeScale.label.weight(.medium)).foregroundStyle(Ink.primary).lineLimit(1)
-                        Text(happening ? String(localized: "now") : event.start.formatted(date: .omitted, time: .shortened))
+                        Text(happening ? String(localized: "now", table: "Calendar") : event.start.formatted(date: .omitted, time: .shortened))
                             .font(TypeScale.label.monospacedDigit()).foregroundStyle(Ink.tertiary)
                     }
                 }
                 .buttonStyle(.plain)
                 if let join = event.joinURL, happening || close {
-                    Button("Join") { openURL(join) }
+                    Button(String(localized: "Join", table: "Calendar")) { openURL(join) }
                         .buttonStyle(.plain)
                         .font(TypeScale.label.weight(.semibold))
                         .foregroundStyle(accentInk)

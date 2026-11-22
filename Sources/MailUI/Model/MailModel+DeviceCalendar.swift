@@ -46,7 +46,7 @@ extension MailModel {
         case .notAsked:
             do {
                 if try await request() { return true }
-                notice = Notice(text: String(localized: "Margin wasn't allowed to see them. You can change that in System Settings → Privacy & Security."), isError: true)
+                notice = Notice(text: String(localized: "Margin wasn't allowed to see them. You can change that in System Settings → Privacy & Security.", table: "Calendar"), isError: true)
             } catch {
                 show(error)
             }

@@ -99,7 +99,7 @@ extension MailModel {
             return false
         }
         await reloadCalendars()
-        offerUndo(String(localized: "Added “\(draft.title)”")) { [weak self] in
+        offerUndo(String(localized: "Added “\(draft.title)”", table: "Calendar")) { [weak self] in
             guard let self, let made = self.agenda(from: draft.start.addingTimeInterval(-1), to: draft.end.addingTimeInterval(1))
                 .first(where: { $0.title == draft.title && $0.start == draft.start && $0.canChange }) else { return }
             await self.deleteEvent(made, offersUndo: false)
@@ -146,7 +146,7 @@ extension MailModel {
         await reloadCalendars()
         if offersUndo {
             let moved = draft.start != before.start || draft.end != before.end
-            let text = moved ? String(localized: "Moved “\(draft.title)”") : String(localized: "Changed “\(draft.title)”")
+            let text = moved ? String(localized: "Moved “\(draft.title)”", table: "Calendar") : String(localized: "Changed “\(draft.title)”", table: "Calendar")
             offerUndo(text) { [weak self] in
                 guard let self, let now = self.agenda(from: draft.start.addingTimeInterval(-1), to: draft.end.addingTimeInterval(1))
                     .first(where: { $0.title == draft.title && $0.start == draft.start && $0.canChange }) else { return }
@@ -187,11 +187,11 @@ extension MailModel {
         await reloadCalendars()
         // A deleted series can't come back as it was; one event can.
         if offersUndo, !(item.repeats && scope == .allEvents), let destination {
-            offerUndo(String(localized: "Deleted “\(item.title)”")) { [weak self] in
+            offerUndo(String(localized: "Deleted “\(item.title)”", table: "Calendar")) { [weak self] in
                 await self?.createEvent(before, in: destination)
             }
         } else {
-            notice = Notice(text: String(localized: "Deleted “\(item.title)”"))
+            notice = Notice(text: String(localized: "Deleted “\(item.title)”", table: "Calendar"))
         }
         return true
     }

@@ -400,7 +400,7 @@ extension MailModel {
         switch item.source {
         case .account(let accountID, let eventID):
             guard let account = account(accountID) else {
-                notice = Notice(text: String(localized: "Couldn't answer “\(item.title)”: its account isn't in Margin anymore."), isError: true)
+                notice = Notice(text: String(localized: "Couldn't answer “\(item.title)”: its account isn't in Margin anymore.", table: "Calendar"), isError: true)
                 return nil
             }
             let previous = rsvps[key]
@@ -411,7 +411,7 @@ extension MailModel {
                 do {
                     guard let reader = try await calendarAdapter(for: account) as? any CalendarReading else {
                         rsvps[key] = previous
-                        notice = Notice(text: String(localized: "Couldn't answer “\(item.title)”: the account's calendar can't be reached."), isError: true)
+                        notice = Notice(text: String(localized: "Couldn't answer “\(item.title)”: the account's calendar can't be reached.", table: "Calendar"), isError: true)
                         return
                     }
                     try await reader.respond(toEvent: eventID, with: response)
@@ -419,7 +419,7 @@ extension MailModel {
                         events[index].response = response
                         calendarEvents[accountID] = events
                     }
-                    notice = Notice(text: String(localized: "Replied \(response.shortTitle) to “\(item.title)”"), isSent: true)
+                    notice = Notice(text: String(localized: "Replied \(response.shortTitle) to “\(item.title)”", table: "Calendar"), isSent: true)
                 } catch {
                     rsvps[key] = previous
                     show(error)
@@ -433,13 +433,13 @@ extension MailModel {
             return Task {
                 guard let thread = await invitationThread(threadID) else {
                     answering[key] = nil
-                    notice = Notice(text: String(localized: "The invitation for “\(item.title)” isn't in your inbox anymore."))
+                    notice = Notice(text: String(localized: "The invitation for “\(item.title)” isn't in your inbox anymore.", table: "Calendar"))
                     return
                 }
                 let found = await askContext([thread]).first?.1 ?? [:]
                 guard let invite = thread.messages.reversed().compactMap({ found[$0.id]?.invite }).first(where: { $0.method != "REPLY" }) else {
                     answering[key] = nil
-                    notice = Notice(text: String(localized: "The invitation for “\(item.title)” couldn't be read."))
+                    notice = Notice(text: String(localized: "The invitation for “\(item.title)” couldn't be read.", table: "Calendar"))
                     return
                 }
                 // The reader card may be sending an answer to this invitation already.
@@ -502,7 +502,7 @@ extension MailModel {
     public func showInvitation(threadID: String, title: String? = nil) {
         Task {
             guard let thread = await invitationThread(threadID) else {
-                notice = Notice(text: String(localized: "The invitation for “\(title ?? "")” isn't in your inbox anymore."))
+                notice = Notice(text: String(localized: "The invitation for “\(title ?? "")” isn't in your inbox anymore.", table: "Calendar"))
                 return
             }
             place = .search(title ?? thread.subject)
@@ -538,9 +538,9 @@ extension CalendarInvite.Response {
     /// "Yes", "Maybe", "No": the answers as the Calendar's buttons say them.
     public var shortTitle: String {
         switch self {
-        case .accepted: String(localized: "Yes", comment: "Going to a meeting")
-        case .tentative: String(localized: "Maybe", comment: "Going to a meeting")
-        case .declined: String(localized: "No", comment: "Going to a meeting")
+        case .accepted: String(localized: "Yes", table: "Calendar", comment: "Going to a meeting")
+        case .tentative: String(localized: "Maybe", table: "Calendar", comment: "Going to a meeting")
+        case .declined: String(localized: "No", table: "Calendar", comment: "Going to a meeting")
         }
     }
 }

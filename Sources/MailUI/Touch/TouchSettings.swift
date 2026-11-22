@@ -37,17 +37,17 @@ struct TouchSettingsView: View {
                     }
                 }
             }
-            .searchable(text: $search, prompt: Text("Search settings"))
+            .searchable(text: $search, prompt: Text("Search settings", tableName: "Settings"))
             .navigationDestination(for: SettingsPage.self) { item in
                 SettingsDetail(model: model, page: item, editingAccount: $editingSignature)
                     .environment(\.settingsTint, item.tint)
                     .navigationTitle(Text(verbatim: item.title))
                     .navigationBarTitleDisplayMode(.inline)
             }
-            .navigationTitle("Settings")
+            .navigationTitle(String(localized: "Settings", table: "Settings"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) { Button(String(localized: "Done", table: "Settings")) { dismiss() } }
             }
         }
         .tint(Ink.primary)

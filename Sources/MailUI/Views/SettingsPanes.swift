@@ -28,7 +28,7 @@ struct MailboxesSettings: View {
                             Text(account.label)
                             Text(account.serverDescription).font(TypeScale.caption).foregroundStyle(.secondary)
                             if model.movesOnSignIn(account) {
-                                Text("Sign in again to keep getting mail. Margin asks for everything it needs at once.")
+                                Text("Sign in again to keep getting mail. Margin asks for everything it needs at once.", tableName: "Settings")
                                     .font(TypeScale.caption)
                                     .foregroundStyle(Status.danger)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -36,22 +36,22 @@ struct MailboxesSettings: View {
                         }
                         Spacer()
                         if model.needsSignIn(account.id) && model.canSignInAgain(account) {
-                            Button("Sign In Again…") { signingIn = account }
+                            Button(String(localized: "Sign In Again…", table: "Settings")) { signingIn = account }
                                 .buttonStyle(.borderedProminent)
                                 .tint(Ink.primary)
                         }
-                        Button("Edit…") { editing = account.id }
+                        Button(String(localized: "Edit…", table: "Settings")) { editing = account.id }
                         Menu {
-                            Button("Move Up") { withAnimation(Motion.quick) { model.moveAccount(account.id, by: -1) } }
+                            Button(String(localized: "Move Up", table: "Settings")) { withAnimation(Motion.quick) { model.moveAccount(account.id, by: -1) } }
                                 .disabled(!model.canMoveAccount(account.id, by: -1))
-                            Button("Move Down") { withAnimation(Motion.quick) { model.moveAccount(account.id, by: 1) } }
+                            Button(String(localized: "Move Down", table: "Settings")) { withAnimation(Motion.quick) { model.moveAccount(account.id, by: 1) } }
                                 .disabled(!model.canMoveAccount(account.id, by: 1))
                             if model.canSignInAgain(account) {
                                 Divider()
-                                Button("Sign In Again…") { signingIn = account }
+                                Button(String(localized: "Sign In Again…", table: "Settings")) { signingIn = account }
                             }
                             Divider()
-                            Button("Remove", role: .destructive) { removing = account }
+                            Button(String(localized: "Remove", table: "Settings"), role: .destructive) { removing = account }
                         } label: {
                             Image(systemName: "ellipsis.circle")
                         }
@@ -63,24 +63,24 @@ struct MailboxesSettings: View {
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
                     if model.accounts.count > 1 {
-                        Text("Drag to change the order, here or in the account column.")
+                        Text("Drag to change the order, here or in the account column.", tableName: "Settings")
                     }
                     if model.accounts.contains(where: model.canSignInAgain) {
-                        Text("If a mailbox stops signing in, choose Sign In Again from its menu. Your mail and settings stay as they are.")
+                        Text("If a mailbox stops signing in, choose Sign In Again from its menu. Your mail and settings stay as they are.", tableName: "Settings")
                     }
                 }
             }
             Section {
-                Button("Add Mailbox…") { model.isAddingAccount = true }
+                Button(String(localized: "Add Mailbox…", table: "Settings")) { model.isAddingAccount = true }
             }
         }
         .formStyle(.grouped)
         .signsInAgain(model: model, account: $signingIn, confirms: true)
-        .confirmationDialog(Text("Remove this mailbox from Margin?"), isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
+        .confirmationDialog(Text("Remove this mailbox from Margin?", tableName: "Settings"), isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
                             presenting: removing) { account in
-            Button("Remove", role: .destructive) { model.remove(account.id) }
+            Button(String(localized: "Remove", table: "Settings"), role: .destructive) { model.remove(account.id) }
         } message: { _ in
-            Text("Mail stays on the server. You can add the mailbox again later.")
+            Text("Mail stays on the server. You can add the mailbox again later.", tableName: "Settings")
         }
     }
 }
@@ -92,7 +92,7 @@ struct SavedMailSection: View {
 
     var body: some View {
         Section {
-            Picker("Keep on this device", selection: $model.keepMail) {
+            Picker(String(localized: "Keep on this device", table: "Settings"), selection: $model.keepMail) {
                 ForEach(KeepMail.allCases, id: \.self) { Text(verbatim: $0.title).tag($0) }
             }
             Picker(selection: $model.keepText) {
@@ -103,16 +103,16 @@ struct SavedMailSection: View {
             HStack {
                 // Room kept for both lines, so nothing moves when downloading starts or stops.
                 ZStack(alignment: .leading) {
-                    Text("Downloading older mail…").hidden()
+                    Text("Downloading older mail…", tableName: "Settings").hidden()
                     if let usage = model.savedMailUsage {
                         let size = ByteCountFormatter.string(fromByteCount: Int64(usage.bytes), countStyle: .file)
-                        Text(model.isDownloadingOlder ? String(localized: "Downloading older mail…")
-                                                      : String(localized: "\(usage.messages) messages, \(size) on disk"))
+                        Text(model.isDownloadingOlder ? String(localized: "Downloading older mail…", table: "Settings")
+                                                      : String(localized: "\(usage.messages) messages, \(size) on disk", table: "Settings"))
                     }
                 }
                 .foregroundStyle(.secondary)
                 Spacer()
-                Button("Clear Downloaded Mail") {
+                Button(String(localized: "Clear Downloaded Mail", table: "Settings")) {
                     isClearing = true
                     Task {
                         await model.clearDownloadedMail()
@@ -122,9 +122,9 @@ struct SavedMailSection: View {
                 .disabled(isClearing)
             }
         } header: {
-            Text("On this device")
+            Text("On this device", tableName: "Settings")
         } footer: {
-            Text("Older mail's senders, subjects and previews are downloaded in the background, so it can be searched and scrolled without a connection. The text of recent mail is saved too, without its files, so opening it doesn't wait; older texts and all files come when a mail is opened. On iPhone and iPad only on Wi-Fi, and while charging or above 20% battery.")
+            Text("Older mail's senders, subjects and previews are downloaded in the background, so it can be searched and scrolled without a connection. The text of recent mail is saved too, without its files, so opening it doesn't wait; older texts and all files come when a mail is opened. On iPhone and iPad only on Wi-Fi, and while charging or above 20% battery.", tableName: "Settings")
         }
         .task {
             while !Task.isCancelled {
@@ -142,24 +142,24 @@ struct AppearanceSettings: View {
     static func caption(_ appearance: AppAppearance) -> String? {
         switch appearance {
         #if os(macOS)
-        case .system: String(localized: "Light or dark, like the Mac.")
+        case .system: String(localized: "Light or dark, like the Mac.", table: "Settings")
         #else
-        case .system: String(localized: "Light or dark, like the system.")
+        case .system: String(localized: "Light or dark, like the system.", table: "Settings")
         #endif
-        case .light: String(localized: "Soft gray sidebar, white mail.")
-        case .dark: String(localized: "Dark gray, easy at night.")
-        case .deepDark: String(localized: "True black, for dark rooms.")
-        case .white: String(localized: "All white, no gray.")
-        case .developer: String(localized: "Dark blue-black with green.")
+        case .light: String(localized: "Soft gray sidebar, white mail.", table: "Settings")
+        case .dark: String(localized: "Dark gray, easy at night.", table: "Settings")
+        case .deepDark: String(localized: "True black, for dark rooms.", table: "Settings")
+        case .white: String(localized: "All white, no gray.", table: "Settings")
+        case .developer: String(localized: "Dark blue-black with green.", table: "Settings")
         }
     }
 
     static func caption(_ layout: ListLayout) -> String? {
         switch layout {
-        case .panels: String(localized: "The list and the open mail next to each other.")
-        case .wide: String(localized: "A full-width list; mail opens over it.")
-        case .spark: String(localized: "Inbox, unread and labels as tabs on top.")
-        case .minimal: String(localized: "A calm page of sections, no sidebar.")
+        case .panels: String(localized: "The list and the open mail next to each other.", table: "Settings")
+        case .wide: String(localized: "A full-width list; mail opens over it.", table: "Settings")
+        case .spark: String(localized: "Inbox, unread and labels as tabs on top.", table: "Settings")
+        case .minimal: String(localized: "A calm page of sections, no sidebar.", table: "Settings")
         }
     }
 
@@ -170,12 +170,12 @@ struct AppearanceSettings: View {
             Section {
                 AppSizeRow(model: model)
                 ChoiceTiles(options: Density.allCases, selection: $model.density,
-                            title: { $0 == .roomy ? String(localized: "Roomy") : String(localized: "Compact") },
-                            caption: { $0 == .roomy ? String(localized: "Bigger text and more room.") : String(localized: "Fits more on screen.") }) {
+                            title: { $0 == .roomy ? String(localized: "Roomy", table: "Settings") : String(localized: "Compact", table: "Settings") },
+                            caption: { $0 == .roomy ? String(localized: "Bigger text and more room.", table: "Settings") : String(localized: "Fits more on screen.", table: "Settings") }) {
                     DensityPreview(density: $0)
                 }
             } header: {
-                Text("Size")
+                Text("Size", tableName: "Settings")
             }
             Section {
                 ChoiceTiles(options: AppAppearance.allCases, selection: $model.appearance,
@@ -188,12 +188,12 @@ struct AppearanceSettings: View {
                                     .overlay(Circle().strokeBorder(Ink.primary, lineWidth: 2).padding(-3).opacity(model.accentIndex == index ? 1 : 0))
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel("Accent \(index + 1)")
+                            .accessibilityLabel(String(localized: "Accent \(index + 1)", table: "Settings"))
                         }
                     }
                 } label: { SettingLabel("Accent", detail: "Unread dots, selections and badges.") }
             } header: {
-                Text("Theme")
+                Text("Theme", tableName: "Settings")
             }
             Section {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 64), spacing: Space.s)], spacing: Space.m) {
@@ -219,36 +219,36 @@ struct AppearanceSettings: View {
                     }
                 }
                 .padding(.vertical, 4)
-                Toggle("Dark", isOn: $model.appIconDark)
+                Toggle(String(localized: "Dark", table: "Settings"), isOn: $model.appIconDark)
                     .disabled(!model.appIcon.hasDarkVersion)
             } header: {
-                Text("App icon")
+                Text("App icon", tableName: "Settings")
             } footer: {
                 #if os(macOS)
-                Text("The Dock shows the new icon while Margin is open.")
+                Text("The Dock shows the new icon while Margin is open.", tableName: "Settings")
                 #endif
             }
             Section {
                 ChoiceTiles(options: [false, true], selection: $model.colorBlindSafe,
-                            title: { $0 ? String(localized: "Color-blind safe") : String(localized: "Standard") }) {
+                            title: { $0 ? String(localized: "Color-blind safe", table: "Settings") : String(localized: "Standard", table: "Settings") }) {
                     PalettePreview(colorBlindSafe: $0)
                 }
             } header: {
-                Text("Colors")
+                Text("Colors", tableName: "Settings")
             } footer: {
-                Text("A palette that stays clear with red–green and blue–yellow color blindness. Mailboxes also always show their letter, and unread mail is bold as well as marked.")
+                Text("A palette that stays clear with red–green and blue–yellow color blindness. Mailboxes also always show their letter, and unread mail is bold as well as marked.", tableName: "Settings")
             }
             Section {
                 Toggle(isOn: $model.increaseContrast) { SettingLabel("Increase contrast", detail: "Darker text and clearer lines.") }
                 Toggle(isOn: $model.underlineLinks) { SettingLabel("Underline links in mail", detail: "So links stand out without relying on color.") }
                 Toggle(isOn: $model.reduceMotion) { SettingLabel("Reduce motion", detail: "Things appear at once instead of sliding.") }
             } header: {
-                Text("Accessibility")
+                Text("Accessibility", tableName: "Settings")
             } footer: {
                 #if os(macOS)
-                Text("Margin also follows these settings from the Mac's Accessibility settings.")
+                Text("Margin also follows these settings from the Mac's Accessibility settings.", tableName: "Settings")
                 #else
-                Text("Margin also follows these settings from the system's Accessibility settings.")
+                Text("Margin also follows these settings from the system's Accessibility settings.", tableName: "Settings")
                 #endif
             }
         }
@@ -275,22 +275,22 @@ struct LayoutSettings: View {
             Section {
                 ChoiceTiles(options: layouts, selection: $model.layout, title: \.title, caption: AppearanceSettings.caption) { LayoutPreview(layout: $0) }
             } header: {
-                Text("Layout")
+                Text("Layout", tableName: "Settings")
             }
             Section {
                 ChoiceTiles(options: [false, true], selection: $model.compactRows,
-                            title: { $0 ? String(localized: "One line") : String(localized: "Three lines") },
-                            caption: { $0 ? String(localized: "Fits the most mail on screen.") : String(localized: "Sender, subject and a preview.") }) {
+                            title: { $0 ? String(localized: "One line", table: "Settings") : String(localized: "Three lines", table: "Settings") },
+                            caption: { $0 ? String(localized: "Fits the most mail on screen.", table: "Settings") : String(localized: "Sender, subject and a preview.", table: "Settings") }) {
                     RowsPreview(compact: $0)
                 }
             } header: {
-                Text("Rows")
+                Text("Rows", tableName: "Settings")
             }
             #if os(macOS)
             Section {
                 ChoiceTiles(options: [false, true], selection: $model.insetPanel,
-                            title: { $0 ? String(localized: "Inset panel") : String(localized: "Edge to edge") },
-                            caption: { $0 ? String(localized: "Mail sits in a rounded panel.") : String(localized: "Mail runs to the window's edges.") }) {
+                            title: { $0 ? String(localized: "Inset panel", table: "Settings") : String(localized: "Edge to edge", table: "Settings") },
+                            caption: { $0 ? String(localized: "Mail sits in a rounded panel.", table: "Settings") : String(localized: "Mail runs to the window's edges.", table: "Settings") }) {
                     WindowStylePreview(inset: $0)
                 }
                 Toggle(isOn: Binding(get: { model.showsAccountRail }, set: { model.showsAccountRail = $0 })) {
@@ -302,7 +302,7 @@ struct LayoutSettings: View {
                                  detail: "Names beside the icons above a conversation, when they fit. Off shows icons only; pointing at one shows its name and shortcut.")
                 }
             } header: {
-                Text("Window")
+                Text("Window", tableName: "Settings")
             }
             #endif
         }
@@ -339,7 +339,7 @@ struct ShortcutSettings: View {
         Section {
             Toggle(isOn: $model.singleKeyShortcuts) { SettingLabel("Single-key shortcuts (E, R, J, K…)") }
             LabeledContent {
-                Menu("Choose…") {
+                Menu(String(localized: "Choose…", table: "Settings")) {
                     ForEach(ShortcutPreset.allCases) { preset in
                         Button(preset.title) {
                             model.keyOverrides = preset.overrides
@@ -350,9 +350,9 @@ struct ShortcutSettings: View {
                 .fixedSize()
             } label: { SettingLabel("Start from the keys of") }
         } header: {
-            Text("Keyboard")
+            Text("Keyboard", tableName: "Settings")
         } footer: {
-            Text("Turn this off if you'd rather nothing happens when you type outside a text field. ⌘ shortcuts and ⌘K keep working.")
+            Text("Turn this off if you'd rather nothing happens when you type outside a text field. ⌘ shortcuts and ⌘K keep working.", tableName: "Settings")
         }
     }
 
@@ -364,11 +364,11 @@ struct ShortcutSettings: View {
                 ShortcutRow(model: model, command: command, clashes: clashes(command, in: commands))
             }
         } header: {
-            Text("Single keys")
+            Text("Single keys", tableName: "Settings")
         }
         .disabled(!model.singleKeyShortcuts)
         Section {
-            Button("Restore the original keys") { model.keyOverrides = [:] }
+            Button(String(localized: "Restore the original keys", table: "Settings")) { model.keyOverrides = [:] }
         }
     }
 
@@ -388,7 +388,7 @@ private struct ShortcutRow: View {
     var body: some View {
         LabeledContent {
             HStack(spacing: Space.s) {
-                if clashes { Text("Used twice").font(TypeScale.caption).foregroundStyle(Status.danger) }
+                if clashes { Text("Used twice", tableName: "Settings").font(TypeScale.caption).foregroundStyle(Status.danger) }
                 TextField("", text: Binding(
                     get: { command.key(in: model) ?? "" },
                     set: { value in
@@ -430,9 +430,9 @@ struct TemplateSettings: View {
                             Text(template.body.replacingOccurrences(of: "\n", with: " ")).font(TypeScale.caption).foregroundStyle(.secondary).lineLimit(1)
                         }
                         Spacer()
-                        Button("Edit") { editing = template }
+                        Button(String(localized: "Edit", table: "Settings")) { editing = template }
                         Menu {
-                            Button("Delete", role: .destructive) { model.deleteTemplate(template.id) }
+                            Button(String(localized: "Delete", table: "Settings"), role: .destructive) { model.deleteTemplate(template.id) }
                         } label: {
                             Image(systemName: "ellipsis.circle")
                         }
@@ -441,10 +441,10 @@ struct TemplateSettings: View {
                     }
                 }
             } footer: {
-                Text("Fill-ins: {first_name}, {name}, {my_name}, {my_first_name}, {date}")
+                Text("Fill-ins: {first_name}, {name}, {my_name}, {my_first_name}, {date}", tableName: "Settings")
             }
             Section {
-                Button("New template") { editing = MailTemplate(name: "", body: "") }
+                Button(String(localized: "New template", table: "Settings")) { editing = MailTemplate(name: "", body: "") }
             }
         }
         .formStyle(.grouped)
@@ -463,8 +463,8 @@ private struct TemplateEditor: View {
         VStack(spacing: 0) {
             Form {
                 Section {
-                    TextField("Name", text: $template.name)
-                    TextField("Subject (optional)", text: $template.subject)
+                    TextField(String(localized: "Name", table: "Settings"), text: $template.name)
+                    TextField(String(localized: "Subject (optional)", table: "Settings"), text: $template.subject)
                 }
                 Section {
                     TextEditor(text: $template.body)
@@ -475,8 +475,8 @@ private struct TemplateEditor: View {
             .formStyle(.grouped)
             HStack {
                 Spacer()
-                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
-                Button("Save") { onSave(template); dismiss() }
+                Button(String(localized: "Cancel", table: "Settings")) { dismiss() }.keyboardShortcut(.cancelAction)
+                Button(String(localized: "Save", table: "Settings")) { onSave(template); dismiss() }
                     .keyboardShortcut(.defaultAction)
                     .buttonStyle(.borderedProminent)
                     .disabled(template.name.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -501,49 +501,49 @@ struct SortingSettings: View {
                 }
                 LabeledContent {
                     if model.isSorting, let progress = model.sortingProgress {
-                        Button("Stop (\(progress.done) of \(progress.total))") { model.stopSorting() }
+                        Button(String(localized: "Stop (\(progress.done) of \(progress.total))", table: "Settings")) { model.stopSorting() }
                     } else {
-                        Button("Sort Now") { model.sortNow() }
+                        Button(String(localized: "Sort Now", table: "Settings")) { model.sortNow() }
                     }
                 } label: {
                     SettingLabel("Sort the inbox", detail: "Goes through the mail that's already there.")
                 }
                 LabeledContent {
-                    Button("Open") { model.settingsPageRequest = SettingsPage.assistant.rawValue }
+                    Button(String(localized: "Open", table: "Settings")) { model.settingsPageRequest = SettingsPage.assistant.rawValue }
                 } label: {
-                    SettingLabel(verbatim: String(localized: "Sorting with AI"),
-                                 detail: !model.usesAI ? String(localized: "Off, because AI is off. Clear cases are still sorted.")
-                                    : model.sortAssistant.map { String(localized: "On, by \(AssistantRow.label($0)).") }
-                                        ?? String(localized: "Off, because no assistant is set up. Clear cases are still sorted."))
+                    SettingLabel(verbatim: String(localized: "Sorting with AI", table: "Settings"),
+                                 detail: !model.usesAI ? String(localized: "Off, because AI is off. Clear cases are still sorted.", table: "Settings")
+                                    : model.sortAssistant.map { String(localized: "On, by \(AssistantRow.label($0)).", table: "Settings") }
+                                        ?? String(localized: "Off, because no assistant is set up. Clear cases are still sorted.", table: "Settings"))
                 }
             } footer: {
-                Text("Margin sorts the inbox into these groups, each a label, and Home shows a tab per group. With the assistant on it reads each conversation; without it, only clear cases are sorted (bills, receipts, orders, travel, newsletters).")
+                Text("Margin sorts the inbox into these groups, each a label, and Home shows a tab per group. With the assistant on it reads each conversation; without it, only clear cases are sorted (bills, receipts, orders, travel, newsletters).", tableName: "Settings")
             }
             Section {
                 ForEach($groups) { $group in
                     HStack(alignment: .top, spacing: Space.s) {
                         VStack(alignment: .leading, spacing: 4) {
-                            TextField("Name", text: $group.name).textFieldStyle(.plain)
-                            TextField("What belongs here", text: $group.detail, axis: .vertical)
+                            TextField(String(localized: "Name", table: "Settings"), text: $group.name).textFieldStyle(.plain)
+                            TextField(String(localized: "What belongs here", table: "Settings"), text: $group.detail, axis: .vertical)
                                 .textFieldStyle(.plain).font(TypeScale.caption).foregroundStyle(.secondary).lineLimit(1...3)
                         }
                         .labelsHidden()
                         Spacer()
                         Button { move(group.id, by: -1) } label: { Image(systemName: "chevron.up") }
-                            .accessibilityLabel("Move up").disabled(groups.first?.id == group.id)
+                            .accessibilityLabel(String(localized: "Move up", table: "Settings")).disabled(groups.first?.id == group.id)
                         Button { move(group.id, by: 1) } label: { Image(systemName: "chevron.down") }
-                            .accessibilityLabel("Move down").disabled(groups.last?.id == group.id)
+                            .accessibilityLabel(String(localized: "Move down", table: "Settings")).disabled(groups.last?.id == group.id)
                         Button { groups.removeAll { $0.id == group.id } } label: { Image(systemName: "minus.circle") }
-                            .accessibilityLabel("Remove")
+                            .accessibilityLabel(String(localized: "Remove", table: "Settings"))
                     }
                     .buttonStyle(.borderless)
                 }
             } header: {
-                Text("Groups")
+                Text("Groups", tableName: "Settings")
             }
             Section {
-                Button("Add Group") { groups.append(EmailGroup(name: String(localized: "New group"), detail: "")) }
-                Button("Start Over") { groups = EmailGroup.starters }
+                Button(String(localized: "Add Group", table: "Settings")) { groups.append(EmailGroup(name: String(localized: "New group", table: "Settings"), detail: "")) }
+                Button(String(localized: "Start Over", table: "Settings")) { groups = EmailGroup.starters }
             }
         }
         .formStyle(.grouped)
@@ -594,20 +594,20 @@ struct BackupSettings: View {
                         Text(verbatim: problem).font(TypeScale.caption).foregroundStyle(.secondary)
                     } else {
                         LabeledContent {
-                            Button("Sync Now") { Task { await model.syncNow() } }
+                            Button(String(localized: "Sync Now", table: "Settings")) { Task { await model.syncNow() } }
                         } label: {
                             if let last = model.lastSync {
-                                Text("Synced \(last.formatted(.relative(presentation: .named)))").foregroundStyle(.secondary)
+                                Text("Synced \(last.formatted(.relative(presentation: .named)))", tableName: "Settings").foregroundStyle(.secondary)
                             } else {
-                                Text("Not synced yet").foregroundStyle(.secondary)
+                                Text("Not synced yet", tableName: "Settings").foregroundStyle(.secondary)
                             }
                         }
                     }
                 }
             } header: {
-                Text("iCloud")
+                Text("iCloud", tableName: "Settings")
             } footer: {
-                Text("Passwords go through iCloud Keychain, encrypted end to end by Apple. The rest is kept in Margin's folder in your iCloud Drive. No server of ours is involved.")
+                Text("Passwords go through iCloud Keychain, encrypted end to end by Apple. The rest is kept in Margin's folder in your iCloud Drive. No server of ours is involved.", tableName: "Settings")
             }
                 linkDevice
                 statusLine
@@ -615,25 +615,25 @@ struct BackupSettings: View {
                 SettingsHeader(.backupFiles)
             Section {
                 LabeledContent {
-                    RevealableField(title: "Password", text: $password, prompt: Text("Optional")).frame(maxWidth: 220)
+                    RevealableField(title: "Password", text: $password, prompt: Text("Optional", tableName: "Settings")).frame(maxWidth: 220)
                 } label: { SettingLabel("Password") }
                 Toggle(isOn: $includeSecrets) { SettingLabel("Include mail passwords and API keys") }
                     .disabled(password.isEmpty)
                 HStack {
-                    Button("Export Backup…") { export() }
+                    Button(String(localized: "Export Backup…", table: "Settings")) { export() }
                     if let exported {
                         // iPhone and iPad: save it to Files, AirDrop it, or send it anywhere.
-                        ShareLink(item: exported) { Label("Save or Send…", systemImage: "square.and.arrow.up") }
+                        ShareLink(item: exported) { Label(String(localized: "Save or Send…", table: "Settings"), systemImage: "square.and.arrow.up") }
                     }
                 }
             } header: {
-                Text("Make a backup")
+                Text("Make a backup", tableName: "Settings")
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(password.isEmpty
                          ? "Without a password the file isn't encrypted, so passwords and keys are left out."
                          : "The file is encrypted with this password. Without it, the backup can't be opened.")
-                    Text("A backup holds your mailboxes, settings, labels, snoozes, scheduled mail, templates and signatures. Mail itself stays on your mail servers.")
+                    Text("A backup holds your mailboxes, settings, labels, snoozes, scheduled mail, templates and signatures. Mail itself stays on your mail servers.", tableName: "Settings")
                 }
             }
 
@@ -650,13 +650,13 @@ struct BackupSettings: View {
                 part("Scheduled mail", .scheduled)
                 part("Writing style and Ask chats", .writingAndChats)
                 HStack {
-                    Button("Restore from Backup…") { choosingRestore = true }
+                    Button(String(localized: "Restore from Backup…", table: "Settings")) { choosingRestore = true }
                     if model.canUndoRestore {
-                        Button("Undo Restore") { model.undoRestore(); status = nil }
+                        Button(String(localized: "Undo Restore", table: "Settings")) { model.undoRestore(); status = nil }
                     }
                 }
             } header: {
-                Text("When restoring, bring back")
+                Text("When restoring, bring back", tableName: "Settings")
             } footer: {
                 // Kept in place, so the page doesn't jump when a message appears.
                 Text(verbatim: status ?? " ")
@@ -669,13 +669,13 @@ struct BackupSettings: View {
             guard case .success(let url) = result else { return }
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            guard let data = try? Data(contentsOf: url) else { status = String(localized: "Couldn't read that file."); return }
+            guard let data = try? Data(contentsOf: url) else { status = String(localized: "Couldn't read that file.", table: "Settings"); return }
             if BackupBox.isEncrypted(data) { pendingRestore = data } else { restore(data, password: nil) }
         }
-        .alert("This backup has a password", isPresented: Binding(get: { pendingRestore != nil }, set: { if !$0 { pendingRestore = nil } })) {
-            SecureField("Password", text: $restorePassword)
-            Button("Cancel", role: .cancel) { pendingRestore = nil }
-            Button("Restore") {
+        .alert(String(localized: "This backup has a password", table: "Settings"), isPresented: Binding(get: { pendingRestore != nil }, set: { if !$0 { pendingRestore = nil } })) {
+            SecureField(String(localized: "Password", table: "Settings"), text: $restorePassword)
+            Button(String(localized: "Cancel", table: "Settings"), role: .cancel) { pendingRestore = nil }
+            Button(String(localized: "Restore", table: "Settings")) {
                 if let data = pendingRestore { restore(data, password: restorePassword) }
                 pendingRestore = nil
                 restorePassword = ""
@@ -695,7 +695,7 @@ struct BackupSettings: View {
     private var automatic: some View {
         Section {
             if let problem = model.automaticBackupProblem {
-                Label(String(localized: "The last automatic backup failed: \(problem)"), systemImage: "exclamationmark.triangle")
+                Label(String(localized: "The last automatic backup failed: \(problem)", table: "Settings"), systemImage: "exclamationmark.triangle")
                     .foregroundStyle(Status.danger)
             }
             Picker(selection: Binding(get: { model.backupSchedule }, set: { model.backupSchedule = $0 })) {
@@ -705,9 +705,9 @@ struct BackupSettings: View {
                 #if canImport(AppKit)
                 LabeledContent {
                     HStack {
-                        Button("Choose Folder…") { chooseFolder() }
+                        Button(String(localized: "Choose Folder…", table: "Settings")) { chooseFolder() }
                         if MailModel.iCloudDriveFolder != nil {
-                            Button("Use iCloud Drive…") { chooseFolder(in: MailModel.iCloudDriveFolder) }
+                            Button(String(localized: "Use iCloud Drive…", table: "Settings")) { chooseFolder(in: MailModel.iCloudDriveFolder) }
                         }
                     }
                 } label: {
@@ -717,24 +717,24 @@ struct BackupSettings: View {
                 LabeledContent {
                     RevealableField(title: "Password", text: $autoPassword, prompt: Text(model.hasAutomaticBackupPassword ? "Saved in Keychain" : "Optional"))
                         .frame(maxWidth: 200)
-                    Button("Save Password") {
+                    Button(String(localized: "Save Password", table: "Settings")) {
                         model.setAutomaticBackupPassword(autoPassword)
                         autoPassword = ""
                     }
                     .disabled(autoPassword.isEmpty)
                 } label: { SettingLabel("Password") }
                 LabeledContent {
-                    Button("Back Up Now") {
-                        do { try model.writeAutomaticBackup(); status = String(localized: "Backed up.") } catch { status = error.localizedDescription }
+                    Button(String(localized: "Back Up Now", table: "Settings")) {
+                        do { try model.writeAutomaticBackup(); status = String(localized: "Backed up.", table: "Settings") } catch { status = error.localizedDescription }
                     }
                 } label: {
                     if let last = model.lastAutomaticBackup {
-                        Text("Last backup \(last.formatted(.relative(presentation: .named)))")
+                        Text("Last backup \(last.formatted(.relative(presentation: .named)))", tableName: "Settings")
                     }
                 }
             }
         } header: {
-            Text("Automatic backups")
+            Text("Automatic backups", tableName: "Settings")
         } footer: {
             if model.backupSchedule != .off {
                 Text(model.hasAutomaticBackupPassword
@@ -749,25 +749,25 @@ struct BackupSettings: View {
         Section {
             if let key = shownRecoveryKey {
                 LabeledContent {
-                    Button("Copy") { MailModel.putOnPasteboard(key) }
+                    Button(String(localized: "Copy", table: "Settings")) { MailModel.putOnPasteboard(key) }
                 } label: {
                     Text(verbatim: key).monospaced().textSelection(.enabled)
                 }
             }
             if model.backupRecoveryKey == nil {
-                Button("Make a Recovery Key") { shownRecoveryKey = model.makeBackupRecoveryKey() }
+                Button(String(localized: "Make a Recovery Key", table: "Settings")) { shownRecoveryKey = model.makeBackupRecoveryKey() }
             } else {
                 HStack {
                     Button(shownRecoveryKey == nil ? "Show Recovery Key" : "Hide") {
                         shownRecoveryKey = shownRecoveryKey == nil ? model.backupRecoveryKey : nil
                     }
-                    Button("Remove", role: .destructive) { model.removeBackupRecoveryKey(); shownRecoveryKey = nil }
+                    Button(String(localized: "Remove", table: "Settings"), role: .destructive) { model.removeBackupRecoveryKey(); shownRecoveryKey = nil }
                 }
             }
         } header: {
-            Text("Recovery key")
+            Text("Recovery key", tableName: "Settings")
         } footer: {
-            Text("A recovery key also opens backups that have a password. Write it down or keep it in a password manager.")
+            Text("A recovery key also opens backups that have a password. Write it down or keep it in a password manager.", tableName: "Settings")
         }
     }
 
@@ -776,35 +776,35 @@ struct BackupSettings: View {
         Section {
             if let link {
                 LabeledContent {
-                    ShareLink(item: link.file) { Label("Send File…", systemImage: "square.and.arrow.up") }
+                    ShareLink(item: link.file) { Label(String(localized: "Send File…", table: "Settings"), systemImage: "square.and.arrow.up") }
                 } label: {
                     HStack(spacing: Space.s) {
-                        Text("Code")
+                        Text("Code", tableName: "Settings")
                         Text(verbatim: link.code).monospaced().bold().textSelection(.enabled)
                     }
                 }
             } else {
-                Button("Link Another Device…") {
+                Button(String(localized: "Link Another Device…", table: "Settings")) {
                     do { link = try model.makeDeviceLink() } catch { status = error.localizedDescription }
                 }
             }
         } header: {
-            Text("Link another device")
+            Text("Link another device", tableName: "Settings")
         } footer: {
-            Text("Moves your mailboxes, passwords, settings, labels and templates to another Mac, iPhone or iPad. Send the file there (AirDrop works), open it, and type the code.")
+            Text("Moves your mailboxes, passwords, settings, labels and templates to another Mac, iPhone or iPad. Send the file there (AirDrop works), open it, and type the code.", tableName: "Settings")
         }
     }
 
     private func export() {
         do {
             let data = try model.makeBackup(password: password.isEmpty ? nil : password, includeSecrets: includeSecrets)
-            let name = String(localized: "Margin Backup \(Date().formatted(.iso8601.year().month().day()))", comment: "Default backup file name, without extension") + ".marginbackup"
+            let name = String(localized: "Margin Backup \(Date().formatted(.iso8601.year().month().day()))", table: "Settings", comment: "Default backup file name, without extension") + ".marginbackup"
             #if canImport(AppKit)
             let panel = NSSavePanel()
             panel.nameFieldStringValue = name
             guard panel.runModal() == .OK, let url = panel.url else { return }
             try data.write(to: url, options: .atomic)
-            status = String(localized: "Saved \(url.lastPathComponent)")
+            status = String(localized: "Saved \(url.lastPathComponent)", table: "Settings")
             #else
             let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -828,7 +828,7 @@ struct BackupSettings: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
-        panel.prompt = String(localized: "Choose")
+        panel.prompt = String(localized: "Choose", table: "Settings")
         if panel.runModal() == .OK, let url = panel.url { model.setBackupFolder(url) }
     }
     #endif
@@ -856,12 +856,12 @@ struct AboutSettings: View {
                     .font(.system(size: Look.size(26), weight: .bold))
                     .foregroundStyle(Ink.primary)
                     .padding(.top, 16)
-                Text("Version \(Self.version)")
+                Text("Version \(Self.version)", tableName: "Settings")
                     .font(TypeScale.label.monospacedDigit())
                     .foregroundStyle(Ink.tertiary)
                     .textSelection(.enabled)
                     .padding(.top, 4)
-                    .help(Text("Build \(Changelog.build)"))
+                    .help(Text("Build \(Changelog.build)", tableName: "Settings"))
                 #if os(macOS)
                 if let updates = model.updates {
                     UpdateSettings(updates: updates)
@@ -872,7 +872,7 @@ struct AboutSettings: View {
                     .padding(.top, 36)
                 Link(destination: URL(string: "https://relevate.app")!) {
                     HStack(spacing: 8) {
-                        Text("Made by").font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                        Text("Made by", tableName: "Settings").font(TypeScale.label).foregroundStyle(Ink.tertiary)
                         RelevateLogo()
                             .fill(Ink.secondary)
                             .aspectRatio(RelevateLogo.aspect, contentMode: .fit)
@@ -881,12 +881,12 @@ struct AboutSettings: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(Text("Made by Relevate"))
+                .accessibilityLabel(Text("Made by Relevate", tableName: "Settings"))
                 .padding(.top, 32)
                 HStack(spacing: 18) {
                     // To Margin's own inbox, from your mailbox, with the version at the bottom.
-                    Button("Send Feedback…") { model.startFeedback() }
-                    Button("Show Welcome") { showingWelcome = true }
+                    Button(String(localized: "Send Feedback…", table: "Settings")) { model.startFeedback() }
+                    Button(String(localized: "Show Welcome", table: "Settings")) { showingWelcome = true }
                 }
                 .buttonStyle(.borderless)
                 .font(TypeScale.label)
@@ -914,11 +914,11 @@ private struct UpdateSettings: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            Button("Check for Updates…") { updates.checkForUpdates() }
+            Button(String(localized: "Check for Updates…", table: "Settings")) { updates.checkForUpdates() }
             VStack(alignment: .leading, spacing: 6) {
-                Toggle("Check for updates automatically", isOn: $checks)
+                Toggle(String(localized: "Check for updates automatically", table: "Settings"), isOn: $checks)
                     .onChange(of: checks) { _, on in updates.checksAutomatically = on }
-                Toggle("Download and install updates", isOn: $installs)
+                Toggle(String(localized: "Download and install updates", table: "Settings"), isOn: $installs)
                     .onChange(of: installs) { _, on in updates.installsAutomatically = on }
                     .disabled(!checks)
             }
@@ -944,10 +944,10 @@ private struct TellUsCard: View {
                     .frame(width: 40, height: 40)
                     .background(Ink.inverse.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Something broken?")
+                    Text("Something broken?", tableName: "Settings")
                         .font(.system(size: Look.size(16), weight: .semibold))
                         .foregroundStyle(Ink.inverse)
-                    Text("Because nothing is tracked, we won't know when something breaks until you tell us.")
+                    Text("Because nothing is tracked, we won't know when something breaks until you tell us.", tableName: "Settings")
                         .font(TypeScale.label)
                         .foregroundStyle(Ink.inverse.opacity(0.7))
                         .fixedSize(horizontal: false, vertical: true)
@@ -1028,12 +1028,12 @@ struct AppSizeRow: View {
             HStack(spacing: Space.s) {
                 Button { model.zoomApp(-1) } label: { Image(systemName: "textformat.size.smaller") }
                     .disabled(Double(Look.scale) <= AppScale.range.lowerBound)
-                    .accessibilityLabel(Text("Smaller"))
+                    .accessibilityLabel(Text("Smaller", tableName: "Settings"))
                 Text(verbatim: "\(percent)%").monospacedDigit().foregroundStyle(.secondary)
                     .frame(width: Look.scaled(48), alignment: .center)
                 Button { model.zoomApp(1) } label: { Image(systemName: "textformat.size.larger") }
                     .disabled(Double(Look.scale) >= AppScale.range.upperBound)
-                    .accessibilityLabel(Text("Bigger"))
+                    .accessibilityLabel(Text("Bigger", tableName: "Settings"))
             }
         } label: {
             #if os(macOS)

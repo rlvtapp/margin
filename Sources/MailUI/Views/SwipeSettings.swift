@@ -25,12 +25,12 @@ struct SwipeSettings: View {
             SwipeSide(model: model, leading: true)
             SwipeSide(model: model, leading: false)
         } header: {
-            Text("Swipes")
+            Text("Swipes", tableName: "Settings")
         } footer: {
             #if os(macOS)
-            Text("Two fingers sideways on a trackpad. A full swipe does the first action.")
+            Text("Two fingers sideways on a trackpad. A full swipe does the first action.", tableName: "Settings")
             #else
-            Text("A full swipe does the first action.")
+            Text("A full swipe does the first action.", tableName: "Settings")
             #endif
         }
         #if os(macOS)
@@ -39,7 +39,7 @@ struct SwipeSettings: View {
                 SettingLabel("Buttons on hover", detail: "Done, Mark read and Move to Trash at the end of a conversation while the pointer is over it.")
             }
         } header: {
-            Text("Pointer")
+            Text("Pointer", tableName: "Settings")
         }
         #endif
     }
@@ -73,7 +73,7 @@ private struct SwipeSide: View {
             }
             if actions[0] != .none {
                 HStack {
-                    Text("Second action").foregroundStyle(.secondary)
+                    Text("Second action", tableName: "Settings").foregroundStyle(.secondary)
                     Spacer()
                     Picker(selection: Binding(get: { actions[1] }, set: { set(1, $0) })) {
                         ForEach(SwipeAction.allCases.filter { $0 != actions[0] }) { Text($0.title).tag($0) }
@@ -104,7 +104,7 @@ private struct ActionChoice: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: Look.gap(30))
                     .background(isOn ? action.color : Fill.one, in: Capsule())
-                Text(verbatim: action == .read ? String(localized: "Read") : action.title)
+                Text(verbatim: action == .read ? String(localized: "Read", table: "Settings") : action.title)
                     .font(.system(size: Look.size(11), weight: isOn ? .semibold : .regular))
                     .foregroundStyle(isOn ? Ink.primary : Ink.tertiary)
                     .lineLimit(1)
@@ -144,7 +144,7 @@ private struct SwipePreview: View {
                         .foregroundStyle(.white)
                         .frame(width: 50, height: 26)
                         .background(action.color, in: Capsule())
-                    Text(verbatim: action == .read ? String(localized: "Read") : action.title)
+                    Text(verbatim: action == .read ? String(localized: "Read", table: "Settings") : action.title)
                         .font(.system(size: Look.size(10), weight: .medium))
                         .foregroundStyle(Ink.secondary)
                         .lineLimit(1)

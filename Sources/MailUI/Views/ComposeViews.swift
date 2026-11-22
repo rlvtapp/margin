@@ -32,7 +32,7 @@ struct ReplyPrompt: View {
         // Not someone who only reacted.
         let other = thread.messages.reversed().first { !model.isMine($0) && model.reaction(in: $0, of: thread) == nil }?.from
         let name = other.map { EmailAddress.firstName(of: $0) } ?? ""
-        return name.isEmpty || name.contains("@") ? String(localized: "Reply…") : String(localized: "Reply to \(name)…")
+        return name.isEmpty || name.contains("@") ? String(localized: "Reply…", table: "Composer") : String(localized: "Reply to \(name)…", table: "Composer")
     }
 }
 
@@ -84,26 +84,26 @@ struct ReplyEditor: View {
             // Who it's from, at the top where you'd check it.
             FromPicker(model: model, state: $state)
             HStack(spacing: Space.s) {
-                Text("To").font(TypeScale.label).foregroundStyle(Ink.tertiary).frame(width: 26, alignment: .leading)
+                Text("To", tableName: "Composer").font(TypeScale.label).foregroundStyle(Ink.tertiary).frame(width: 26, alignment: .leading)
                 RecipientField(model: model, input: toInput, text: $state.to)
                 if !state.showsCc {
-                    Button("Cc") { opened = "cc"; state.showsCc = true }.buttonStyle(.plain).font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                    Button(String(localized: "Cc", table: "Composer")) { opened = "cc"; state.showsCc = true }.buttonStyle(.plain).font(TypeScale.label).foregroundStyle(Ink.tertiary)
                 }
                 if !state.showsBcc {
-                    Button("Bcc") { opened = "bcc"; state.showsBcc = true }.buttonStyle(.plain).font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                    Button(String(localized: "Bcc", table: "Composer")) { opened = "bcc"; state.showsBcc = true }.buttonStyle(.plain).font(TypeScale.label).foregroundStyle(Ink.tertiary)
                 }
             }
             RecipientMatches(model: model, input: toInput)
             if state.showsCc {
                 HStack(spacing: Space.s) {
-                    Text("Cc").font(TypeScale.label).foregroundStyle(Ink.tertiary).frame(width: 26, alignment: .leading)
+                    Text("Cc", tableName: "Composer").font(TypeScale.label).foregroundStyle(Ink.tertiary).frame(width: 26, alignment: .leading)
                     RecipientField(model: model, input: ccInput, text: $state.cc, autofocus: opened == "cc")
                 }
                 RecipientMatches(model: model, input: ccInput)
             }
             if state.showsBcc {
                 HStack(spacing: Space.s) {
-                    Text("Bcc").font(TypeScale.label).foregroundStyle(Ink.tertiary).frame(width: 26, alignment: .leading)
+                    Text("Bcc", tableName: "Composer").font(TypeScale.label).foregroundStyle(Ink.tertiary).frame(width: 26, alignment: .leading)
                     RecipientField(model: model, input: bccInput, text: $state.bcc, autofocus: opened == "bcc")
                 }
                 RecipientMatches(model: model, input: bccInput)
@@ -128,7 +128,7 @@ struct ReplyEditor: View {
             // A phone is too narrow for one row: send on the first, the rest under it.
             HStack(spacing: Space.s) {
                 SendControls(model: model, state: $state, isReply: true)
-                Button("Discard") { model.reply = nil }
+                Button(String(localized: "Discard", table: "Composer")) { model.reply = nil }
                     .buttonStyle(.plain).font(TypeScale.label).foregroundStyle(Ink.secondary)
                 Spacer(minLength: 0)
                 TemplatesMenu(model: model, state: $state)
@@ -166,13 +166,13 @@ struct ReplyEditor: View {
     private var tools: some View {
         HStack(spacing: Space.s) {
             SendControls(model: model, state: $state, isReply: true)
-            Button("Discard") { model.reply = nil; model.focusRequest += 1 }.fixedSize()
+            Button(String(localized: "Discard", table: "Composer")) { model.reply = nil; model.focusRequest += 1 }.fixedSize()
             FormattingToggle(model: model)
             TemplatesMenu(model: model, state: $state)
             SignatureMenu(model: model, state: $state)
             ReplyReminderMenu(state: $state)
             if expandedHeight != nil { sizeToggle }
-            Button("Draft") { model.writeReply(.draft(note: nil)) }
+            Button(String(localized: "Draft", table: "Composer")) { model.writeReply(.draft(note: nil)) }
                 .keyboardShortcut("j", modifiers: .command)
                 .opacity(0)
                 .frame(width: 0, height: 0)
@@ -199,8 +199,8 @@ struct ReplyEditor: View {
         }
         .buttonStyle(.plain)
         .keyboardShortcut("e", modifiers: [.command, .shift])
-        .help(isExpanded ? Text("Back to the usual size (⇧⌘E or Esc)") : Text("Write in the whole pane, the conversation above (⇧⌘E)"))
-        .accessibilityLabel(isExpanded ? Text("Smaller Reply") : Text("Bigger Reply"))
+        .help(isExpanded ? Text("Back to the usual size (⇧⌘E or Esc)", tableName: "Composer") : Text("Write in the whole pane, the conversation above (⇧⌘E)", tableName: "Composer"))
+        .accessibilityLabel(isExpanded ? Text("Smaller Reply", tableName: "Composer") : Text("Bigger Reply", tableName: "Composer"))
     }
     #endif
 
@@ -257,8 +257,8 @@ struct ComposeSheet: View {
                 }
                 .buttonStyle(.plain)
                 .keyboardShortcut("m", modifiers: [.command, .shift])
-                .tip(Text("Put the message away to look at other mail (⇧⌘M)"))
-                .accessibilityLabel(Text("Put Away"))
+                .tip(Text("Put the message away to look at other mail (⇧⌘M)", tableName: "Composer"))
+                .accessibilityLabel(Text("Put Away", tableName: "Composer"))
                 CloseKeyCap { model.closeComposer(state, isReply: false) }
             }
             row {
@@ -266,11 +266,11 @@ struct ComposeSheet: View {
                 // A new message starts in To; one that already has someone starts in the text.
                 RecipientField(model: model, input: toInput, text: $state.to, autofocus: state.to.isEmpty)
                 if !state.showsCc {
-                    Button("Cc") { opened = "cc"; state.showsCc = true }.buttonStyle(.plain).font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                    Button(String(localized: "Cc", table: "Composer")) { opened = "cc"; state.showsCc = true }.buttonStyle(.plain).font(TypeScale.label).foregroundStyle(Ink.tertiary)
                 }
                 if !state.showsBcc {
-                    Button("Bcc") { opened = "bcc"; state.showsBcc = true }.buttonStyle(.plain).font(TypeScale.label).foregroundStyle(Ink.tertiary)
-                        .tip(Text("Hidden recipients: they get the message, nobody sees them."))
+                    Button(String(localized: "Bcc", table: "Composer")) { opened = "bcc"; state.showsBcc = true }.buttonStyle(.plain).font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                        .tip(Text("Hidden recipients: they get the message, nobody sees them.", tableName: "Composer"))
                 }
             }
             RecipientMatches(model: model, input: toInput).padding(.horizontal, inset).padding(.vertical, 4)
@@ -372,7 +372,7 @@ struct CancelKey: View {
     let action: () -> Void
 
     var body: some View {
-        Button("Close", action: action)
+        Button(String(localized: "Close", table: "Composer"), action: action)
             .keyboardShortcut(.cancelAction)
             .opacity(0)
             .frame(width: 0, height: 0)
@@ -387,8 +387,8 @@ struct CloseKeyCap: View {
     var body: some View {
         Button(action: action) { KeyCap("esc") }
             .buttonStyle(.plain)
-            .tip(Text("Close"))
-            .accessibilityLabel(Text("Close"))
+            .tip(Text("Close", tableName: "Composer"))
+            .accessibilityLabel(Text("Close", tableName: "Composer"))
     }
 }
 
@@ -447,10 +447,10 @@ struct FromPicker: View {
                 }
             }
             Divider()
-            Button("Add an Address…") { newAddress = ""; addsAddress = true }
+            Button(String(localized: "Add an Address…", table: "Composer")) { newAddress = ""; addsAddress = true }
         } label: {
             HStack(spacing: 6) {
-                if showsLabel { Text("From").foregroundStyle(Ink.tertiary) }
+                if showsLabel { Text("From", tableName: "Composer").foregroundStyle(Ink.tertiary) }
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
                     .fill(Palette.account(current?.colorIndex ?? 0))
                     .frame(width: 8, height: 8)
@@ -468,12 +468,12 @@ struct FromPicker: View {
         .fixedSize()
         // Another address this mailbox may send as (sales@, one at your own domain): it's added
         // to the mailbox's Send as list and used for this message.
-        .alert("Add an address to send from", isPresented: $addsAddress) {
-            TextField("name@example.com", text: $newAddress)
-            Button("Cancel", role: .cancel) {}
-            Button("Add") { addAddress() }
+        .alert(String(localized: "Add an address to send from", table: "Composer"), isPresented: $addsAddress) {
+            TextField(String(localized: "name@example.com", table: "Composer"), text: $newAddress)
+            Button(String(localized: "Cancel", table: "Composer"), role: .cancel) {}
+            Button(String(localized: "Add", table: "Composer")) { addAddress() }
         } message: {
-            Text("Your provider has to allow sending from it. It's added to this mailbox's Send as list.")
+            Text("Your provider has to allow sending from it. It's added to this mailbox's Send as list.", tableName: "Composer")
         }
     }
 
@@ -504,7 +504,7 @@ struct SendControls: View {
                 model.sendChecking(state, isReply: isReply) { warnsAboutAttachment = true }
             } label: {
                 HStack(spacing: 6) {
-                    Text("Send")
+                    Text("Send", tableName: "Composer")
                     #if os(macOS)
                     Text(verbatim: "⌘↩").opacity(0.6)
                     #endif
@@ -516,14 +516,14 @@ struct SendControls: View {
             .fixedSize()
             .layoutPriority(1)
             Menu {
-                Button("Tomorrow · \(SnoozePreset.tomorrow.date().formatted(.dateTime.weekday(.abbreviated).hour().minute()))") {
+                Button(String(localized: "Tomorrow · \(SnoozePreset.tomorrow.date().formatted(.dateTime.weekday(.abbreviated).hour().minute()))", table: "Composer")) {
                     model.schedule(state, at: SnoozePreset.tomorrow.date(), isReply: isReply)
                 }
-                Button("Monday · \(SnoozePreset.nextWeek.date().formatted(.dateTime.weekday(.abbreviated).hour().minute()))") {
+                Button(String(localized: "Monday · \(SnoozePreset.nextWeek.date().formatted(.dateTime.weekday(.abbreviated).hour().minute()))", table: "Composer")) {
                     model.schedule(state, at: SnoozePreset.nextWeek.date(), isReply: isReply)
                 }
                 Divider()
-                Button("Pick a date…") { picksDate = true }
+                Button(String(localized: "Pick a date…", table: "Composer")) { picksDate = true }
             } label: {
                 Image(systemName: "clock").font(.system(size: Look.size(12))).foregroundStyle(Ink.secondary).frame(width: 26, height: 28)
             }
@@ -531,15 +531,15 @@ struct SendControls: View {
             .buttonStyle(.plain)
             .menuIndicator(.hidden)
             .fixedSize()
-            .tip("Send later")
+            .tip(String(localized: "Send later", table: "Composer"))
             IconButton("paperclip", help: "Attach files") { picksFiles = true }
         }
-        .alert("Did you mean to attach a file?", isPresented: $warnsAboutAttachment) {
-            Button("Attach a file") { picksFiles = true }
-            Button("Send anyway") { model.queueSend(state, isReply: isReply) }
-            Button("Cancel", role: .cancel) {}
+        .alert(String(localized: "Did you mean to attach a file?", table: "Composer"), isPresented: $warnsAboutAttachment) {
+            Button(String(localized: "Attach a file", table: "Composer")) { picksFiles = true }
+            Button(String(localized: "Send anyway", table: "Composer")) { model.queueSend(state, isReply: isReply) }
+            Button(String(localized: "Cancel", table: "Composer"), role: .cancel) {}
         } message: {
-            Text("The message mentions an attachment, but nothing is attached.")
+            Text("The message mentions an attachment, but nothing is attached.", tableName: "Composer")
         }
         .fileImporter(isPresented: $picksFiles, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
             if case .success(let urls) = result { ComposeAttachments.add(urls, to: &state) }
@@ -566,7 +566,7 @@ struct ComposeAttachments: View {
                     Image(systemName: "xmark").font(.system(size: Look.size(8), weight: .bold)).foregroundStyle(Ink.tertiary)
                 }
                 .buttonStyle(.plain)
-                .tip("Dismiss")
+                .tip(String(localized: "Dismiss", table: "Composer"))
             }
         }
         if !files.isEmpty {
@@ -580,7 +580,7 @@ struct ComposeAttachments: View {
                             Image(systemName: "xmark").font(.system(size: Look.size(8), weight: .bold)).foregroundStyle(Ink.tertiary)
                         }
                         .buttonStyle(.plain)
-                        .tip("Remove")
+                        .tip(String(localized: "Remove", table: "Composer"))
                     }
                     .padding(.horizontal, 8)
                     .frame(height: Look.gap(26))
@@ -626,11 +626,11 @@ struct ComposeAttachments: View {
         let limit = sizeLimit.formatted(.byteCount(style: .file))
         if !tooBig.isEmpty {
             let names = tooBig.map { "“\($0)”" }.formatted(.list(type: .and))
-            lines.append(String(localized: "\(names) didn't fit: mail can carry about \(limit) in all. Share big files by link instead."))
+            lines.append(String(localized: "\(names) didn't fit: mail can carry about \(limit) in all. Share big files by link instead.", table: "Composer"))
         }
         if !unreadable.isEmpty {
             let names = unreadable.map { "“\($0)”" }.formatted(.list(type: .and))
-            lines.append(String(localized: "\(names) couldn't be read."))
+            lines.append(String(localized: "\(names) couldn't be read.", table: "Composer"))
         }
         return lines.isEmpty ? nil : lines.joined(separator: " ")
     }
@@ -646,9 +646,9 @@ struct TemplatesMenu: View {
             ForEach(model.templates) { template in
                 Button(template.name) { model.insert(template, into: &state) }
             }
-            if model.templates.isEmpty { Text("No templates yet") }
+            if model.templates.isEmpty { Text("No templates yet", tableName: "Composer") }
             Divider()
-            Button("Save as template") { model.saveTemplate(from: state) }
+            Button(String(localized: "Save as template", table: "Composer")) { model.saveTemplate(from: state) }
         } label: {
             Image(systemName: "doc.on.doc").font(.system(size: Look.size(12.5))).foregroundStyle(Ink.tertiary).frame(width: 28, height: 28)
         }
@@ -656,7 +656,7 @@ struct TemplatesMenu: View {
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
-        .tip("Templates")
+        .tip(String(localized: "Templates", table: "Composer"))
     }
 }
 
@@ -671,18 +671,18 @@ struct ForwardedPreview: View {
         VStack(alignment: .leading, spacing: Space.s) {
             HStack(spacing: Space.s) {
                 Button { withAnimation(Motion.quick) { isOpen.toggle() } } label: {
-                    Label("Forwarded email", systemImage: isOpen ? "chevron.down" : "chevron.right")
+                    Label(String(localized: "Forwarded email", table: "Composer"), systemImage: isOpen ? "chevron.down" : "chevron.right")
                         .font(TypeScale.label.weight(.medium))
                         .foregroundStyle(Ink.secondary)
                 }
                 .buttonStyle(.plain)
-                Text("Goes out with its own formatting")
+                Text("Goes out with its own formatting", tableName: "Composer")
                     .font(TypeScale.caption).foregroundStyle(Ink.tertiary)
                 Spacer(minLength: 0)
-                Button("Edit as Text", action: editAsText)
+                Button(String(localized: "Edit as Text", table: "Composer"), action: editAsText)
                     .buttonStyle(.borderless)
                     .font(TypeScale.label)
-                    .help(Text("Put the forwarded email in the message as text, to trim it"))
+                    .help(Text("Put the forwarded email in the message as text, to trim it", tableName: "Composer"))
             }
             if isOpen {
                 ScrollView {
@@ -712,7 +712,7 @@ struct FormattingToggle: View {
         }
         .buttonStyle(.plain)
         .tip(Text(on ? "Hide formatting" : "Show formatting"))
-        .accessibilityLabel(Text("Formatting"))
+        .accessibilityLabel(Text("Formatting", tableName: "Composer"))
         .accessibilityAddTraits(on ? .isSelected : [])
     }
 }

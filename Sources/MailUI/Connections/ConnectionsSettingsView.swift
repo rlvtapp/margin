@@ -45,7 +45,7 @@ struct ConnectionsSettingsView: View {
                                      detail: "Off means apps can only open a draft in Margin for you to send yourself.")
                     }
                 } header: {
-                    Text("What AI apps may do")
+                    Text("What AI apps may do", tableName: "Settings")
                 }
                 Section {
                     ForEach(model.accounts) { account in
@@ -65,20 +65,20 @@ struct ConnectionsSettingsView: View {
                         }
                     }
                 } header: {
-                    Text("Mailboxes AI apps can see")
+                    Text("Mailboxes AI apps can see", tableName: "Settings")
                 } footer: {
-                    Text("Junk, Trash and sign-in codes are never shown to AI apps.")
+                    Text("Junk, Trash and sign-in codes are never shown to AI apps.", tableName: "Settings")
                 }
                 #if os(macOS)
                 Section {
                     MCPAddButtons(model: model)
                 } header: {
-                    Text("Add Margin to")
+                    Text("Add Margin to", tableName: "Settings")
                 }
                 #endif
                 Section {
                     snippet(
-                        String(localized: "Claude Desktop, ChatGPT and other apps (add to the app's MCP servers)"),
+                        String(localized: "Claude Desktop, ChatGPT and other apps (add to the app's MCP servers)", table: "Settings"),
                         """
                         {
                           "mcpServers": {
@@ -88,11 +88,11 @@ struct ConnectionsSettingsView: View {
                         """
                     )
                     snippet(
-                        String(localized: "Codex and the ChatGPT app (in Terminal, then restart the app)"),
+                        String(localized: "Codex and the ChatGPT app (in Terminal, then restart the app)", table: "Settings"),
                         "codex mcp add margin -- \"\(Self.connectorPath)\" --mcp"
                     )
                     snippet(
-                        String(localized: "Or in ~/.codex/config.toml"),
+                        String(localized: "Or in ~/.codex/config.toml", table: "Settings"),
                         """
                         [mcp_servers.margin]
                         command = "\(Self.connectorPath)"
@@ -104,15 +104,15 @@ struct ConnectionsSettingsView: View {
                         "Claude Code",
                         "claude mcp add --transport http margin \(model.connectionURL) --header \"Authorization: Bearer \(model.connectionToken)\""
                     )
-                    Button("New token") { model.resetConnectionToken() }
+                    Button(String(localized: "New token", table: "Settings")) { model.resetConnectionToken() }
                 } header: {
                     #if os(macOS)
-                    Text("Or add it by hand")
+                    Text("Or add it by hand", tableName: "Settings")
                     #else
-                    Text("Connect an app")
+                    Text("Connect an app", tableName: "Settings")
                     #endif
                 } footer: {
-                    Text("The token in these lines lets an app read your mail. Keep it to yourself.")
+                    Text("The token in these lines lets an app read your mail. Keep it to yourself.", tableName: "Settings")
                 }
                 if !model.connectionActivity.isEmpty {
                     Section {
@@ -120,7 +120,7 @@ struct ConnectionsSettingsView: View {
                             ActivityRow(entry: entry)
                         }
                     } header: {
-                        Text("Recent activity")
+                        Text("Recent activity", tableName: "Settings")
                     }
                 }
             }.disabled(!model.usesAI) }
@@ -135,7 +135,7 @@ struct ConnectionsSettingsView: View {
             Text(error).foregroundStyle(Status.danger)
         } else {
             Label {
-                Text("Running on 127.0.0.1:\(model.connectionSettings.port)").foregroundStyle(.secondary)
+                Text("Running on 127.0.0.1:\(model.connectionSettings.port)", tableName: "Settings").foregroundStyle(.secondary)
             } icon: {
                 Circle().fill(Color.green.opacity(0.8)).frame(width: 7, height: 7)
             }
@@ -186,76 +186,76 @@ struct ConnectionsSettingsView: View {
 
     static func describe(_ tool: String) -> String {
         switch tool {
-        case "list_mailboxes": String(localized: "Listed mailboxes")
-        case "search_mail": String(localized: "Searched mail")
-        case "read_conversation": String(localized: "Read a conversation")
-        case "create_draft": String(localized: "Opened a draft")
-        case "save_draft": String(localized: "Saved a draft")
-        case "update_draft": String(localized: "Changed a draft")
-        case "delete_draft": String(localized: "Deleted a draft")
-        case "list_drafts": String(localized: "Looked at drafts")
-        case "get_writing_style": String(localized: "Read your writing style")
-        case "list_groups": String(localized: "Looked at your groups")
-        case "list_to_sort": String(localized: "Looked at mail to sort")
-        case "skip_sorting": String(localized: "Sorted mail")
-        case "sort_into_group": String(localized: "Sorted mail")
-        case "create_group": String(localized: "Added a group")
-        case "list_rules": String(localized: "Looked at rules")
-        case "preview_rule": String(localized: "Checked a rule")
-        case "create_rule": String(localized: "Added a rule")
-        case "update_rule": String(localized: "Changed a rule")
-        case "delete_rule": String(localized: "Deleted a rule")
-        case "list_needs_you": String(localized: "Looked at what needs you")
-        case "find_people": String(localized: "Looked up people")
-        case "get_events", "get_event": String(localized: "Looked at your calendar")
-        case "list_calendars": String(localized: "Looked at your calendars")
-        case "list_reminders": String(localized: "Looked at your reminders")
-        case "find_free_time": String(localized: "Looked for free time")
-        case "get_free_busy": String(localized: "Checked when people are free")
-        case "suggest_meeting_times": String(localized: "Suggested meeting times")
-        case "create_event": String(localized: "Added an event")
-        case "move_event": String(localized: "Moved an event")
-        case "update_event": String(localized: "Changed an event")
-        case "delete_event": String(localized: "Deleted an event")
-        case "set_reminder_done": String(localized: "Changed a reminder")
-        case "create_reminder": String(localized: "Added a reminder")
-        case "archive": String(localized: "Archived mail")
-        case "set_read", "set_starred": String(localized: "Changed mail")
-        case "snooze": String(localized: "Snoozed mail")
-        case "unsnooze": String(localized: "Brought back snoozed mail")
-        case "move_to_folder": String(localized: "Moved mail")
-        case "list_folders": String(localized: "Listed folders")
-        case "list_labels": String(localized: "Listed labels")
-        case "get_selection": String(localized: "Looked at what you have open")
-        case "add_label": String(localized: "Added a label")
-        case "remove_label": String(localized: "Removed a label")
-        case "rename_label": String(localized: "Renamed a label")
-        case "delete_label": String(localized: "Deleted a label")
-        case "list_outbox": String(localized: "Looked at scheduled mail")
-        case "list_templates": String(localized: "Looked at templates")
-        case "list_newsletters": String(localized: "Looked at newsletters")
-        case "list_waiting": String(localized: "Looked at mail waiting for a reply")
-        case "read_attachment": String(localized: "Read an attachment")
-        case "open_in_margin": String(localized: "Opened something in Margin")
-        case "check_new_mail": String(localized: "Checked for new mail")
-        case "get_settings": String(localized: "Looked at settings")
-        case "trash": String(localized: "Moved mail to Trash")
-        case "mark_spam": String(localized: "Moved mail to Junk")
-        case "list_spam": String(localized: "Looked at Junk")
-        case "not_spam": String(localized: "Took mail out of Junk")
-        case "stop_waiting": String(localized: "Stopped waiting for a reply")
-        case "unsubscribe": String(localized: "Unsubscribed from a newsletter")
-        case "archive_newsletter": String(localized: "Archived a newsletter")
-        case "create_folder", "rename_folder", "delete_folder", "hide_folder": String(localized: "Changed a folder")
-        case "save_template", "update_template", "delete_template": String(localized: "Changed a template")
-        case "reschedule", "cancel_scheduled": String(localized: "Changed scheduled mail")
-        case "send_now": String(localized: "Sent scheduled mail")
-        case "add_to_calendar": String(localized: "Added an invitation to Calendar")
-        case "respond_to_invite": String(localized: "Answered an invitation")
-        case "undo_last": String(localized: "Undid its last change")
-        case "change_settings": String(localized: "Changed settings")
-        case "set_signature": String(localized: "Changed a signature")
-        case "send_email": String(localized: "Sent an email")
+        case "list_mailboxes": String(localized: "Listed mailboxes", table: "Settings")
+        case "search_mail": String(localized: "Searched mail", table: "Settings")
+        case "read_conversation": String(localized: "Read a conversation", table: "Settings")
+        case "create_draft": String(localized: "Opened a draft", table: "Settings")
+        case "save_draft": String(localized: "Saved a draft", table: "Settings")
+        case "update_draft": String(localized: "Changed a draft", table: "Settings")
+        case "delete_draft": String(localized: "Deleted a draft", table: "Settings")
+        case "list_drafts": String(localized: "Looked at drafts", table: "Settings")
+        case "get_writing_style": String(localized: "Read your writing style", table: "Settings")
+        case "list_groups": String(localized: "Looked at your groups", table: "Settings")
+        case "list_to_sort": String(localized: "Looked at mail to sort", table: "Settings")
+        case "skip_sorting": String(localized: "Sorted mail", table: "Settings")
+        case "sort_into_group": String(localized: "Sorted mail", table: "Settings")
+        case "create_group": String(localized: "Added a group", table: "Settings")
+        case "list_rules": String(localized: "Looked at rules", table: "Settings")
+        case "preview_rule": String(localized: "Checked a rule", table: "Settings")
+        case "create_rule": String(localized: "Added a rule", table: "Settings")
+        case "update_rule": String(localized: "Changed a rule", table: "Settings")
+        case "delete_rule": String(localized: "Deleted a rule", table: "Settings")
+        case "list_needs_you": String(localized: "Looked at what needs you", table: "Settings")
+        case "find_people": String(localized: "Looked up people", table: "Settings")
+        case "get_events", "get_event": String(localized: "Looked at your calendar", table: "Settings")
+        case "list_calendars": String(localized: "Looked at your calendars", table: "Settings")
+        case "list_reminders": String(localized: "Looked at your reminders", table: "Settings")
+        case "find_free_time": String(localized: "Looked for free time", table: "Settings")
+        case "get_free_busy": String(localized: "Checked when people are free", table: "Settings")
+        case "suggest_meeting_times": String(localized: "Suggested meeting times", table: "Settings")
+        case "create_event": String(localized: "Added an event", table: "Settings")
+        case "move_event": String(localized: "Moved an event", table: "Settings")
+        case "update_event": String(localized: "Changed an event", table: "Settings")
+        case "delete_event": String(localized: "Deleted an event", table: "Settings")
+        case "set_reminder_done": String(localized: "Changed a reminder", table: "Settings")
+        case "create_reminder": String(localized: "Added a reminder", table: "Settings")
+        case "archive": String(localized: "Archived mail", table: "Settings")
+        case "set_read", "set_starred": String(localized: "Changed mail", table: "Settings")
+        case "snooze": String(localized: "Snoozed mail", table: "Settings")
+        case "unsnooze": String(localized: "Brought back snoozed mail", table: "Settings")
+        case "move_to_folder": String(localized: "Moved mail", table: "Settings")
+        case "list_folders": String(localized: "Listed folders", table: "Settings")
+        case "list_labels": String(localized: "Listed labels", table: "Settings")
+        case "get_selection": String(localized: "Looked at what you have open", table: "Settings")
+        case "add_label": String(localized: "Added a label", table: "Settings")
+        case "remove_label": String(localized: "Removed a label", table: "Settings")
+        case "rename_label": String(localized: "Renamed a label", table: "Settings")
+        case "delete_label": String(localized: "Deleted a label", table: "Settings")
+        case "list_outbox": String(localized: "Looked at scheduled mail", table: "Settings")
+        case "list_templates": String(localized: "Looked at templates", table: "Settings")
+        case "list_newsletters": String(localized: "Looked at newsletters", table: "Settings")
+        case "list_waiting": String(localized: "Looked at mail waiting for a reply", table: "Settings")
+        case "read_attachment": String(localized: "Read an attachment", table: "Settings")
+        case "open_in_margin": String(localized: "Opened something in Margin", table: "Settings")
+        case "check_new_mail": String(localized: "Checked for new mail", table: "Settings")
+        case "get_settings": String(localized: "Looked at settings", table: "Settings")
+        case "trash": String(localized: "Moved mail to Trash", table: "Settings")
+        case "mark_spam": String(localized: "Moved mail to Junk", table: "Settings")
+        case "list_spam": String(localized: "Looked at Junk", table: "Settings")
+        case "not_spam": String(localized: "Took mail out of Junk", table: "Settings")
+        case "stop_waiting": String(localized: "Stopped waiting for a reply", table: "Settings")
+        case "unsubscribe": String(localized: "Unsubscribed from a newsletter", table: "Settings")
+        case "archive_newsletter": String(localized: "Archived a newsletter", table: "Settings")
+        case "create_folder", "rename_folder", "delete_folder", "hide_folder": String(localized: "Changed a folder", table: "Settings")
+        case "save_template", "update_template", "delete_template": String(localized: "Changed a template", table: "Settings")
+        case "reschedule", "cancel_scheduled": String(localized: "Changed scheduled mail", table: "Settings")
+        case "send_now": String(localized: "Sent scheduled mail", table: "Settings")
+        case "add_to_calendar": String(localized: "Added an invitation to Calendar", table: "Settings")
+        case "respond_to_invite": String(localized: "Answered an invitation", table: "Settings")
+        case "undo_last": String(localized: "Undid its last change", table: "Settings")
+        case "change_settings": String(localized: "Changed settings", table: "Settings")
+        case "set_signature": String(localized: "Changed a signature", table: "Settings")
+        case "send_email": String(localized: "Sent an email", table: "Settings")
         default: tool
         }
     }

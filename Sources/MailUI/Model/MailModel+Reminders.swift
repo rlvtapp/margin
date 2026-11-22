@@ -59,11 +59,11 @@ extension MailModel {
         replyReminders.removeAll { item in due.contains { $0.id == item.id } }
         for reminder in due where !gotReply(to: reminder) {
             let who = reminder.recipients.first ?? ""
-            notice = Notice(text: String(localized: "No reply yet from \(who): \(reminder.subject)"))
+            notice = Notice(text: String(localized: "No reply yet from \(who): \(reminder.subject)", table: "Calendar"))
             #if canImport(UserNotifications)
             guard !environment.isPreview else { continue }
             let content = UNMutableNotificationContent()
-            content.title = String(localized: "No reply yet")
+            content.title = String(localized: "No reply yet", table: "Calendar")
             content.body = "\(reminder.subject) · \(who)"
             content.sound = .default
             UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "reply-\(reminder.id)", content: content, trigger: nil))
@@ -80,17 +80,17 @@ extension MailModel {
         Task {
             do {
                 guard try await store.requestFullAccessToReminders() else {
-                    notice = Notice(text: String(localized: "Allow Margin to use Reminders in System Settings → Privacy."), isError: true)
+                    notice = Notice(text: String(localized: "Allow Margin to use Reminders in System Settings → Privacy.", table: "Calendar"), isError: true)
                     return
                 }
                 let reminder = EKReminder(eventStore: store)
                 reminder.title = thread.subject.isEmpty ? thread.latest.from.displayName : thread.subject
-                reminder.notes = String(localized: "From \(thread.latest.from.displayName)") + "\n" + thread.latest.snippet
+                reminder.notes = String(localized: "From \(thread.latest.from.displayName)", table: "Calendar") + "\n" + thread.latest.snippet
                 reminder.url = Self.link(to: thread)
                 reminder.calendar = store.defaultCalendarForNewReminders()
                 try store.save(reminder, commit: true)
-                addLabel(String(localized: "Tasks"), to: thread)
-                notice = Notice(text: String(localized: "Added to Reminders"))
+                addLabel(String(localized: "Tasks", table: "Calendar"), to: thread)
+                notice = Notice(text: String(localized: "Added to Reminders", table: "Calendar"))
             } catch {
                 show(error)
             }
@@ -109,11 +109,11 @@ extension MailModel {
         let title = thread.subject.isEmpty ? message.from.displayName : thread.subject
         let text = String((message.body?.text ?? message.snippet).prefix(20_000))
         var html = "<h1>\(Self.html(title))</h1>"
-        html += "<p>" + Self.html(String(localized: "From \(message.from.displayName)")) + " · "
+        html += "<p>" + Self.html(String(localized: "From \(message.from.displayName)", table: "Calendar")) + " · "
             + Self.html(message.date.formatted(date: .abbreviated, time: .shortened)) + "</p>"
         html += "<p>" + Self.html(text).replacingOccurrences(of: "\n", with: "<br>") + "</p>"
         if let link = Self.link(to: thread) {
-            html += "<p><a href=\"\(Self.html(link.absoluteString))\">" + Self.html(String(localized: "Open in Margin")) + "</a></p>"
+            html += "<p><a href=\"\(Self.html(link.absoluteString))\">" + Self.html(String(localized: "Open in Margin", table: "Calendar")) + "</a></p>"
         }
         let source = "tell application id \"com.apple.Notes\" to make new note with properties {body:\"\(Self.appleScriptString(html))\"}"
         var error: NSDictionary?
@@ -121,11 +121,11 @@ extension MailModel {
         if let error {
             // -1743: the Mac said no to controlling Notes.
             let refused = (error[NSAppleScript.errorNumber] as? Int) == -1743
-            notice = Notice(text: refused ? String(localized: "Allow Margin to use Notes in System Settings → Privacy & Security → Automation.")
-                                          : String(localized: "Couldn't add it to Notes."), isError: true)
+            notice = Notice(text: refused ? String(localized: "Allow Margin to use Notes in System Settings → Privacy & Security → Automation.", table: "Calendar")
+                                          : String(localized: "Couldn't add it to Notes.", table: "Calendar"), isError: true)
             return
         }
-        notice = Notice(text: String(localized: "Added to Notes"))
+        notice = Notice(text: String(localized: "Added to Notes", table: "Calendar"))
     }
 
     static func html(_ text: String) -> String {
@@ -154,7 +154,7 @@ extension MailModel {
         guard url.scheme == "margin", url.host() == "message" else { return false }
         let id = String(url.path().dropFirst())
         guard let thread = inboxThreads(nil).first(where: { $0.messages.first?.messageID == id || $0.id == id }) else {
-            notice = Notice(text: String(localized: "That conversation isn't in the inbox anymore. Search for it to find it."))
+            notice = Notice(text: String(localized: "That conversation isn't in the inbox anymore. Search for it to find it.", table: "Calendar"))
             return true
         }
         reveal(thread.id)
@@ -178,7 +178,7 @@ struct ReplyReminderMenu: View {
                 .font(.system(size: Look.size(12.5)))
                 .foregroundStyle(state.remindAfterDays == nil ? Ink.tertiary : Ink.primary)
                 .frame(width: 28, height: 28)
-                .accessibilityLabel(Text("Remind me"))
+                .accessibilityLabel(Text("Remind me", tableName: "Calendar"))
         }
         #if os(macOS)
         .menuStyle(.button)
@@ -186,7 +186,7 @@ struct ReplyReminderMenu: View {
         .menuIndicator(.hidden)
         .fixedSize()
         #endif
-        .tip("Remind me if nobody replies")
+        .tip(String(localized: "Remind me if nobody replies", table: "Calendar"))
     }
 
     @ViewBuilder

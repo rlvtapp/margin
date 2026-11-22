@@ -229,7 +229,7 @@ extension MailModel {
                 guard when > Date() else { continue }
                 let content = UNMutableNotificationContent()
                 content.title = event.title
-                content.body = String(localized: "Starts at \(event.start.formatted(date: .omitted, time: .shortened))")
+                content.body = String(localized: "Starts at \(event.start.formatted(date: .omitted, time: .shortened))", table: "Calendar")
                     + (event.location.map { " · " + $0 } ?? "")
                 content.userInfo = ["threadID": event.threadID]
                 content.interruptionLevel = .timeSensitive

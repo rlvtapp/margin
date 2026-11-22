@@ -35,7 +35,7 @@ struct AssistantSettingsView: View {
             Section {
                 AISwitchRow(model: model)
             } footer: {
-                Text("Sorting by sender and kind of mail, rules, sign-in codes and search are not AI and keep working either way. Translation and dictation are done by this device itself and have their own switches.")
+                Text("Sorting by sender and kind of mail, rules, sign-in codes and search are not AI and keep working either way. Translation and dictation are done by this device itself and have their own switches.", tableName: "Settings")
             }
             // Shown either way, so nothing vanishes; only switched off while AI is off.
             assistants.disabled(!model.usesAI)
@@ -70,9 +70,9 @@ struct AssistantSettingsView: View {
                 }
                 addMenu
             } header: {
-                Text("Your assistants")
+                Text("Your assistants", tableName: "Settings")
             } footer: {
-                Text("Add as many as you like; each keeps its own key and model. New ones start on their fastest, cheapest model, which is plenty for mail.")
+                Text("Add as many as you like; each keeps its own key and model. New ones start on their fastest, cheapest model, which is plenty for mail.", tableName: "Settings")
             }
             if !added.isEmpty { roles }
     }
@@ -89,7 +89,7 @@ struct AssistantSettingsView: View {
         let keyed = [AssistantProvider.claude, .chatGPT, .gemini, .grok, .custom].filter(can)
         return Menu {
             if !here.isEmpty {
-                Section("On this Mac") {
+                Section(String(localized: "On this Mac", table: "Settings")) {
                     ForEach(here, id: \.self) { provider in
                         Button { edit(AssistantSettings(provider: provider)) } label: {
                             Label(provider.shortName, systemImage: AssistantRow.symbol(provider))
@@ -98,7 +98,7 @@ struct AssistantSettingsView: View {
                 }
             }
             if !keyed.isEmpty {
-                Section("With an API key") {
+                Section(String(localized: "With an API key", table: "Settings")) {
                     ForEach(keyed, id: \.self) { provider in
                         Button { edit(AssistantSettings(provider: provider)) } label: {
                             Label(provider.shortName, systemImage: AssistantRow.symbol(provider))
@@ -107,7 +107,7 @@ struct AssistantSettingsView: View {
                 }
             }
         } label: {
-            Label("Add Assistant", systemImage: "plus.circle.fill")
+            Label(String(localized: "Add Assistant", table: "Settings"), systemImage: "plus.circle.fill")
         }
         .menuStyle(.button)
         .buttonStyle(.borderless)
@@ -124,7 +124,7 @@ struct AssistantSettingsView: View {
                 let settings = model.assistantProfiles[provider] ?? AssistantSettings(provider: provider)
                 model.applyAssistant(settings, apiKey: nil)
             })) {
-                Text("Off").tag(AssistantProvider.off)
+                Text("Off", tableName: "Settings").tag(AssistantProvider.off)
                 ForEach(ready, id: \.provider) { Text(verbatim: AssistantRow.label($0)).tag($0.provider) }
                 if model.assistantSettings.provider != .off && !ready.contains(where: { $0.provider == model.assistantSettings.provider }) {
                     Text(verbatim: AssistantRow.label(model.assistantSettings)).tag(model.assistantSettings.provider)
@@ -133,20 +133,20 @@ struct AssistantSettingsView: View {
                 SettingLabel("Ask and writing", detail: "Answers in Ask, drafts, summaries, rules in your words and translations.")
             }
             Picker(selection: Binding(get: { model.quickProviderChoice }, set: { model.quickProviderChoice = $0 })) {
-                Text("Automatic (\(model.quickAssistant.map(AssistantRow.label) ?? String(localized: "Off")))").tag(AssistantProvider?.none)
+                Text("Automatic (\(model.quickAssistant.map(AssistantRow.label) ?? String(localized: "Off")))", tableName: "Settings").tag(AssistantProvider?.none)
                 ForEach(ready, id: \.provider) { Text(verbatim: AssistantRow.label($0)).tag(Optional($0.provider)) }
             } label: {
                 SettingLabel("Quick suggestions", detail: "The reply bubbles under a message and label ideas. Automatic uses Apple's model on this Mac when it has one (fast, free and private), else the cheapest model of the assistant above.")
             }
             Picker(selection: Binding(get: { model.sortProviderChoice }, set: { model.sortProviderChoice = $0 })) {
-                Text("Automatic (\(model.sortAssistant.map(AssistantRow.label) ?? String(localized: "Off")))").tag(AssistantProvider?.none)
+                Text("Automatic (\(model.sortAssistant.map(AssistantRow.label) ?? String(localized: "Off")))", tableName: "Settings").tag(AssistantProvider?.none)
                 ForEach(ready, id: \.provider) { Text(verbatim: AssistantRow.label($0)).tag(Optional($0.provider)) }
             } label: {
                 SettingLabel("Sorting into groups", detail: "Sort Now, and new mail as it arrives, one conversation at a time. Automatic uses Apple's model on this Mac when it has one, else the cheapest model of the assistant above.")
             }
             ActionProviderPicker(model: model)
         } header: {
-            Text("Who does what")
+            Text("Who does what", tableName: "Settings")
         }
     }
 
@@ -184,14 +184,14 @@ struct AssistantSettingsView: View {
         Group {
             if provider.hasServerURL {
                 LabeledContent {
-                    TextField("Server", text: $draft.baseURL,
+                    TextField(String(localized: "Server", table: "Settings"), text: $draft.baseURL,
                               prompt: Text(verbatim: provider.defaultBaseURL.isEmpty ? "https://…/v1" : provider.defaultBaseURL))
                         .labelsHidden()
                 } label: { SettingLabel("Server") }
             }
             if provider.acceptsKey {
                 LabeledContent {
-                    SecureField("API key", text: $apiKey,
+                    SecureField(String(localized: "API key", table: "Settings"), text: $apiKey,
                                 prompt: Text(model.savedAPIKey(for: provider) == nil ? "Paste your key" : "Saved in Keychain"))
                         .labelsHidden()
                 } label: {
@@ -201,7 +201,7 @@ struct AssistantSettingsView: View {
             if provider != .onDevice && provider != .off { modelPicker }
             LabeledContent {
                 HStack(spacing: Space.s) {
-                    Button("Cancel") { editing = nil }
+                    Button(String(localized: "Cancel", table: "Settings")) { editing = nil }
                     Button(added.contains(where: { $0.provider == provider }) ? "Save" : "Add") { save() }
                         .buttonStyle(.borderedProminent)
                 }
@@ -227,11 +227,11 @@ struct AssistantSettingsView: View {
         LabeledContent {
             HStack(spacing: Space.s) {
                 if choices.isEmpty {
-                    TextField("Model name", text: $draft.model,
+                    TextField(String(localized: "Model name", table: "Settings"), text: $draft.model,
                               prompt: Text(draft.provider == .codex ? "Its default model" : "Model name")).labelsHidden()
                 } else {
-                    Picker("Model", selection: $draft.model) {
-                        if draft.provider == .codex { Text("Its default model").tag("") }
+                    Picker(String(localized: "Model", table: "Settings"), selection: $draft.model) {
+                        if draft.provider == .codex { Text("Its default model", tableName: "Settings").tag("") }
                         ForEach(choices) { choice in
                             Text(verbatim: choice.detail.isEmpty ? choice.name : "\(choice.name) · \(choice.detail)").tag(choice.id)
                         }
@@ -244,7 +244,7 @@ struct AssistantSettingsView: View {
                     }
                     .buttonStyle(.borderless)
                     .disabled(isChecking)
-                    .help(Text("Load models"))
+                    .help(Text("Load models", tableName: "Settings"))
                 }
             }
         } label: { SettingLabel("Model") }
@@ -263,7 +263,7 @@ struct AssistantSettingsView: View {
             editing = nil
             status = nil
         } else {
-            status = String(localized: "Saved, but something's missing: a key, a server or a model.")
+            status = String(localized: "Saved, but something's missing: a key, a server or a model.", table: "Settings")
         }
     }
 
@@ -278,11 +278,11 @@ struct AssistantSettingsView: View {
             let ids: [String]
             switch provider {
             case .claude:
-                guard let key else { status = String(localized: "Add your API key first."); return }
+                guard let key else { status = String(localized: "Add your API key first.", table: "Settings"); return }
                 ids = try await AnthropicModel.availableModels(apiKey: key)
             case .chatGPT, .gemini, .grok, .ollama, .lmStudio, .custom:
-                guard let url = URL(string: draft.baseURL) else { status = String(localized: "Check the server address."); return }
-                if provider.needsKey && key == nil { status = String(localized: "Add your API key first."); return }
+                guard let url = URL(string: draft.baseURL) else { status = String(localized: "Check the server address.", table: "Settings"); return }
+                if provider.needsKey && key == nil { status = String(localized: "Add your API key first.", table: "Settings"); return }
                 ids = try await OpenAICompatibleModel.availableModels(baseURL: url, apiKey: key)
             default:
                 return
@@ -292,7 +292,7 @@ struct AssistantSettingsView: View {
             status = nil
         } catch {
             status = provider.hasServerURL && provider != .custom
-                ? String(localized: "Couldn't reach \(provider.name). Is it running?")
+                ? String(localized: "Couldn't reach \(provider.name). Is it running?", table: "Settings")
                 : error.localizedDescription
         }
     }
@@ -302,7 +302,7 @@ struct AssistantSettingsView: View {
         let quick = ["haiku", "mini", "nano", "flash", "lite", "small", "fast", "luna"]
         func isQuick(_ id: String) -> Bool { quick.contains { id.lowercased().contains($0) } }
         return (ids.filter(isQuick) + ids.filter { !isQuick($0) }).map { id in
-            ModelChoice(id: id, name: id, detail: isQuick(id) ? String(localized: "Quick and cheap") : "")
+            ModelChoice(id: id, name: id, detail: isQuick(id) ? String(localized: "Quick and cheap", table: "Settings") : "")
         }
     }
 }
@@ -328,7 +328,7 @@ struct AssistantRow: View {
             }
             Spacer(minLength: Space.s)
             if !ready {
-                Label("Needs setup", systemImage: "exclamationmark.circle.fill")
+                Label(String(localized: "Needs setup", table: "Settings"), systemImage: "exclamationmark.circle.fill")
                     .font(TypeScale.caption).foregroundStyle(Status.star)
             }
             ForEach(roles, id: \.self) { role in
@@ -339,16 +339,16 @@ struct AssistantRow: View {
                 Menu {
                     Button(isOpen ? "Close" : "Change…", action: open)
                     if ready && model.assistantSettings.provider != provider {
-                        Button("Use for Ask and Writing") { model.applyAssistant(settings, apiKey: nil) }
+                        Button(String(localized: "Use for Ask and Writing", table: "Settings")) { model.applyAssistant(settings, apiKey: nil) }
                     }
                     if ready && model.quickAssistant?.provider != provider {
-                        Button("Use for Quick Suggestions") { model.quickProviderChoice = provider }
+                        Button(String(localized: "Use for Quick Suggestions", table: "Settings")) { model.quickProviderChoice = provider }
                     }
                     if ready && model.sortAssistant?.provider != provider {
-                        Button("Use for Sorting") { model.sortProviderChoice = provider }
+                        Button(String(localized: "Use for Sorting", table: "Settings")) { model.sortProviderChoice = provider }
                     }
                     Divider()
-                    Button("Remove", role: .destructive, action: remove)
+                    Button(String(localized: "Remove", table: "Settings"), role: .destructive, action: remove)
                         .disabled(model.assistantSettings.provider == provider)
                 } label: {
                     Image(systemName: "ellipsis.circle").foregroundStyle(.secondary)
@@ -367,10 +367,10 @@ struct AssistantRow: View {
     /// What it's used for, as small tags.
     private var roles: [String] {
         var roles: [String] = []
-        if model.assistantSettings.provider == settings.provider { roles.append(String(localized: "Ask and writing")) }
-        if model.quickAssistant?.provider == settings.provider { roles.append(String(localized: "Quick")) }
-        if model.sortAssistant?.provider == settings.provider { roles.append(String(localized: "Sorting")) }
-        if model.actionProvider?.provider == settings.provider { roles.append(String(localized: "Actions")) }
+        if model.assistantSettings.provider == settings.provider { roles.append(String(localized: "Ask and writing", table: "Settings")) }
+        if model.quickAssistant?.provider == settings.provider { roles.append(String(localized: "Quick", table: "Settings")) }
+        if model.sortAssistant?.provider == settings.provider { roles.append(String(localized: "Sorting", table: "Settings")) }
+        if model.actionProvider?.provider == settings.provider { roles.append(String(localized: "Actions", table: "Settings")) }
         return roles
     }
 
@@ -384,11 +384,11 @@ struct AssistantRow: View {
     /// How it connects: "Your subscription", "API key", "On this computer"…
     static func connection(_ settings: AssistantSettings) -> String {
         switch settings.provider {
-        case .onDevice: String(localized: "On this Mac · free and private")
-        case .claudeCode, .codex: String(localized: "Your subscription")
-        case .ollama, .lmStudio: String(localized: "On this computer")
-        case .custom: URL(string: settings.baseURL)?.host() ?? String(localized: "Your server")
-        default: String(localized: "API key")
+        case .onDevice: String(localized: "On this Mac · free and private", table: "Settings")
+        case .claudeCode, .codex: String(localized: "Your subscription", table: "Settings")
+        case .ollama, .lmStudio: String(localized: "On this computer", table: "Settings")
+        case .custom: URL(string: settings.baseURL)?.host() ?? String(localized: "Your server", table: "Settings")
+        default: String(localized: "API key", table: "Settings")
         }
     }
 
@@ -401,7 +401,7 @@ struct AssistantRow: View {
         if settings.provider == .onDevice { return nil }
         let known = AssistantSettingsView.knownModels(settings.provider)
         if let match = known.first(where: { $0.id == settings.model }) { return match.name }
-        if settings.model.isEmpty { return settings.provider == .codex ? String(localized: "Its default model") : nil }
+        if settings.model.isEmpty { return settings.provider == .codex ? String(localized: "Its default model", table: "Settings") : nil }
         return settings.model
     }
 
@@ -437,17 +437,17 @@ struct AskSettingsSection: View {
     var body: some View {
         let preferences = Binding(get: { model.askPreferences }, set: { model.askPreferences = $0 })
         Section {
-            Picker("Answer length", selection: preferences.length) {
+            Picker(String(localized: "Answer length", table: "Settings"), selection: preferences.length) {
                 ForEach(AskPreferences.Length.allCases, id: \.self) { Text($0.title).tag($0) }
             }
-            TextField("Your instructions", text: preferences.instructions, prompt: Text("Like: answer in Dutch, and leave newsletters out"), axis: .vertical)
+            TextField(String(localized: "Your instructions", table: "Settings"), text: preferences.instructions, prompt: Text("Like: answer in Dutch, and leave newsletters out", tableName: "Settings"), axis: .vertical)
                 .lineLimit(2...5)
-            Toggle("Only the mailbox in view", isOn: preferences.onlyMailboxInView)
-            Toggle("Suggested questions to start", isOn: preferences.showsSuggestions)
+            Toggle(String(localized: "Only the mailbox in view", table: "Settings"), isOn: preferences.onlyMailboxInView)
+            Toggle(String(localized: "Suggested questions to start", table: "Settings"), isOn: preferences.showsSuggestions)
         } header: {
-            Text("Ask")
+            Text("Ask", tableName: "Settings")
         } footer: {
-            Text("Ask answers from your mail on this device. With “Only the mailbox in view”, it looks in the mailbox you have open instead of all of them.")
+            Text("Ask answers from your mail on this device. With “Only the mailbox in view”, it looks in the mailbox you have open instead of all of them.", tableName: "Settings")
         }
     }
 }
@@ -527,12 +527,12 @@ struct AISwitchRow: View {
     var body: some View {
         Toggle(isOn: $model.usesAI) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Use AI").font(TypeScale.rowStrong)
+                    Text("Use AI", tableName: "Settings").font(TypeScale.rowStrong)
                     // Both lines keep their room, so the row is the same height on and off.
                     ZStack(alignment: .topLeading) {
-                        Text("On: Ask, summaries, suggested replies, AI drafts, AI sorting and AI apps work with the assistants below.")
+                        Text("On: Ask, summaries, suggested replies, AI drafts, AI sorting and AI apps work with the assistants below.", tableName: "Settings")
                             .opacity(model.usesAI ? 1 : 0)
-                        Text("Off: Margin is a plain mail app. Nothing is summarized, suggested, drafted or sorted by AI, nothing goes to an AI service, and AI apps can't connect.")
+                        Text("Off: Margin is a plain mail app. Nothing is summarized, suggested, drafted or sorted by AI, nothing goes to an AI service, and AI apps can't connect.", tableName: "Settings")
                             .opacity(model.usesAI ? 0 : 1)
                     }
                     .font(TypeScale.caption).foregroundStyle(.secondary)
@@ -540,6 +540,6 @@ struct AISwitchRow: View {
                 }
             .padding(.vertical, 2)
         }
-        .accessibilityHint(Text("Off makes Margin a plain mail app."))
+        .accessibilityHint(Text("Off makes Margin a plain mail app.", tableName: "Settings"))
     }
 }

@@ -210,7 +210,7 @@ struct SettingsSidebar: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 if groups.isEmpty {
-                    Text("No settings match “\(search)”.")
+                    Text("No settings match “\(search)”.", tableName: "Settings")
                         .font(TypeScale.label)
                         .foregroundStyle(Ink.tertiary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -310,7 +310,7 @@ private struct SettingsSidebarRow: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.trailing, Space.xs)
-                .accessibilityLabel(isOpen.wrappedValue ? Text("Hide") : Text("Show"))
+                .accessibilityLabel(isOpen.wrappedValue ? Text("Hide", tableName: "Settings") : Text("Show", tableName: "Settings"))
             }
         }
     }
@@ -387,7 +387,7 @@ private struct SettingsSearchField: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: Look.size(12), weight: .medium))
                 .foregroundStyle(Ink.tertiary)
-            TextField("Search settings", text: $text)
+            TextField(String(localized: "Search settings", table: "Settings"), text: $text)
                 .textFieldStyle(.plain)
                 .font(.system(size: Look.size(13)))
                 .focused($isFocused)
@@ -397,7 +397,7 @@ private struct SettingsSearchField: View {
             .buttonStyle(.plain)
             .opacity(text.isEmpty ? 0 : 1)
             .disabled(text.isEmpty)
-            .accessibilityLabel(Text("Clear"))
+            .accessibilityLabel(Text("Clear", tableName: "Settings"))
         }
         .padding(.horizontal, Space.s)
         .frame(height: Look.gap(30))

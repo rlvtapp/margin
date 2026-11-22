@@ -402,7 +402,7 @@ private struct RecipientBadge: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text("Remove"))
+            .accessibilityLabel(Text("Remove", tableName: "Composer"))
             #if os(macOS)
             // Always there, so the badge keeps its width; seen when pointed at or picked out.
             .opacity(hovered || isSelected ? 1 : 0.45)

@@ -12,7 +12,7 @@ extension SignatureSet {
     /// An empty signature with the next free name ("Signature 2"…).
     func newSignature() -> NamedSignature {
         let taken = Set(allSignatures.map(\.name))
-        let name = (2...).lazy.map { String(localized: "Signature \($0)") }.first { !taken.contains($0) } ?? ""
+        let name = (2...).lazy.map { String(localized: "Signature \($0)", table: "Settings") }.first { !taken.contains($0) } ?? ""
         return NamedSignature(name: name, text: "")
     }
 }
@@ -62,7 +62,7 @@ extension MailModel {
             }
         }
         guard var shared = sets["all"], !shared.isEmpty else { return nil }
-        shared.title = String(localized: "All inboxes")
+        shared.title = String(localized: "All inboxes", table: "Settings")
         return shared
     }
 
@@ -80,7 +80,7 @@ extension MailModel {
     /// What a place's signatures are called: "All Inboxes", the workspace's name, the inbox's.
     func signatureOwnerName(_ owner: SignatureOwner) -> String {
         switch owner {
-        case .all: String(localized: "All inboxes")
+        case .all: String(localized: "All inboxes", table: "Settings")
         case .workspace(let id): workspaces.first { $0.id == id }?.name ?? ""
         case .account(let id): account(id)?.label ?? ""
         }
@@ -118,7 +118,7 @@ extension MailModel {
     func copySignature(_ signature: NamedSignature, from source: SignatureOwner, to target: SignatureOwner, asDefault: Bool) {
         let sourceName = signatureOwnerName(source)
         changeSignatures(of: target) { $0.copySignature(signature, from: sourceName, asDefault: asDefault) }
-        notice = Notice(text: String(localized: "Copied to \(signatureOwnerName(target))"))
+        notice = Notice(text: String(localized: "Copied to \(signatureOwnerName(target))", table: "Settings"))
     }
 }
 
@@ -184,16 +184,16 @@ private struct SignatureOwnerSection: View {
                     model.copySignature(signature, from: owner, to: target, asDefault: asDefault)
                 }
             }
-            Button("Add a Signature…") {
+            Button(String(localized: "Add a Signature…", table: "Settings")) {
                 edit(SignatureEditing(original: nil, signature: set.newSignature()))
             }
-            Picker("For replies and forwards", selection: Binding(
+            Picker(String(localized: "For replies and forwards", table: "Settings"), selection: Binding(
                 get: { set.replySignature ?? NamedSignature.defaultName },
                 set: { value in model.changeSignatures(of: owner) { $0.replySignature = value == NamedSignature.defaultName ? nil : value } }
             )) {
-                Text("Default").tag(NamedSignature.defaultName)
+                Text("Default", tableName: "Settings").tag(NamedSignature.defaultName)
                 ForEach(set.moreSignatures ?? []) { Text(verbatim: $0.name).tag($0.name) }
-                Text("None").tag("")
+                Text("None", tableName: "Settings").tag("")
             }
             if case .account(let id) = owner, let account = model.account(id) {
                 sharedRow(account)
@@ -208,8 +208,8 @@ private struct SignatureOwnerSection: View {
 
     private var footer: String {
         switch owner {
-        case .all: String(localized: "Inboxes without signatures of their own use these.")
-        case .workspace: String(localized: "Inboxes in this workspace without signatures of their own use these in place of the ones for all inboxes.")
+        case .all: String(localized: "Inboxes without signatures of their own use these.", table: "Settings")
+        case .workspace: String(localized: "Inboxes in this workspace without signatures of their own use these in place of the ones for all inboxes.", table: "Settings")
         case .account: ""
         }
     }
@@ -225,11 +225,11 @@ private struct SignatureOwnerSection: View {
                 set = mailbox
             } }
         )) {
-            Text("Use shared signatures when it has none")
+            Text("Use shared signatures when it has none", tableName: "Settings")
             if let inherited = account.inheritedSignatures {
-                Text("Now using the signatures from \(inherited.title).").font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                Text("Now using the signatures from \(inherited.title).", tableName: "Settings").font(TypeScale.label).foregroundStyle(Ink.tertiary)
             } else if account.usesSharedSignatures != false, let shared = account.sharedSignatures.value {
-                Text("Its own come first. Those from \(shared.title) are in the signature menu while writing.")
+                Text("Its own come first. Those from \(shared.title) are in the signature menu while writing.", tableName: "Settings")
                     .font(TypeScale.label).foregroundStyle(Ink.tertiary)
             }
         }
@@ -250,8 +250,8 @@ private struct SignatureOwnerSection: View {
             }
             Text(verbatim: model.signatureOwnerName(owner)).font(TypeScale.rowStrong).foregroundStyle(Ink.primary)
             switch owner {
-            case .all: Text("Shared").font(TypeScale.row).foregroundStyle(Ink.tertiary)
-            case .workspace: Text("Workspace").font(TypeScale.row).foregroundStyle(Ink.tertiary)
+            case .all: Text("Shared", tableName: "Settings").font(TypeScale.row).foregroundStyle(Ink.tertiary)
+            case .workspace: Text("Workspace", tableName: "Settings").font(TypeScale.row).foregroundStyle(Ink.tertiary)
             case .account(let id):
                 Text(verbatim: model.account(id)?.address.address ?? "").font(TypeScale.row).foregroundStyle(Ink.tertiary)
                     .lineLimit(1).truncationMode(.middle)
@@ -279,28 +279,28 @@ struct SignatureRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: Space.s) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(isDefault ? String(localized: "Default") : signature.name).font(TypeScale.rowStrong)
+                Text(isDefault ? String(localized: "Default", table: "Settings") : signature.name).font(TypeScale.rowStrong)
                 if isEmpty {
-                    Text("None").font(TypeScale.label).foregroundStyle(Ink.tertiary)
+                    Text("None", tableName: "Settings").font(TypeScale.label).foregroundStyle(Ink.tertiary)
                 } else {
                     Text(verbatim: signature.plainText).font(TypeScale.label).foregroundStyle(Ink.secondary).lineLimit(3)
                     if signature.isFormatted {
-                        Label(pictures == 0 ? String(localized: "Formatted")
-                                : pictures == 1 ? String(localized: "Formatted, with a picture")
-                                : String(localized: "Formatted, with \(pictures) pictures"),
+                        Label(pictures == 0 ? String(localized: "Formatted", table: "Settings")
+                                : pictures == 1 ? String(localized: "Formatted, with a picture", table: "Settings")
+                                : String(localized: "Formatted, with \(pictures) pictures", table: "Settings"),
                               systemImage: pictures == 0 ? "textformat" : "photo")
                             .font(TypeScale.caption).foregroundStyle(Ink.tertiary)
                     }
                 }
             }
             Spacer()
-            Button(isEmpty ? String(localized: "Write…") : String(localized: "Edit…"), action: edit)
+            Button(isEmpty ? String(localized: "Write…", table: "Settings") : String(localized: "Edit…", table: "Settings"), action: edit)
             if !isEmpty, !copyTargets.isEmpty {
                 Menu {
                     ForEach(copyTargets, id: \.owner) { target in
                         Menu(target.name) {
-                            Button("As Its Default") { copy(target.owner, true) }
-                            Button("As Another Signature") { copy(target.owner, false) }
+                            Button(String(localized: "As Its Default", table: "Settings")) { copy(target.owner, true) }
+                            Button(String(localized: "As Another Signature", table: "Settings")) { copy(target.owner, false) }
                         }
                     }
                 } label: {
@@ -308,13 +308,13 @@ struct SignatureRow: View {
                 }
                 .menuIndicatorHidden()
                 .fixedSize()
-                .help(Text("Copy to…"))
-                .accessibilityLabel(Text("Copy to…"))
+                .help(Text("Copy to…", tableName: "Settings"))
+                .accessibilityLabel(Text("Copy to…", tableName: "Settings"))
             }
             if !isDefault || !isEmpty {
                 Button(role: .destructive, action: remove) { Image(systemName: "minus.circle") }
                     .buttonStyle(.plain)
-                    .accessibilityLabel(Text("Remove"))
+                    .accessibilityLabel(Text("Remove", tableName: "Settings"))
             }
         }
         .contentShape(Rectangle())
@@ -353,11 +353,11 @@ struct SignatureSheet: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle(isDefault ? Text("Default Signature") : Text("Signature"))
+                .navigationTitle(isDefault ? Text("Default Signature", tableName: "Settings") : Text("Signature", tableName: "Settings"))
                 .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                    ToolbarItem(placement: .cancellationAction) { Button(String(localized: "Cancel", table: "Settings")) { dismiss() } }
                     ToolbarItem(placement: .confirmationAction) {
-                        Button("Save") {
+                        Button(String(localized: "Save", table: "Settings")) {
                             save(finished())
                             dismiss()
                         }
@@ -381,7 +381,7 @@ struct SignatureSheet: View {
     }
 
     private var nameField: some View {
-        TextField("Name", text: $name, prompt: Text("Casual, Formal, Short…"))
+        TextField(String(localized: "Name", table: "Settings"), text: $name, prompt: Text("Casual, Formal, Short…", tableName: "Settings"))
     }
 
     #if canImport(AppKit)
@@ -390,7 +390,7 @@ struct SignatureSheet: View {
             if !isDefault {
                 nameField.textFieldStyle(.roundedBorder)
                 if !nameIsFree, !trimmedName.isEmpty {
-                    Text("Another signature has this name.").font(TypeScale.label).foregroundStyle(Status.danger)
+                    Text("Another signature has this name.", tableName: "Settings").font(TypeScale.label).foregroundStyle(Status.danger)
                 }
             }
             ScrollView(.horizontal, showsIndicators: false) {
@@ -403,18 +403,18 @@ struct SignatureSheet: View {
                     .background(Fill.one, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
             HStack {
-                Text("Add a logo or photo with the picture button. Pictures go along with the mail, so nobody has to load them.")
+                Text("Add a logo or photo with the picture button. Pictures go along with the mail, so nobody has to load them.", tableName: "Settings")
                     .font(TypeScale.label).foregroundStyle(Ink.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer()
-                Menu("Picture Size") {
-                    Button("Small") { controller.resizePictures(to: 80) }
-                    Button("Medium") { controller.resizePictures(to: 160) }
-                    Button("Large") { controller.resizePictures(to: SignatureText.widestPicture) }
+                Menu(String(localized: "Picture Size", table: "Settings")) {
+                    Button(String(localized: "Small", table: "Settings")) { controller.resizePictures(to: 80) }
+                    Button(String(localized: "Medium", table: "Settings")) { controller.resizePictures(to: 160) }
+                    Button(String(localized: "Large", table: "Settings")) { controller.resizePictures(to: SignatureText.widestPicture) }
                 }
                 .fixedSize()
-                .help(Text("Picture size (the selected pictures, or all of them)"))
-                Button("Import HTML…") { importing = true }
+                .help(Text("Picture size (the selected pictures, or all of them)", tableName: "Settings"))
+                Button(String(localized: "Import HTML…", table: "Settings")) { importing = true }
             }
         }
         .padding(Space.l)
@@ -426,7 +426,7 @@ struct SignatureSheet: View {
     private var importSheet: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: Space.s) {
-                Text("Paste a signature's HTML. It replaces what's in the editor.")
+                Text("Paste a signature's HTML. It replaces what's in the editor.", tableName: "Settings")
                     .font(TypeScale.label).foregroundStyle(Ink.secondary)
                 TextEditor(text: $htmlSource)
                     .font(TypeScale.label.monospaced())
@@ -435,11 +435,11 @@ struct SignatureSheet: View {
                     .background(Fill.one, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
             .padding(Space.l)
-            .navigationTitle("Import HTML")
+            .navigationTitle(String(localized: "Import HTML", table: "Settings"))
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { importing = false } }
+                ToolbarItem(placement: .cancellationAction) { Button(String(localized: "Cancel", table: "Settings")) { importing = false } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Import") {
+                    Button(String(localized: "Import", table: "Settings")) {
                         if let read = SignatureText.fromHTML(htmlSource), let view = controller.textView, let storage = view.textStorage {
                             storage.setAttributedString(read)
                             view.didChangeText()
@@ -464,15 +464,15 @@ struct SignatureSheet: View {
         Form {
             if !isDefault {
                 Section { nameField } footer: {
-                    if !nameIsFree, !trimmedName.isEmpty { Text("Another signature has this name.") }
+                    if !nameIsFree, !trimmedName.isEmpty { Text("Another signature has this name.", tableName: "Settings") }
                 }
             }
             if original.isFormatted, !madePlain, let preview = original.previewHTML {
                 Section {
                     HTMLMessageView(html: HTMLSanitizer.sanitize(preview), allowsRemote: true).frame(minHeight: 80)
-                    Button("Make It Plain to Edit Here") { madePlain = true }
+                    Button(String(localized: "Make It Plain to Edit Here", table: "Settings")) { madePlain = true }
                 } footer: {
-                    Text("This signature has formatting or pictures. Change it in Margin on a Mac, or make it plain to change the words here.")
+                    Text("This signature has formatting or pictures. Change it in Margin on a Mac, or make it plain to change the words here.", tableName: "Settings")
                 }
             } else {
                 Section {
@@ -534,17 +534,17 @@ struct AliasSignatureButton: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(isSet ? Ink.primary : Ink.tertiary)
-        .help(Text("Signature for \(address)"))
+        .help(Text("Signature for \(address)", tableName: "Settings"))
         .popover(isPresented: $isOpen) {
             VStack(alignment: .leading, spacing: Space.s) {
-                Text("Signature for \(address)").font(TypeScale.rowStrong)
-                Picker("Signature", selection: pick) {
-                    Text("The mailbox's").tag(Pick.mailbox)
+                Text("Signature for \(address)", tableName: "Settings").font(TypeScale.rowStrong)
+                Picker(String(localized: "Signature", table: "Settings"), selection: pick) {
+                    Text("The mailbox's", tableName: "Settings").tag(Pick.mailbox)
                     ForEach(names, id: \.self) { name in
-                        Text(name == NamedSignature.defaultName ? String(localized: "Default") : name).tag(Pick.named(name))
+                        Text(name == NamedSignature.defaultName ? String(localized: "Default", table: "Settings") : name).tag(Pick.named(name))
                     }
-                    Text("None").tag(Pick.none)
-                    Text("Its own words").tag(Pick.own)
+                    Text("None", tableName: "Settings").tag(Pick.none)
+                    Text("Its own words", tableName: "Settings").tag(Pick.own)
                 }
                 .labelsHidden()
                 if pick.wrappedValue == .own {
@@ -553,7 +553,7 @@ struct AliasSignatureButton: View {
                         .frame(width: 320, height: 120)
                         .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Line.edge))
                 }
-                Text("Mail sent as this address uses it. The mailbox's follows what new mail and replies use.")
+                Text("Mail sent as this address uses it. The mailbox's follows what new mail and replies use.", tableName: "Settings")
                     .font(TypeScale.caption).foregroundStyle(Ink.tertiary)
                     .fixedSize(horizontal: false, vertical: true)
             }

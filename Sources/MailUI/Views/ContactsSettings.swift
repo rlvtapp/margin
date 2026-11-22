@@ -32,15 +32,15 @@ struct ContactsSettings: View {
                 Section {
                     ForEach(oauthAccounts) { account in accountRow(account) }
                 } header: {
-                    Text("Accounts")
+                    Text("Accounts", tableName: "Settings")
                 } footer: {
-                    Text("Connecting an account also sends meetings from New Meeting through its calendar, with rooms. Microsoft 365 adds the people you work with.")
+                    Text("Connecting an account also sends meetings from New Meeting through its calendar, with rooms. Microsoft 365 adds the people you work with.", tableName: "Settings")
                 }
             }
             Section {
                 ForEach(model.cardDAVBooks) { book in
                     LabeledContent {
-                        Button("Remove") { model.removeCardDAVBook(book.id) }.buttonStyle(.borderless)
+                        Button(String(localized: "Remove", table: "Settings")) { model.removeCardDAVBook(book.id) }.buttonStyle(.borderless)
                     } label: {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(verbatim: book.username)
@@ -50,22 +50,22 @@ struct ContactsSettings: View {
                         }
                     }
                 }
-                Button("Add Address Book…") { addingBook = true }
+                Button(String(localized: "Add Address Book…", table: "Settings")) { addingBook = true }
             } header: {
-                Text("CardDAV")
+                Text("CardDAV", tableName: "Settings")
             } footer: {
-                Text("For Fastmail, iCloud, Nextcloud and other servers. Use an app password where the provider offers one.")
+                Text("For Fastmail, iCloud, Nextcloud and other servers. Use an app password where the provider offers one.", tableName: "Settings")
             }
             Section {
                 LabeledContent {
                     Button(model.isRefreshingContacts ? "Refreshing…" : "Refresh Now") { Task { await model.refreshContacts() } }
                         .disabled(model.isRefreshingContacts)
                 } label: {
-                    Text("\(model.contacts.count) contacts")
+                    Text("\(model.contacts.count) contacts", tableName: "Settings")
                 }
             } footer: {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Contacts stay on this device and are only used to suggest people while you write.")
+                    Text("Contacts stay on this device and are only used to suggest people while you write.", tableName: "Settings")
                     if let problem { Text(verbatim: problem).foregroundStyle(Status.danger) }
                 }
             }
@@ -75,7 +75,7 @@ struct ContactsSettings: View {
     }
 
     private func count(_ number: Int) -> some View {
-        Text("\(number) contacts").font(TypeScale.caption).foregroundStyle(.secondary)
+        Text("\(number) contacts", tableName: "Settings").font(TypeScale.caption).foregroundStyle(.secondary)
     }
 
     @ViewBuilder
@@ -84,11 +84,11 @@ struct ContactsSettings: View {
         let issue = model.contactProblems["account.\(account.id.uuidString)"]
         LabeledContent {
             if connected {
-                Button("Disconnect") { model.removeAccess(for: account) }.buttonStyle(.borderless)
+                Button(String(localized: "Disconnect", table: "Settings")) { model.removeAccess(for: account) }.buttonStyle(.borderless)
             } else if model.canAskForAccess(account) {
-                Button("Connect…") { Task { await connect(account) } }
+                Button(String(localized: "Connect…", table: "Settings")) { Task { await connect(account) } }
             } else {
-                Text("Not available in this build").foregroundStyle(.tertiary)
+                Text("Not available in this build", tableName: "Settings").foregroundStyle(.tertiary)
             }
         } label: {
             HStack(spacing: Space.s) {
@@ -139,19 +139,19 @@ private struct CardDAVSetup: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Server", text: $server, prompt: Text(verbatim: "carddav.fastmail.com"))
+                    TextField(String(localized: "Server", table: "Settings"), text: $server, prompt: Text(verbatim: "carddav.fastmail.com"))
                         .autocorrectionDisabled()
-                    TextField("Username", text: $username, prompt: Text("Usually your email address"))
+                    TextField(String(localized: "Username", table: "Settings"), text: $username, prompt: Text("Usually your email address", tableName: "Settings"))
                         .autocorrectionDisabled()
-                    SecureField("Password", text: $password, prompt: Text("App password"))
+                    SecureField(String(localized: "Password", table: "Settings"), text: $password, prompt: Text("App password", tableName: "Settings"))
                 } footer: {
                     if let problem { Text(verbatim: problem).foregroundStyle(Status.danger) }
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle("Add Address Book")
+            .navigationTitle(String(localized: "Add Address Book", table: "Settings"))
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button(String(localized: "Cancel", table: "Settings")) { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(checking ? "Checking…" : "Add") { Task { await add() } }
                         .disabled(checking || server.isEmpty || username.isEmpty || password.isEmpty)

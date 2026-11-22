@@ -222928,6 +222928,642 @@
           }
         }
       }
+    },
+    "Opens while AI apps are connected" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet sich, während KI-Apps verbunden sind"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se abre con apps de IA conectadas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S'ouvre pendant que des apps d'IA sont connectées"
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S'ouvre pendant que des apps d'IA sont connectées"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI ऐप जुड़े होने पर भी खुलता है"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Megnyílik, amíg MI-alkalmazások kapcsolódnak"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si apre con le app di IA collegate"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AIアプリ接続中も開けます"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 앱이 연결되어 있어도 열림"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opent terwijl AI-apps verbonden zijn"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Otwiera się, gdy aplikacje AI są połączone"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abre com apps de IA conectados"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открывается, пока подключены ИИ-приложения"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öppnas medan AI-appar är anslutna"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yapay zekâ uygulamaları bağlıyken açılır"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI 应用连接时也能打开"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "AI App 連線時也能打開"
+          }
+        }
+      }
+    },
+    "Margin opens from the Dock as usual while Codex, Claude or another AI app uses it, with no extra icon bouncing in the Dock." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin öffnet sich wie gewohnt aus dem Dock, während Codex, Claude oder eine andere KI-App es nutzt, ohne zusätzliches hüpfendes Symbol im Dock."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin se abre desde el Dock como siempre mientras Codex, Claude u otra app de IA lo usa, sin un icono extra saltando en el Dock."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin s'ouvre depuis le Dock comme d'habitude pendant que Codex, Claude ou une autre app d'IA l'utilise, sans icône supplémentaire qui rebondit dans le Dock."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin s'ouvre depuis le Dock comme d'habitude pendant que Codex, Claude ou une autre app d'IA l'utilise, sans icône supplémentaire qui rebondit dans le Dock."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Codex, Claude या कोई अन्य AI ऐप इस्तेमाल कर रहा हो, तब भी Margin Dock से सामान्य रूप से खुलता है, Dock में कोई अतिरिक्त उछलता आइकन नहीं।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A Margin a szokásos módon megnyílik a Dockból, miközben a Codex, a Claude vagy más MI-alkalmazás használja, és nem ugrál plusz ikon a Dockban."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin si apre dal Dock come sempre mentre Codex, Claude o un'altra app di IA lo usa, senza un'icona in più che rimbalza nel Dock."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Codex、Claude、その他のAIアプリが使用中でも、MarginはいつもどおりDockから開き、Dockで余分なアイコンが跳ねることもありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Codex, Claude 또는 다른 AI 앱이 사용 중이어도 Margin이 평소처럼 Dock에서 열리며, Dock에서 추가 아이콘이 튀지 않습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin opent gewoon vanuit het Dock terwijl Codex, Claude of een andere AI-app het gebruikt, zonder extra stuiterend icoon in het Dock."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin otwiera się z Docka jak zwykle, gdy korzysta z niego Codex, Claude lub inna aplikacja AI, bez dodatkowej podskakującej ikony w Docku."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Margin abre pelo Dock como sempre enquanto o Codex, o Claude ou outro app de IA o usa, sem um ícone extra pulando no Dock."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin открывается из Dock как обычно, пока им пользуется Codex, Claude или другое ИИ-приложение, без лишнего прыгающего значка в Dock."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin öppnas från Dock som vanligt medan Codex, Claude eller en annan AI-app använder det, utan någon extra studsande symbol i Dock."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Codex, Claude veya başka bir yapay zekâ uygulaması kullanırken Margin Dock'tan her zamanki gibi açılır; Dock'ta fazladan zıplayan bir simge olmaz."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Codex、Claude 或其他 AI 应用使用时，Margin 也能照常从程序坞打开，程序坞里不会多出一个跳动的图标。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在 Codex、Claude 或其他 AI App 使用時，Margin 也能照常從 Dock 打開，Dock 裡不會多出一個跳動的圖示。"
+          }
+        }
+      }
+    },
+    "Your choice when Margin is closed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deine Wahl, wenn Margin geschlossen ist"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tú decides con Margin cerrado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre choix quand Margin est fermé"
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Votre choix quand Margin est fermé"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin बंद होने पर आपकी पसंद"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Te döntöd el, ha a Margin be van zárva"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scegli tu quando Margin è chiuso"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Marginを閉じているときの動作を選択"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin이 닫혀 있을 때 직접 선택"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jouw keuze als Margin gesloten is"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Twój wybór, gdy Margin jest zamknięty"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Você escolhe com o Margin fechado"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ваш выбор, когда Margin закрыт"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ditt val när Margin är stängt"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin kapalıyken seçim sizin"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin 关闭时由你决定"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Margin 關閉時由你決定"
+          }
+        }
+      }
+    },
+    "Settings → AI Apps → Answer while Margin is closed: turn it off and AI apps ask you to open Margin instead." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einstellungen → KI-Apps → Antworten, wenn Margin geschlossen ist: Schalte es aus, dann bitten KI-Apps dich stattdessen, Margin zu öffnen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajustes → Apps de IA → Responder con Margin cerrado: desactívalo y las apps de IA te pedirán que abras Margin."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages → Apps d'IA → Répondre quand Margin est fermé : désactivez-le et les apps d'IA vous demanderont plutôt d'ouvrir Margin."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages → Apps d'IA → Répondre quand Margin est fermé : désactivez-le et les apps d'IA vous demanderont plutôt d'ouvrir Margin."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सेटिंग्स → AI ऐप → Margin बंद होने पर भी जवाब दें: इसे बंद करें, तब AI ऐप आपसे Margin खोलने को कहेंगे।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beállítások → MI-alkalmazások → Válaszolás, amikor a Margin be van zárva: kapcsold ki, és az MI-alkalmazások inkább megkérnek, hogy nyisd meg a Margint."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impostazioni → App di IA → Rispondi quando Margin è chiuso: disattivalo e le app di IA ti chiederanno invece di aprire Margin."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定 → AIアプリ → Marginを閉じていても応答：オフにすると、AIアプリは代わりにMarginを開くよう求めます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "설정 → AI 앱 → Margin이 닫혀 있어도 응답: 끄면 AI 앱이 대신 Margin을 열라고 안내합니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instellingen → AI-apps → Antwoorden als Margin gesloten is: zet het uit, dan vragen AI-apps je in plaats daarvan Margin te openen."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ustawienia → Aplikacje AI → Odpowiadaj, gdy Margin jest zamknięty: wyłącz, a aplikacje AI poproszą Cię zamiast tego o otwarcie Margina."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajustes → Apps de IA → Responder com o Margin fechado: desative e os apps de IA vão pedir que você abra o Margin."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Настройки → ИИ-приложения → Отвечать, когда Margin закрыт: выключите, и ИИ-приложения вместо этого попросят открыть Margin."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inställningar → AI-appar → Svara när Margin är stängt: slå av det så ber AI-apparna dig öppna Margin i stället."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ayarlar → Yapay Zekâ Uygulamaları → Margin kapalıyken yanıtla: kapatırsanız yapay zekâ uygulamaları bunun yerine Margin'i açmanızı ister."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置 → AI 应用 → Margin 关闭时也响应：关闭后，AI 应用会改为请你打开 Margin。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定 → AI App → Margin 關閉時也回應：關閉後，AI App 會改為請你打開 Margin。"
+          }
+        }
+      }
+    },
+    "Faster at the bottom of the list" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schneller am Ende der Liste"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Más rápido al final de la lista"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus rapide en bas de la liste"
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Plus rapide en bas de la liste"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सूची के अंत में तेज़"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gyorsabb a lista alján"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Più veloce in fondo all'elenco"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リストの末尾がより速く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "목록 끝에서 더 빠르게"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sneller onderaan de lijst"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Szybciej na dole listy"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mais rápido no fim da lista"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Быстрее внизу списка"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snabbare längst ned i listan"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Listenin sonunda daha hızlı"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "列表底部加载更快"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "列表底部載入更快"
+          }
+        }
+      }
+    },
+    "Older mail loads before you reach the end, straight from what's saved on your Mac." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ältere Mails laden, bevor du das Ende erreichst, direkt aus dem, was auf deinem Mac gespeichert ist."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El correo antiguo se carga antes de que llegues al final, directamente desde lo guardado en tu Mac."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les anciens e-mails se chargent avant que vous n'arriviez en bas, directement depuis ce qui est enregistré sur votre Mac."
+          }
+        },
+        "fr-CA" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les anciens courriels se chargent avant que vous n'arriviez en bas, directement depuis ce qui est enregistré sur votre Mac."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पुराने मेल आपके अंत तक पहुँचने से पहले ही लोड हो जाते हैं, सीधे आपके Mac पर सहेजे गए मेल से।"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A régebbi levelek még azelőtt betöltődnek, hogy a végére érnél, közvetlenül abból, ami a Maceden van mentve."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La posta più vecchia si carica prima che tu arrivi in fondo, direttamente da ciò che è salvato sul Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "末尾に着く前に、Macに保存済みのメールから古いメールを読み込みます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "끝에 도달하기 전에 Mac에 저장된 메일에서 이전 메일을 바로 불러옵니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oudere mail laadt al voordat je onderaan bent, direct uit wat op je Mac is bewaard."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starsza poczta wczytuje się, zanim dotrzesz do końca, prosto z tego, co zapisano na Macu."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-mails mais antigos carregam antes de você chegar ao fim, direto do que está salvo no seu Mac."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Старые письма загружаются ещё до того, как вы дойдёте до конца, прямо из сохранённого на Mac."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Äldre mejl laddas innan du når slutet, direkt från det som finns sparat på din Mac."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eski postalar, siz sona varmadan doğrudan Mac'inizde kayıtlı olanlardan yüklenir."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在你滑到底部之前，较早的邮件就已直接从 Mac 上保存的内容中载入。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在你滑到底部之前，較早的郵件就已直接從 Mac 上儲存的內容中載入。"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

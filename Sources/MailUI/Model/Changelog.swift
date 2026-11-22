@@ -26,6 +26,17 @@ public enum Changelog {
     /// Newest first. Add a release at the top when tagging a new version.
     public static var releases: [ChangelogRelease] {
         [
+            ChangelogRelease(version: "2026.11.22", changes: [
+                .init(symbol: "macwindow", hue: 0,
+                      title: String(localized: "Opens while AI apps are connected"),
+                      detail: String(localized: "Margin opens from the Dock as usual while Codex, Claude or another AI app uses it, with no extra icon bouncing in the Dock.")),
+                .init(symbol: "moon", hue: 1,
+                      title: String(localized: "Your choice when Margin is closed"),
+                      detail: String(localized: "Settings → AI Apps → Answer while Margin is closed: turn it off and AI apps ask you to open Margin instead.")),
+                .init(symbol: "arrow.down.to.line", hue: 2,
+                      title: String(localized: "Faster at the bottom of the list"),
+                      detail: String(localized: "Older mail loads before you reach the end, straight from what's saved on your Mac.")),
+            ]),
             ChangelogRelease(version: "2026.11.21.1", changes: [
                 .init(symbol: "textformat.size", hue: 0,
                       title: String(localized: "All of Margin, bigger or smaller"),

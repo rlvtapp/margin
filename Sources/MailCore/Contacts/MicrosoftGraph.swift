@@ -376,7 +376,20 @@ public struct BearerHTTP: Sendable {
         switch response.statusCode {
         case 200..<300: return
         case 401: throw MailError.authenticationFailed(String(localized: "Sign in to this account again."))
-        case 403: throw MailError.authenticationFailed(forbidden ?? String(localized: "This account didn't allow Margin access."))
+        case 403:
+            let body = try? JSONDecoder().decode(ErrorBody.self, from: data)
+            let reasons = Set((body?.error.errors ?? []).compactMap(\.reason) + (body?.error.details ?? []).compactMap(\.reason))
+            // Google: the API is off in the app's own project. Signing in again can't fix that,
+            // so it isn't put as a refused sign-in.
+            if !reasons.isDisjoint(with: ["accessNotConfigured", "SERVICE_DISABLED"]) {
+                throw MailError.serverRejected(body?.error.message ?? String(localized: "This service isn't turned on for Margin yet."))
+            }
+            // Google: a box was left unticked on the sign-in page.
+            if !reasons.isDisjoint(with: ["insufficientPermissions", "ACCESS_TOKEN_SCOPE_INSUFFICIENT"]) {
+                throw MailError.authenticationFailed(String(localized: "Margin wasn't given every permission it asked for. Connect again and tick every box on the sign-in page."))
+            }
+            let said = body?.error.message.map { " (\($0))" } ?? ""
+            throw MailError.authenticationFailed((forbidden ?? String(localized: "This account didn't allow Margin access.")) + said)
         default:
             let message = (try? JSONDecoder().decode(ErrorBody.self, from: data))?.error.message
             throw MailError.serverRejected(message ?? "HTTP \(response.statusCode)")
@@ -393,7 +406,14 @@ public struct BearerHTTP: Sendable {
 
     struct ErrorBody: Decodable {
         var error: Detail
-        struct Detail: Decodable { var message: String? }
+        struct Detail: Decodable {
+            var message: String?
+            /// Google: why, e.g. `insufficientPermissions`, `accessNotConfigured`.
+            var errors: [Reason]?
+            /// Google: the newer form of the same, e.g. `SERVICE_DISABLED`.
+            var details: [Reason]?
+        }
+        struct Reason: Decodable { var reason: String? }
     }
 }
 

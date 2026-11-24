@@ -18,19 +18,19 @@ function Privacy() {
 	return (
 		<Prose
 			title="Privacy policy"
-			updated={site.updated}
+			updated="22 November 2026"
 			intro={`Margin is a mail app that runs on your own devices. It connects straight to your mail provider, and ${site.publisher} never receives your mail, your contacts or your passwords. This page explains exactly what goes where.`}
 		>
 			<h2>The short version</h2>
 			<ul>
-				<li>Your mail travels only between your device and your mail provider.</li>
+				<li>Margin connects directly to your mail provider. If you choose an external assistant, the mail you ask it to use is also sent to that service.</li>
 				<li>Passwords and sign-ins are kept in your device's Keychain.</li>
 				<li>There's no Margin account, no tracking, no analytics and no ads.</li>
 				<li>
 					Margin sends no crash or bug reports. If something goes wrong, we only
 					find out when you tell us.
 				</li>
-				<li>We don't sell, share or look at your data, because we never have it.</li>
+				<li>We don't sell your data or use it for advertising. Optional connections you enable can send data to the services you choose, as described below.</li>
 				<li>
 					Margin is free for good: no paywall, no paid version, no ads. Anything
 					to do with Relevate would most likely be a separate app, and otherwise
@@ -46,7 +46,7 @@ function Privacy() {
 				Recent mail and mail you've opened is kept on your device so it's quick
 				and works offline.
 				It's stored in Margin's private storage and removed when you remove the
-				mailbox or delete the app.
+				mailbox in Margin.
 			</p>
 			<p>
 				Sorting your inbox into people, updates and newsletters, rules, blocking,
@@ -75,7 +75,9 @@ function Privacy() {
 					(senders, recipients, subjects, dates, text and attachments), your
 					labels and folders, drafts, and whether a message is read or starred.
 					If you use automatic replies, Margin also reads and changes your
-					out-of-office setting.
+					out-of-office setting. If you use server rules, Margin reads, creates,
+					changes and deletes Gmail filters, including their matching criteria
+					and actions, when you ask.
 				</li>
 				<li>
 					<b>Your basic profile:</b> your email address, name and profile
@@ -101,7 +103,7 @@ function Privacy() {
 				labelling, marking and deleting messages (including deleting them for
 				good when you empty the trash), saving drafts, suggesting addresses as
 				you type, sending and answering meeting invitations, and turning your
-				automatic reply on or off when you ask. Each of these changes is made
+				automatic reply on or off and managing Gmail filters when you ask. Each of these changes is made
 				in your Google account because you did it in Margin.
 			</p>
 			<p>
@@ -136,17 +138,19 @@ function Privacy() {
 			</ul>
 			<h3>Sharing and transfer</h3>
 			<p>
-				Margin doesn't share Google user data with anyone. There is one case
-				where data leaves your Mac for somewhere other than Google, and you
-				start it: if you choose an assistant other than the one on your Mac
+				Margin does not send Google user data to Relevate servers or sell it.
+				Optional assistant connections can transfer Google user data to a
+				service you choose: if you choose an assistant other than the one on your Mac
 				and add your own key or sign-in for it, the conversation you ask about
 				(or, if you ask it to study your writing, a sample of your sent mail) is
 				sent from your Mac to that service when you ask.
 			</p>
 			<h3>Keeping and deleting</h3>
 			<p>
-				Saved mail and the sign-in token stay on your device until you remove
-				the mailbox or delete the app; either removes them. You can also clear
+				Saved mail and sign-in tokens are kept on your device. Removing the
+				mailbox in Margin removes its cached mail and stored sign-in credentials.
+				Deleting the Mac app alone may leave local data and Keychain entries
+				behind, so remove the mailbox before uninstalling. You can also clear
 				saved mail in Margin's settings, and remove Margin's access at any time
 				in your Google Account, under Security, Third-party apps and services.
 			</p>
@@ -276,8 +280,12 @@ function Privacy() {
 
 			<h2>Your choices</h2>
 			<p>
-				Everything Margin keeps is on your devices, so removing a mailbox or
-				deleting the app removes it. You can also revoke Margin's access in your
+				Remove a mailbox in Margin to remove its cached mail and stored
+				sign-in credentials from that device. Deleting the Mac app alone does
+				not guarantee that local data or Keychain entries are removed.
+				Copies you export, backups and data sent to an external service are
+				managed separately; removing a mailbox does not delete those copies
+				or the original mail in your provider account. You can also revoke Margin's access in your
 				Google or Microsoft account at any time. If you have any question, write
 				to us.
 			</p>

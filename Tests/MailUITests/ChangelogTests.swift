@@ -67,6 +67,23 @@ import Testing
         #expect(!model.isShowingWhatsNew)
     }
 
+    /// Bugfix notes never open the sheet, but a release with news before them still does.
+    @Test func fixesStayQuiet() throws {
+        let fixes = Changelog.releases.filter(\.isFix)
+        let fix = try #require(fixes.first)
+        let withNews = Changelog.releases.filter { !$0.isFix && Changelog.isNewer(fix.version, than: $0.version) }
+        let news = try #require(withNews.first)
+        let quiet = model()
+        quiet.environment.defaults.set(news.version, forKey: MailModel.changelogSeenKey)
+        quiet.showChangelogIfUpdated(version: fix.version)
+        #expect(!quiet.isShowingWhatsNew)
+
+        let behind = model()
+        behind.environment.defaults.set("0.0.1", forKey: MailModel.changelogSeenKey)
+        behind.showChangelogIfUpdated(version: fix.version)
+        #expect(behind.isShowingWhatsNew)
+    }
+
     /// A version is a day: it reads as a date, and later days count as newer.
     @Test func versionsAreDays() {
         #expect(Changelog.date(of: "2026.11.19")?.contains("2026") == true)

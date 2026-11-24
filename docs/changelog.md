@@ -37,6 +37,11 @@ Margin keeps a short list of what changed in each version, inside the app.
    install. A version without its own entry (a fix the same day, `2026.11.26.1`) gets the newest notes before it, like the sheet. The GitHub release notes can be
    copied from the same lines.
 
+**Bugfix releases** get `isFix: true` (`ChangelogRelease(version: "2026.11.24", isFix: true, …)`):
+one short line for what was fixed. It shows in the update window and in Settings → What's New, but
+never opens the sheet after the update; someone who skipped a release with news still gets that
+one's sheet.
+
 `ChangelogTests` checks the list stays newest first and that the sheet opens only after an update.
 
 ## Code

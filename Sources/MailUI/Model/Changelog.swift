@@ -19,6 +19,9 @@ public struct ChangelogRelease: Identifiable, Sendable {
     public var id: String { version }
     /// The version it shipped in, as `year.month.day` (`2026.11.19`); later versions have it too.
     public let version: String
+    /// A bugfix release: its notes are in the update window and in Settings → What's New, but
+    /// they never open the sheet after the update.
+    public var isFix = false
     public let changes: [Change]
 }
 
@@ -26,6 +29,11 @@ public enum Changelog {
     /// Newest first. Add a release at the top when tagging a new version.
     public static var releases: [ChangelogRelease] {
         [
+            ChangelogRelease(version: "2026.11.24", isFix: true, changes: [
+                .init(symbol: "calendar", hue: 0,
+                      title: String(localized: "Gmail calendars connect again", table: "Changelog-2026.11.24"),
+                      detail: String(localized: "Connecting a Gmail calendar works again, and every calendar on the account shows, not just the main one.", table: "Changelog-2026.11.24")),
+            ]),
             ChangelogRelease(version: "2026.11.22", changes: [
                 .init(symbol: "macwindow", hue: 0,
                       title: String(localized: "Opens while AI apps are connected", table: "Changelog-2026.11.22"),
@@ -124,7 +132,9 @@ extension MailModel {
         guard !version.isEmpty else { return }
         let seen = environment.defaults.string(forKey: Self.changelogSeenKey)
         environment.defaults.set(version, forKey: Self.changelogSeenKey)
-        guard hasOnboarded, let notes = Changelog.release(version) else { return }
+        // Bugfix notes don't open it: only the newest release with news does.
+        guard hasOnboarded,
+              let notes = Changelog.releases.first(where: { !$0.isFix && !Changelog.isNewer($0.version, than: version) }) else { return }
         // Notes already there at the version seen last were shown then (or weren't news).
         if let seen, !Changelog.isNewer(notes.version, than: seen) { return }
         isShowingWhatsNew = true

@@ -273,7 +273,10 @@ public enum APIAccess: String, Codable, Sendable, CaseIterable {
         case (.google, .contacts):
             ["https://www.googleapis.com/auth/contacts.readonly", "https://www.googleapis.com/auth/contacts.other.readonly"]
         case (.google, .calendar):
-            ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.freebusy"]
+            // calendar.calendarlist.readonly: the list of calendars (`calendarList`), which
+            // calendar.events doesn't cover; without it only the main calendar shows.
+            ["https://www.googleapis.com/auth/calendar.events", "https://www.googleapis.com/auth/calendar.freebusy",
+             "https://www.googleapis.com/auth/calendar.calendarlist.readonly"]
         case (.google, .rooms):
             ["https://www.googleapis.com/auth/admin.directory.resource.calendar.readonly"]
         case (.microsoft, .autoReply):

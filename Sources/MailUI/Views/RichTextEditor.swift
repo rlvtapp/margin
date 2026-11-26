@@ -125,9 +125,20 @@ struct RichTextEditor: NSViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    final class Coordinator: NSObject, NSTextViewDelegate {
+    /// The editor is going (the message was sent or closed): its undo steps go with it.
+    static func dismantleNSView(_ scroll: NSScrollView, coordinator: Coordinator) {
+        coordinator.undo.removeAllActions()
+        (scroll.documentView as? NSTextView)?.delegate = nil
+    }
+
+    @MainActor final class Coordinator: NSObject, NSTextViewDelegate {
         var onChange: ((NSTextView) -> Void)?
         var onEscape: (() -> Void)?
+        /// This editor's own undo history. A text view otherwise keeps its steps in the window's,
+        /// which doesn't hold on to the text view: after a message was sent and its editor gone,
+        /// ⌘Z sent the next step to the freed editor and Margin crashed.
+        let undo = UndoManager()
+        func undoManager(for view: NSTextView) -> UndoManager? { undo }
         func textDidChange(_ notification: Notification) {
             if let view = notification.object as? NSTextView { onChange?(view) }
         }
@@ -150,9 +161,12 @@ final class RichTextController {
         // Turning text into HTML takes a moment; do it once typing pauses.
         pending?.cancel()
         let storage = NSAttributedString(attributedString: view.attributedString())
-        pending = Task { [weak self] in
+        pending = Task { [weak self, weak view] in
             try? await Task.sleep(for: .milliseconds(300))
-            guard !Task.isCancelled, self != nil else { return }
+            // Only into the message this editor still shows: once it's sent or closed the editor
+            // has left its window, and its bindings could reach a message that came back
+            // meanwhile (Undo Send), or another one opened in its place.
+            guard !Task.isCancelled, self != nil, view?.window != nil else { return }
             let written = Self.isFormatted(storage) ? EmailHTMLWriter.write(storage) : nil
             html.wrappedValue = written?.html
             // Pictures in the text are the draft's inline parts: added when put in, gone when deleted.

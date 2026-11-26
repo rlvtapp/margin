@@ -181,6 +181,8 @@ public final class MailModel {
     /// Each mailbox's inbox (see `InboxShelf`). Not watched itself: the two numbers below are,
     /// so that a read mark doesn't make everything that depends on the order start over.
     @ObservationIgnored var shelves: [UUID: InboxShelf] = [:]
+    /// The formatting of messages opening in the editor, read from their HTML (`EditorStart`).
+    @ObservationIgnored var editorStarts: [String: NSAttributedString] = [:]
     /// Goes up with every change to an inbox, a read mark included.
     var inboxRevision = 0
     /// Goes up when conversations arrive, leave or change places; not for read marks and stars.
@@ -375,6 +377,8 @@ public final class MailModel {
             }
             // A new message, or one that's closed, is never put away.
             if compose == nil || oldValue == nil { isComposePutAway = false }
+            // A message opening, or closing: its formatting is read now, not while it's drawn.
+            if (compose == nil) != (oldValue == nil) { prepareEditorStart(compose) }
         }
     }
     public var reply: ComposeState? {
@@ -388,6 +392,7 @@ public final class MailModel {
             if reply == nil || oldValue == nil { isReplyPutAway = false }
             // A new or closed reply starts at its usual size.
             if reply == nil || oldValue == nil { isReplyExpanded = false }
+            if (reply == nil) != (oldValue == nil) { prepareEditorStart(reply) }
         }
     }
     /// The message being written is tucked into the top bar while you search and read other

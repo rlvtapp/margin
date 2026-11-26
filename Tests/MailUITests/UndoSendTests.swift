@@ -1,5 +1,6 @@
 import Foundation
 import MailCore
+import SwiftUI
 import Testing
 @testable import MailUI
 #if canImport(AppKit)
@@ -205,5 +206,99 @@ import AppKit
         draft.html = "<div>Something else</div>"
         #expect(EditorStart.formatted(draft) == nil)
     }
+
+    /// The formatting is read when Undo puts the message back, so drawing the editor never runs
+    /// the HTML importer; closing the message lets it go.
+    @Test func anUndoneMessageHasItsFormattingReadyBeforeItIsDrawn() async throws {
+        let model = await model()
+        model.startCompose()
+        var state = try #require(model.compose)
+        let bold = NSFontManager.shared.convert(NSFont.systemFont(ofSize: 14), toHaveTrait: .boldFontMask)
+        let written = NSMutableAttributedString(string: "Here it is", attributes: [.font: bold])
+        written.append(NSAttributedString(string: ", bold and all.", attributes: [.font: NSFont.systemFont(ofSize: 14)]))
+        state.to = "sam@kettle.example"
+        state.draft.text = written.string
+        state.draft.html = EmailHTMLWriter.write(written).html
+        model.queueSend(state, isReply: false)
+        #expect(model.editorStarts.isEmpty)
+
+        model.undo()
+        let back = try #require(model.compose)
+        let ready = try #require(model.preparedEditorStart(for: back.draft))
+        #expect(ready.string == back.draft.text)
+        let start = try #require(EditorStart().text(for: back.draft, in: model))
+        let font = try #require(start.attribute(.font, at: 0, effectiveRange: nil) as? NSFont)
+        #expect(NSFontManager.shared.traits(of: font).contains(.boldFontMask))
+
+        model.compose = nil
+        #expect(model.editorStarts.isEmpty)
+    }
+
+    /// ⌘Z after a message was sent: the editor's typing steps went with the editor. They used
+    /// to stay in the window's undo history, pointing at the freed editor, and ⌘Z crashed Margin.
+    @Test func undoAfterTheEditorIsGoneHasNothingOfItsTyping() throws {
+        let shown = EditorShown()
+        let controller = RichTextController()
+        let window = NSWindow(contentRect: NSRect(x: 100, y: 100, width: 320, height: 120), styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        window.contentView = NSHostingView(rootView: EditorHost(shown: shown, controller: controller))
+        window.orderFrontRegardless()
+        defer { window.close() }
+        RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+
+        let editor = try #require(controller.textView)
+        #expect(window.makeFirstResponder(editor))
+        editor.insertText("Thursday works.", replacementRange: editor.selectedRange())
+        RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+        // Typing can be undone in the editor, and none of it is in the window's history.
+        #expect(editor.undoManager?.canUndo == true)
+        #expect(editor.undoManager !== window.undoManager)
+        #expect(window.undoManager?.canUndo != true)
+
+        shown.editor = false
+        RunLoop.main.run(until: Date().addingTimeInterval(0.3))
+        #expect(window.undoManager?.canUndo != true)
+        window.undoManager?.undo()
+    }
+
+    /// Text turns into HTML a moment after typing stops; an editor that has left its window by
+    /// then (the message was sent or closed) writes nothing, so it can't reach a message that
+    /// came back or opened in its place.
+    @Test func anEditorThatHasGoneWritesNothingLater() async throws {
+        let controller = RichTextController()
+        var html: String? = "unchanged"
+        let binding = Binding(get: { html }, set: { html = $0 })
+        var text = ""
+        let textBinding = Binding(get: { text }, set: { text = $0 })
+        let view = NSTextView(frame: NSRect(x: 0, y: 0, width: 300, height: 100))
+        view.textStorage?.setAttributedString(NSAttributedString(string: "Bold", attributes: [
+            .font: NSFontManager.shared.convert(NSFont.systemFont(ofSize: 14), toHaveTrait: .boldFontMask)]))
+
+        controller.changed(view, text: textBinding, html: binding)
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(html == "unchanged")
+
+        let window = NSWindow(contentRect: view.frame, styleMask: [.titled], backing: .buffered, defer: true)
+        window.isReleasedWhenClosed = false
+        window.contentView = view
+        controller.changed(view, text: textBinding, html: binding)
+        try await waitFor { html?.contains("Bold") == true }
+        window.close()
+    }
     #endif
 }
+
+#if canImport(AppKit)
+/// Whether the test editor is on screen: off is the message sent and its editor gone.
+@Observable final class EditorShown { var editor = true }
+
+private struct EditorHost: View {
+    let shown: EditorShown
+    let controller: RichTextController
+    @State var text = ""
+    @State var html: String?
+    var body: some View {
+        if shown.editor { RichTextEditor(text: $text, html: $html, controller: controller).frame(width: 300, height: 100) }
+    }
+}
+#endif

@@ -118,7 +118,7 @@ struct ReplyEditor: View {
             RichTextEditor(text: $state.draft.text, html: $state.draft.html, controller: richText, onEscape: close,
                            linkedLastLine: state.sentFrom?.trimmingCharacters(in: .whitespacesAndNewlines),
                            attachments: $state.draft.attachments, signature: state.signatureInUse,
-                           initial: start.text(for: state.draft))
+                           initial: start.text(for: state.draft, in: model))
                 // Bigger, the text takes all the room the reply gets.
                 .frame(minHeight: 120, maxHeight: isExpanded ? .infinity : nil)
                 .focused($focused)
@@ -307,7 +307,7 @@ struct ComposeSheet: View {
                                onEscape: { model.closeComposer(state, isReply: false) },
                                linkedLastLine: state.sentFrom?.trimmingCharacters(in: .whitespacesAndNewlines),
                                attachments: $state.draft.attachments, signature: state.signatureInUse,
-                               initial: start.text(for: state.draft))
+                               initial: start.text(for: state.draft, in: model))
                 .focused($field, equals: .body)
                 .padding(.horizontal, inset - 4)
                 .padding(.top, Space.l)
